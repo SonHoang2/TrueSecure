@@ -4,10 +4,10 @@ import { Server } from "socket.io";
 import cors from "cors";
 
 const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
+const server = createServer(app);
+const io = new Server(server, {
     cors: {
-        origin: "http://localhost:3000",
+        origin: "*",
     },
 });
 
@@ -18,6 +18,12 @@ io.on('connection', (socket) => {
     console.log('a user connected', socket.id);
     socket.on('chat', (data) => {
         console.log('message: ' + data);
+
+        io.emit("chat", data);
+    });
+
+    socket.on("disconnect", () => {
+        console.log("A user disconnected");
     });
 });
 
@@ -30,6 +36,6 @@ app.get('/messages', function (req, res) {
     });
 });
 
-httpServer.listen(5000, () => {
+server.listen(5000, () => {
     console.log("server is running on port 5000");
 });
