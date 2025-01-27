@@ -16,23 +16,13 @@ app.use(cors());
 
 io.on('connection', (socket) => {
     console.log('a user connected', socket.id);
-    socket.on('chat', (data) => {
-        console.log('message: ' + data);
-
-        io.emit("chat", data);
+    socket.on('sendMessage', (data) => {
+        console.log('message: ' + data.text);
+        socket.broadcast.emit('receiveMessage', data);
     });
 
     socket.on("disconnect", () => {
         console.log("A user disconnected");
-    });
-});
-
-app.get('/messages', function (req, res) {
-    res.json({
-        message: [
-            "hello",
-            "world",
-        ]
     });
 });
 
