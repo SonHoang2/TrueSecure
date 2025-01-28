@@ -22,7 +22,7 @@ const Chat = () => {
     const sendMessage = () => {
         if (message.trim()) {
             const messageData = {
-                id: Date.now(),
+                from: socket.id,
                 text: message,
                 time: new Date().toLocaleTimeString(),
             };
@@ -32,11 +32,23 @@ const Chat = () => {
         }
     };
 
+    const displayMessages = () => {
+
+        return (
+            <div>
+
+            </div>
+        )
+    }
+
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
-            <div className="rounded mx-4">
+            <div className="rounded mx-4 flex flex-col justify-between">
                 <div className="rounded-lg p-3 flex align-middle bg-neutral-200">
                     <span className="material-symbols-outlined text-xl">chat_bubble</span>
+                </div>
+                <div className="hover:bg-gray-100 cursor-pointer" onClick={() => { alert("Clicked") }}>
+                    <img className="inline-block size-10 rounded-full " src="/img/user-avatar-default.jpg" alt="" />
                 </div>
             </div>
             <div className="rounded-lg p-3 bg-white me-4 w-1/5">
@@ -58,27 +70,40 @@ const Chat = () => {
                     </div>
                 </div>
 
-                <div className="flex-grow">
-                    {messages.map((msg) => (
-                        <div key={msg.id} className="text-3xl">
-                            <span>{msg.text}</span>
-                            <small>{msg.time}</small>
-                        </div>
-                    ))}
+                <div className="flex-grow overflow-auto">
+                    {messages.map((msg) => {
+                        console.log(msg, socket.id, msg.from === socket.id);
+                        if (msg.from === socket.id) {
+                            return (
+                                <div key={msg.id} className="flex justify-end w-full p-2 ">
+                                    <div className="flex max-w-md">
+                                        <p className="bg-blue-500 text-white rounded-3xl p-3 break-words max-w-full">{msg.text}</p>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return (
+                            <div key={msg.id} className="flex justify-start w-full p-2 ">
+                                <div className="flex max-w-md">
+                                    <p className="bg-blue-500 text-white rounded-3xl p-3 break-words max-w-full">{msg.text}</p>
+                                </div>
+                            </div>
+                        )
+                    })}
                 </div>
                 <div className="flex p-1 items-center">
                     <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                        <span class="material-symbols-outlined text-blue-500 text-2xl">
+                        <span className="material-symbols-outlined text-blue-500 text-2xl">
                             add_circle
                         </span>
                     </button>
                     <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                        <span class="material-symbols-outlined text-blue-500 text-2xl">
+                        <span className="material-symbols-outlined text-blue-500 text-2xl">
                             imagesmode
                         </span>
                     </button>
                     <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                        <span class="material-symbols-outlined text-blue-500 text-2xl">
+                        <span className="material-symbols-outlined text-blue-500 text-2xl">
                             gif_box
                         </span>
                     </button>
@@ -103,7 +128,7 @@ const Chat = () => {
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 
