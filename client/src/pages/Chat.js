@@ -32,15 +32,6 @@ const Chat = () => {
         }
     };
 
-    const displayMessages = () => {
-
-        return (
-            <div>
-
-            </div>
-        )
-    }
-
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
             <div className="rounded mx-4 flex flex-col justify-between">
@@ -91,7 +82,7 @@ const Chat = () => {
                         )
                     })}
                 </div>
-                <div className="flex p-1 items-center">
+                <div className="flex p-1 items-center mb-2">
                     <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
                         <span className="material-symbols-outlined text-blue-500 text-2xl">
                             add_circle
