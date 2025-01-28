@@ -1,18 +1,27 @@
 {
-    "name": "socket-chat-example",
+    "name": "chat app",
     "version": "0.0.1",
-    "description": "my first socket.io app",
+    "description": "chat app",
     "type": "module",
-    "main": "index.js",
+    "main": "server.js",
     "scripts": {
-        "start": "nodemon index.js",
+        "start": "nodemon server.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "author": "sonhoang2",
     "license": "ISC",
     "dependencies": {
+        "bcryptjs": "^2.4.3",
+        "dotenv": "^16.4.7",
         "express": "^4.21.1",
+        "express-rate-limit": "^7.5.0",
+        "jsonwebtoken": "^9.0.2",
+        "morgan": "^1.10.0",
+        "nodemailer": "^6.10.0",
         "nodemon": "^3.1.7",
+        "pg": "^8.13.1",
+        "redis": "^4.7.0",
+        "sequelize": "^6.37.5",
         "socket.io": "^4.8.1"
     }
 }
