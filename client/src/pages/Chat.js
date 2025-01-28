@@ -36,14 +36,14 @@ const Chat = () => {
         <div className="py-4 flex bg-neutral-100 h-full">
             <div className="rounded mx-4">
                 <div className="rounded-lg p-3 flex align-middle bg-neutral-200">
-                    <span className="material-symbols-outlined">chat_bubble</span>
+                    <span className="material-symbols-outlined text-xl">chat_bubble</span>
                 </div>
             </div>
             <div className="rounded-lg p-3 bg-white me-4 w-1/5">
                 <h1 className="text-2xl font-bold">Chats</h1>
             </div>
-            <div className="rounded-lg p-3 bg-white w-4/5 me-4">
-                <div className="flex justify-between">
+            <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
+                <div className="flex justify-between p-3 shadow-md">
                     <div className="flex">
                         <div>
                             <img className="inline-block size-10 rounded-full ring-2 ring-white" src="/img/user-avatar-default.jpg" alt="" />
@@ -58,7 +58,7 @@ const Chat = () => {
                     </div>
                 </div>
 
-                <div className="">
+                <div className="flex-grow">
                     {messages.map((msg) => (
                         <div key={msg.id} className="text-3xl">
                             <span>{msg.text}</span>
@@ -66,14 +66,41 @@ const Chat = () => {
                         </div>
                     ))}
                 </div>
-                <div className="input-container">
+                <div className="flex p-1 items-center">
+                    <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
+                        <span class="material-symbols-outlined text-blue-500 text-2xl">
+                            add_circle
+                        </span>
+                    </button>
+                    <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
+                        <span class="material-symbols-outlined text-blue-500 text-2xl">
+                            imagesmode
+                        </span>
+                    </button>
+                    <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
+                        <span class="material-symbols-outlined text-blue-500 text-2xl">
+                            gif_box
+                        </span>
+                    </button>
                     <input
                         type="text"
-                        placeholder="Type a message..."
+                        className="flex-grow ms-2 bg-gray-100 px-3 py-2 rounded-3xl focus:outline-none caret-blue-500 me-2"
+                        placeholder="Aa"
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                sendMessage();
+                            }
+                        }}
                     />
-                    <button onClick={sendMessage}>Send</button>
+                    <button
+                        className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
+                    >
+                        <span className="material-symbols-outlined text-blue-500 text-2xl">
+                            thumb_up
+                        </span>
+                    </button>
                 </div>
             </div>
         </div>
