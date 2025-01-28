@@ -1,5 +1,6 @@
 import { createServer } from "http";
 import { Server } from "socket.io";
+import sequelize from "./db.js";
 import app from "./app.js";
 
 const server = createServer(app);
@@ -8,6 +9,15 @@ const io = new Server(server, {
         origin: "*",
     },
 });
+
+try {
+    await sequelize.authenticate();
+    console.log('Connection has been established successfully.');
+} catch (error) {
+    console.error('Unable to connect to the database:', error);
+}
+
+// sequelize.sync({ force: true })
 
 io.on('connection', (socket) => {
     console.log('a user connected', socket.id);

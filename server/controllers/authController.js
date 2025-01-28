@@ -3,8 +3,8 @@ import User from "../models/userModel.js";
 import AppError from "../utils/AppError.js";
 import jwt from 'jsonwebtoken';
 import config from "../config/config.js";
-import { sendEmail } from "../utils/email.js";
-import { client } from "../redisClient.js";
+// import { sendEmail } from "../utils/email.js";
+// import { client } from "../redisClient.js";
 
 export const protect = catchAsync(async (req, res, next) => {
     let token;
@@ -143,70 +143,70 @@ export const logout = (req, res) => {
     );
 }
 
-export const forgotPassword = catchAsync(
-    async (req, res, next) => {
-        const { email } = req.body;
-        const user = await User.findOne({ where: { email: email } });
+// export const forgotPassword = catchAsync(
+//     async (req, res, next) => {
+//         const { email } = req.body;
+//         const user = await User.findOne({ where: { email: email } });
 
-        if (!user) {
-            return next(new AppError('There is no user with email address.', 404));
-        }
+//         if (!user) {
+//             return next(new AppError('There is no user with email address.', 404));
+//         }
 
-        const resetToken = user.createPasswordResetToken();
+//         const resetToken = user.createPasswordResetToken();
 
-        await client.set(resetToken, email, 'EX', 10 * 60);
+//         await client.set(resetToken, email, 'EX', 10 * 60);
 
-        await sendEmail({
-            email: user.email,
-            subject: 'Your password reset token (valid for 10 min)',
-            html: `
-            <div>
-                <p>Your token is: ${resetToken}</p>
-                <p>If you didn't forget your password, please ignore this email!</p>
-            </div>
-        `,
-        });
+//         await sendEmail({
+//             email: user.email,
+//             subject: 'Your password reset token (valid for 10 min)',
+//             html: `
+//             <div>
+//                 <p>Your token is: ${resetToken}</p>
+//                 <p>If you didn't forget your password, please ignore this email!</p>
+//             </div>
+//         `,
+//         });
 
-        res.status(200).json({
-            status: 'success',
-            message: 'Token sent to email!'
-        })
-    }
-)
+//         res.status(200).json({
+//             status: 'success',
+//             message: 'Token sent to email!'
+//         })
+//     }
+// )
 
-export const resetPassword = catchAsync(
-    async (req, res, next) => {
-        const { resetToken } = req.params;
-        const { password, passwordConfirm } = req.body;
+// export const resetPassword = catchAsync(
+//     async (req, res, next) => {
+//         const { resetToken } = req.params;
+//         const { password, passwordConfirm } = req.body;
 
-        const email = await client.get(resetToken);
+//         const email = await client.get(resetToken);
 
-        console.log(email);
+//         console.log(email);
 
-        if (!email) {
-            return next(new AppError('Token is invalid or has expired', 400));
-        }
+//         if (!email) {
+//             return next(new AppError('Token is invalid or has expired', 400));
+//         }
 
-        if (!password || !passwordConfirm) {
-            return next(new AppError('Please provide password and passwordConfirm', 400));
-        }
+//         if (!password || !passwordConfirm) {
+//             return next(new AppError('Please provide password and passwordConfirm', 400));
+//         }
 
-        if (password !== passwordConfirm) {
-            return next(new AppError('Passwords do not match', 400));
-        }
+//         if (password !== passwordConfirm) {
+//             return next(new AppError('Passwords do not match', 400));
+//         }
 
-        const user = await User.scope('withPassword').findOne({ where: { email: email } });
+//         const user = await User.scope('withPassword').findOne({ where: { email: email } });
 
-        await user.update({
-            password: password,
-            passwordChangedAt: Date.now() - 1000
-        });
+//         await user.update({
+//             password: password,
+//             passwordChangedAt: Date.now() - 1000
+//         });
 
-        await client.del(resetToken);
+//         await client.del(resetToken);
 
-        res.status(200).json({
-            status: 'success',
-            message: 'Password reset successfully!'
-        })
-    }
-)
+//         res.status(200).json({
+//             status: 'success',
+//             message: 'Password reset successfully!'
+//         })
+//     }
+// )
