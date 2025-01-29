@@ -38,6 +38,7 @@ export const getUser = catchAsync(async (req, res, next) => {
 });
 
 export const getMe = catchAsync(async (req, res, next) => {
+    
     req.params.id = req.user.id;
     next();
 });
