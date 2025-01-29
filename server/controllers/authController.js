@@ -42,6 +42,12 @@ export const protect = catchAsync(async (req, res, next) => {
     next();
 })
 
+export const socketProtect = catchAsync(async (socket, next) => {
+    console.log("socketProtect called");
+
+    next();
+})
+
 export const restrictTo = (...roles) => {
     return (req, res, next) => {
         // roles ['admin, ...]  .role = 'user'
