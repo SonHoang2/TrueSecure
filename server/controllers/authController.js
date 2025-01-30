@@ -43,8 +43,39 @@ export const protect = catchAsync(async (req, res, next) => {
 })
 
 export const socketProtect = catchAsync(async (socket, next) => {
-    console.log("socketProtect called");
+    let token;
 
+    if (socket.handshake.headers.cookie) {
+        token = socket.handshake.headers.cookie.replace("access_token=", "");
+    }
+    if (!token) {
+        return next(
+            new AppError('You are not logged in! Please log in to get access', 401)
+        );
+    }
+    // verification token
+    const decoded = jwt.verify(token, config.jwt.secret);
+    // check if user still exists
+    const currentUser = await User.findOne(
+        {
+            where: {
+                id: decoded.id,
+                active: true
+            }
+        });
+    if (!currentUser) {
+        return next(
+            new AppError(
+                'The user belonging to this token does no longer exits.',
+                401
+            ));
+    }
+    // check if user changed password after the token was issued
+    if (currentUser.changedPasswordAfter(decoded.iat)) {
+        return next(new AppError('User recently changed password! Please log in again.', 401));
+    }
+
+    socket.user = currentUser;
     next();
 })
 
