@@ -9,7 +9,12 @@ const App = () => {
     return (
         <AuthProvider>
             <Routes>
-                <Route path="/" element={<Chat />} />
+                <Route
+                    path="/"
+                    element={<ProtectedRoute />}
+                >
+                    <Route path="chat" element={<Chat />} />
+                </Route>
                 <Route
                     path='/auth'
                 >

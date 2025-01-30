@@ -16,6 +16,8 @@ export const AuthProvider = ({ children }) => {
 
     const refreshTokens = async () => {
         try {
+            console.log("hello");
+            
             await axios.get(AUTH_URL + "/refresh", { withCredentials: true });
             console.log("Token Refreshed");
             
