@@ -23,30 +23,6 @@ export default function Login() {
         }
     }
 
-    // google login
-    const handleAuthRedirect = async () => {
-        try {
-            console.log(location.pathname);
-            const { code } = queryString.parse(location.search);
-            if (location.pathname === "/auth/google") {
-                sendGoogleCode(code);
-            }
-        } catch (error) {
-            console.error('Error fetching auth data:', error);
-        }
-    };
-
-    useEffect(() => {
-        // login with social account
-        handleAuthRedirect()
-
-        if (user) {
-            navigate("/");
-        }
-
-    }, [location.pathname]);
-
-
     return (
         <div className="h-100">
             <div

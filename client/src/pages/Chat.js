@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from "react";
 import { io } from "socket.io-client";
 import { SERVER_URL } from "../config/config";
+import { useAuth } from "../hooks/useAuth";
 
-const socket = io(SERVER_URL);
+const socket = io(SERVER_URL, {
+    withCredentials: true,
+});
 
 const Chat = () => {
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState([]);
+    const { user, refreshTokens } = useAuth();
 
     useEffect(() => {
-        // Listen for incoming messages
+        socket.on("connect_error", (error) => {
+            console.log(error.message);
+            if (error.message === "Unauthorized") {
+                refreshTokens();
+            }
+        });
+
         socket.on("receiveMessage", (data) => {
             setMessages((prevMessages) => [...prevMessages, data]);
         });
@@ -20,15 +30,22 @@ const Chat = () => {
     }, []);
 
     const sendMessage = () => {
-        if (message.trim()) {
-            const messageData = {
-                from: socket.id,
-                text: message,
-                time: new Date().toLocaleTimeString(),
-            };
-            socket.emit("sendMessage", messageData); // Send the message to the server
-            setMessages(prevMessages => [...prevMessages, messageData]);
-            setMessage("");
+        try {
+            if (message.trim()) {
+                const messageData = {
+                    from: user.id,
+                    text: message,
+                    time: new Date().toLocaleTimeString(),
+                };
+                console.log(messageData);
+
+                socket.emit("sendMessage", messageData);
+                setMessages(prevMessages => [...prevMessages, messageData]);
+                setMessage("");
+            }
+        } catch (error) {
+            console.error(error);
+
         }
     };
 
@@ -63,10 +80,11 @@ const Chat = () => {
 
                 <div className="flex-grow overflow-auto">
                     {messages.map((msg) => {
-                        console.log(msg, socket.id, msg.from === socket.id);
-                        if (msg.from === socket.id) {
+                        const uniqueKey = crypto.randomUUID();
+
+                        if (msg.from === user.id) {
                             return (
-                                <div key={msg.id} className="flex justify-end w-full p-2 ">
+                                <div key={uniqueKey} className="flex justify-end w-full p-2 ">
                                     <div className="flex max-w-md">
                                         <p className="bg-blue-500 text-white rounded-3xl p-3 break-words max-w-full">{msg.text}</p>
                                     </div>
@@ -74,7 +92,7 @@ const Chat = () => {
                             );
                         }
                         return (
-                            <div key={msg.id} className="flex justify-start w-full p-2 ">
+                            <div key={uniqueKey} className="flex justify-start w-full p-2 ">
                                 <div className="flex max-w-md">
                                     <p className="bg-blue-500 text-white rounded-3xl p-3 break-words max-w-full">{msg.text}</p>
                                 </div>
