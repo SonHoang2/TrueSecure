@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { SERVER_URL } from "../config/config";
 import { useAuth } from "../hooks/useAuth";
@@ -12,6 +12,17 @@ const Chat = () => {
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState([]);
     const { user, refreshTokens } = useAuth();
+
+    const messagesEndRef = useRef(null)
+
+    const scrollToBottom = () => {
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+
+    useEffect(() => {
+        scrollToBottom()
+    }, [messages]);
+
 
     useEffect(() => {
         socket.on("connect_error", (error) => {
@@ -78,31 +89,22 @@ const Chat = () => {
                         <span className="material-symbols-outlined text-blue-500">more_horiz</span>
                     </div>
                 </div>
-                <div className="flex-grow overflow-auto flex flex-col justify-end">
-                    <div className="h-full">
-                        {messages.map((msg) => {
-                            const uniqueKey = crypto.randomUUID();
-                            if (msg.from === user.id) {
-                                return (
-                                    <div key={uniqueKey} className="flex justify-end w-full p-2 ">
-                                        <div className="flex max-w-md">
-                                            <p className="bg-blue-500 text-white rounded-3xl px-3 py-2 break-words max-w-full text-sm">{msg.text}</p>
-                                        </div>
+                <div className="flex-grow overflow-y-auto flex flex-col ">
+                    {messages.map((msg, index) => (
+                        <div key={index} className={`flex w-full p-2 ${msg.from === user.id ? "justify-end" : "justify-start"}`}>
+                            <div className="flex max-w-md">
+                                {msg.from !== user.id && (
+                                    <div className="flex pe-2 items-end">
+                                        <img className="size-8 rounded-full" src="/img/user-avatar-default.jpg" alt="" />
                                     </div>
-                                );
-                            }
-                            return (
-                                <div key={uniqueKey} className="flex justify-start w-full p-2 ">
-                                    <div className="flex max-w-md">
-                                        <div className="flex pe-2 items-end flex-wrap">
-                                            <img className="size-8 rounded-full" src="/img/user-avatar-default.jpg" alt="" />
-                                        </div>
-                                        <p className="bg-gray-100 text-black rounded-3xl px-3 py-2 break-words max-w-full text-sm">{msg.text}</p>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
+                                )}
+                                <p className={`rounded-3xl px-3 py-2 break-words max-w-full text-sm ${msg.from === user.id ? "bg-blue-500 text-white" : "bg-gray-100 text-black"}`}>
+                                    {msg.text}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                    <div ref={messagesEndRef} />
                 </div>
                 <div className="flex p-1 items-center mb-2">
                     <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
