@@ -13,7 +13,7 @@ const App = () => {
                     path="/"
                     element={<ProtectedRoute />}
                 >
-                    <Route path="chat" element={<Chat />} />
+                    <Route path="/" element={<Chat />} />
                 </Route>
                 <Route
                     path='/auth'
