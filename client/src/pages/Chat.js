@@ -7,6 +7,7 @@ const socket = io(SERVER_URL, {
     withCredentials: true,
 });
 
+
 const Chat = () => {
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState([]);
@@ -77,28 +78,31 @@ const Chat = () => {
                         <span className="material-symbols-outlined text-blue-500">more_horiz</span>
                     </div>
                 </div>
-
-                <div className="flex-grow overflow-auto">
-                    {messages.map((msg) => {
-                        const uniqueKey = crypto.randomUUID();
-
-                        if (msg.from === user.id) {
+                <div className="flex-grow overflow-auto flex flex-col justify-end">
+                    <div className="h-full">
+                        {messages.map((msg) => {
+                            const uniqueKey = crypto.randomUUID();
+                            if (msg.from === user.id) {
+                                return (
+                                    <div key={uniqueKey} className="flex justify-end w-full p-2 ">
+                                        <div className="flex max-w-md">
+                                            <p className="bg-blue-500 text-white rounded-3xl px-3 py-2 break-words max-w-full text-sm">{msg.text}</p>
+                                        </div>
+                                    </div>
+                                );
+                            }
                             return (
-                                <div key={uniqueKey} className="flex justify-end w-full p-2 ">
+                                <div key={uniqueKey} className="flex justify-start w-full p-2 ">
                                     <div className="flex max-w-md">
-                                        <p className="bg-blue-500 text-white rounded-3xl p-3 break-words max-w-full">{msg.text}</p>
+                                        <div className="flex pe-2 items-end flex-wrap">
+                                            <img className="size-8 rounded-full" src="/img/user-avatar-default.jpg" alt="" />
+                                        </div>
+                                        <p className="bg-gray-100 text-black rounded-3xl px-3 py-2 break-words max-w-full text-sm">{msg.text}</p>
                                     </div>
                                 </div>
-                            );
-                        }
-                        return (
-                            <div key={uniqueKey} className="flex justify-start w-full p-2 ">
-                                <div className="flex max-w-md">
-                                    <p className="bg-blue-500 text-white rounded-3xl p-3 break-words max-w-full">{msg.text}</p>
-                                </div>
-                            </div>
-                        )
-                    })}
+                            )
+                        })}
+                    </div>
                 </div>
                 <div className="flex p-1 items-center mb-2">
                     <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
@@ -137,7 +141,7 @@ const Chat = () => {
                     </button>
                 </div>
             </div>
-        </div >
+        </div>
     );
 };
 
