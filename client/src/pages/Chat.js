@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import { SERVER_URL } from "../config/config";
 import { useAuth } from "../hooks/useAuth";
@@ -12,7 +13,8 @@ const Chat = () => {
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState([]);
     const { user, refreshTokens } = useAuth();
-
+    const { chatId } = useParams();
+    
     const messagesEndRef = useRef(null)
 
     const scrollToBottom = () => {
@@ -46,6 +48,7 @@ const Chat = () => {
             if (message.trim()) {
                 const messageData = {
                     from: user.id,
+                    to: Number(chatId),
                     text: message,
                     time: new Date().toLocaleTimeString(),
                 };
@@ -73,6 +76,7 @@ const Chat = () => {
             </div>
             <div className="rounded-lg p-3 bg-white me-4 w-1/5">
                 <h1 className="text-2xl font-bold">Chats</h1>
+                <h1>Chat list </h1>
             </div>
             <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
                 <div className="flex justify-between p-3 shadow-md">
@@ -89,7 +93,7 @@ const Chat = () => {
                         <span className="material-symbols-outlined text-blue-500">more_horiz</span>
                     </div>
                 </div>
-                <div className="flex-grow overflow-y-auto flex flex-col ">
+                <div className="flex-grow overflow-y-auto flex flex-col pb-4">
                     {messages.map((msg, index) => (
                         <div key={index} className={`flex w-full p-2 ${msg.from === user.id ? "justify-end" : "justify-start"}`}>
                             <div className="flex max-w-md">
@@ -98,7 +102,9 @@ const Chat = () => {
                                         <img className="size-8 rounded-full" src="/img/user-avatar-default.jpg" alt="" />
                                     </div>
                                 )}
-                                <p className={`rounded-3xl px-3 py-2 break-words max-w-full text-sm ${msg.from === user.id ? "bg-blue-500 text-white" : "bg-gray-100 text-black"}`}>
+                                <p className={`rounded-3xl px-3 py-2 break-words max-w-full text-sm 
+                                    ${msg.from === user.id ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white" : "bg-gray-100 text-black"}`
+                                }>
                                     {msg.text}
                                 </p>
                             </div>
