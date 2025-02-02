@@ -8,3 +8,15 @@ export const roleName = {
     User: 'user',
     Admin: 'admin',
 }
+
+export const messageType = {
+    Text: 'text',
+    Image: 'image',
+    File: 'file'
+}
+
+export const messageStatus = {
+    Sent: 'sent',
+    Delivered: 'delivered',
+    Seen: 'seen'
+}
