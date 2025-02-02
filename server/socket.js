@@ -1,5 +1,4 @@
 import { Server } from "socket.io";
-import AppError from "./utils/AppError.js";
 import { socketProtect } from "./controllers/authController.js";
 import config from "./config/config.js";
 
@@ -14,20 +13,27 @@ export const initSocket = (server) => {
 
     io.use(socketProtect);
 
-    io.on('connection', async (socket) => {
-        console.log('a user connected', socket.user.firstName + ' ' + socket.user.lastName);
-        socket.on('sendMessage', (data) => {
-            console.log('message: ' + data.text);
+    const users = new Map([]);
 
-            socket.broadcast.emit('receiveMessage', data);
+    io.on('connection', async (socket) => {
+        console.log("A user connected", socket.id);
+        users.set(socket.user.id, socket.id);
+        console.log('users', users);
+
+        socket.on('sendMessage', (data) => {
+            const user = users.get(data.to);
+            console.log('user', user);
+            
+            console.log('message: ' + data.to);
+
+            io.to(user).emit('receiveMessage', data);
         });
-    
+
         socket.on("disconnect", () => {
             console.log("A user disconnected");
+            users.delete(socket.user.id);
         });
-    });    
-
-    
+    });
 
     return io;
 }
