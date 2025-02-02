@@ -1,7 +1,8 @@
 import sequelize from '../db.js';
+import { DataTypes } from 'sequelize';
 import { messageType } from '../shareVariable.js';
 
-const message = sequelize.define('message', {
+const Message = sequelize.define('message', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -34,4 +35,18 @@ const message = sequelize.define('message', {
     }
 );
 
-export default message;
+Message.associate = (db) => {
+    Message.belongsTo(db.Converstation, {
+        foreignKey: {
+            name: 'conversationId'
+        }
+    });
+
+    Message.belongsTo(db.User, {
+        foreignKey: {
+            name: 'senderId'
+        }
+    });
+}
+
+export default Message;

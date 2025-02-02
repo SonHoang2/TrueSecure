@@ -21,12 +21,10 @@ export const initSocket = (server) => {
         console.log('users', users);
 
         socket.on('sendMessage', (data) => {
-            const user = users.get(data.to);
-            console.log('user', user);
             
             console.log('message: ' + data.to);
 
-            io.to(user).emit('receiveMessage', data);
+            // io.to(user).emit('receiveMessage', data);
         });
 
         socket.on("disconnect", () => {
