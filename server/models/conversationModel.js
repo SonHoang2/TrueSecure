@@ -1,6 +1,7 @@
 import sequelize from '../db.js';
+import { DataTypes } from 'sequelize';
 
-const conversation = sequelize.define('conversation', {
+const Conversation = sequelize.define('conversation', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -21,4 +22,18 @@ const conversation = sequelize.define('conversation', {
     }
 );
 
-export default conversation;
+Conversation.associate = (db) => {
+    Conversation.hasMany(db.Message, {
+        foreignKey: {
+            name: 'conversationId'
+        }
+    });
+
+    Conversation.hasMany(db.ConvParticipant, {
+        foreignKey: {
+            name: 'conversationId'
+        }
+    });
+}
+
+export default Conversation;

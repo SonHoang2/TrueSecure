@@ -1,7 +1,8 @@
 import sequelize from '../db.js';
+import { DataTypes } from 'sequelize';
 import { messageStatus } from '../shareVariable.js';
 
-const messageStatus = sequelize.define('messageStatus', {
+const MessageStatus = sequelize.define('messageStatus', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -26,4 +27,19 @@ const messageStatus = sequelize.define('messageStatus', {
     }
 );
 
-export default messageStatus;
+MessageStatus.associate = (models) => {
+    MessageStatus.belongsTo(models.Message, {
+        foreignKey: {
+            name: 'messageId',
+            allowNull: false
+        }
+    });
+    MessageStatus.belongsTo(models.User, {
+        foreignKey: {
+            name: 'userId',
+            allowNull: false
+        }
+    });
+}
+
+export default MessageStatus;

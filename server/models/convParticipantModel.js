@@ -1,7 +1,8 @@
 import sequelize from '../db.js';
+import { DataTypes } from 'sequelize';
 import { roleName } from '../shareVariable.js';
 
-const convParticipant = sequelize.define('convParticipant', {
+const ConvParticipant = sequelize.define('convParticipant', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -26,4 +27,18 @@ const convParticipant = sequelize.define('convParticipant', {
     }
 );
 
-export default convParticipant;
+ConvParticipant.associate = (db) => {
+    ConvParticipant.belongsTo(db.User, {
+        foreignKey: {
+            name: 'userId'
+        }
+    });
+
+    ConvParticipant.belongsTo(db.Converstation, {
+        foreignKey: {
+            name: 'conversationId'
+        }
+    });
+}
+
+export default ConvParticipant;

@@ -2,6 +2,11 @@ import { createServer } from "http";
 import { initSocket } from "./socket.js";
 import sequelize from "./db.js";
 import app from "./app.js";
+import Converstation from "./models/conversationModel.js";
+import ConvParticipant from "./models/convParticipantModel.js";
+import Message from "./models/messageModel.js";
+import User from "./models/userModel.js";
+import MessageStatus from "./models/messageStatusModel.js";
 
 const server = createServer(app);
 
@@ -11,6 +16,20 @@ try {
 } catch (error) {
     console.error('Unable to connect to the database:', error);
 }
+
+const db = {
+    User,
+    Converstation,
+    ConvParticipant,
+    Message,
+    MessageStatus
+}
+
+Object.keys(db).forEach((modelName) => {
+    if (db[modelName].associate) {
+        db[modelName].associate(db);
+    }
+});
 
 // sequelize.sync({ force: true })
 
