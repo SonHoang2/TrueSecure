@@ -10,7 +10,6 @@ const Conversation = sequelize.define('conversation', {
     },
     title: {
         type: DataTypes.STRING,
-        allowNull: false
     },
     isGroup: {
         type: DataTypes.BOOLEAN,

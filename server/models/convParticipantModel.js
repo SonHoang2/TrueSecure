@@ -23,7 +23,12 @@ const ConvParticipant = sequelize.define('convParticipant', {
     }
 },
     {
-        timestamps: false
+        timestamps: false,
+        uniqueKeys: {
+            unique_user_conversation: {
+                fields: ['userId', 'conversationId']
+            }
+        }
     }
 );
 

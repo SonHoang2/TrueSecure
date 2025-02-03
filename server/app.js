@@ -1,6 +1,7 @@
 import express from 'express'
 import userRoutes from './routes/userRoutes.js'
 import authRoutes from './routes/authRoutes.js'
+import conversationRoutes from './routes/conversationRoutes.js'
 import globalErrorHandler from './controllers/errorController.js'
 import path from 'path'
 import cors from 'cors'
@@ -36,6 +37,7 @@ app.use('/images', express.static(path.join(__dirname, '/upload/images/')));
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/conversations', conversationRoutes);
 
 app.all('*', (req, res, next) => {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
