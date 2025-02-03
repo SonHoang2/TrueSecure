@@ -6,10 +6,10 @@ const router = Router();
 
 router.use(authController.protect);
 
-router.route('/conversations')
-    .post(conversationController.createConversation);
+router.route('/private')
+    .post(conversationController.createPrivateConversation);
 
-router.route('/conversations/:id/messages')
+router.route('/:id/messages')
     .get(conversationController.getConversationMessages);
 
 export default router;
