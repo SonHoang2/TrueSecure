@@ -41,8 +41,9 @@ ConvParticipant.associate = (db) => {
 
     ConvParticipant.belongsTo(db.Converstation, {
         foreignKey: {
-            name: 'conversationId'
-        }
+            name: 'conversationId',
+        },
+        onDelete: "RESTRICT"
     });
 }
 

@@ -31,7 +31,8 @@ Conversation.associate = (db) => {
     Conversation.hasMany(db.ConvParticipant, {
         foreignKey: {
             name: 'conversationId'
-        }
+        },
+        onDelete: 'CASCADE'
     });
 }
 

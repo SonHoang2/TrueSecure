@@ -25,13 +25,11 @@ const Message = sequelize.define('message', {
         type: DataTypes.ENUM(messageType.Text, messageType.Image, messageType.File),
         defaultValue: messageType.Text
     },
-    createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false
-    },
 },
     {
-        timestamps: false
+        timestamps: true,
+        updatedAt: false,
+        createdAt: 'createdAt',
     }
 );
 
