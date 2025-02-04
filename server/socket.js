@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import { socketProtect } from "./controllers/authController.js";
 import config from "./config/config.js";
+import Message from "./models/messageModel.js";
 
 export const initSocket = (server) => {
     const io = new Server(server, {
@@ -15,14 +16,21 @@ export const initSocket = (server) => {
 
     const users = new Map([]);
 
-    io.on('connection', async (socket) => {
+    io.on('connection', (socket) => {
         console.log("A user connected", socket.id);
         users.set(socket.user.id, socket.id);
         console.log('users', users);
 
-        socket.on('sendMessage', (data) => {
+        socket.on('private message', async (data) => {
+            const message = await Message.create({
+                conversationId: data.conversationId,
+                senderId: data.from,
+                content: data.content,
+                messageType: data.messageType
+            });
+
+            console.log('message', message);
             
-            console.log('message: ' + data.to);
 
             // io.to(user).emit('receiveMessage', data);
         });
