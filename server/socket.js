@@ -22,17 +22,18 @@ export const initSocket = (server) => {
         console.log('users', users);
 
         socket.on('private message', async (data) => {
-            const message = await Message.create({
+            await Message.create({
                 conversationId: data.conversationId,
-                senderId: data.from,
+                senderId: data.senderId,
+                receiverId: data.receiverId,
                 content: data.content,
                 messageType: data.messageType
             });
 
-            console.log('message', message);
-            
+            const userId = users.get(data.receiverId);
+            console.log('userId', userId);
 
-            // io.to(user).emit('receiveMessage', data);
+            io.to(userId).emit('private message', data);
         });
 
         socket.on("disconnect", () => {
