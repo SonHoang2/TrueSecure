@@ -18,7 +18,7 @@ export const createPrivateConversation = catchAsync(async (req, res, next) => {
     if (existUsers.length !== 2) {
         return next(new AppError('Users not found', 404));
     }
-    
+
     let conversation = await ConvParticipant.findOne({
         attributes: [
             [Sequelize.col('conversationId'), 'id']
@@ -92,11 +92,17 @@ export const getConversations = catchAsync(async (req, res, next) => {
                 where: {
                     userId: { [Op.ne]: userId }
                 }
+            },
+            include: {
+                model: Message,
+                limit: 1,
+                order: [['createdAt', 'DESC']],
+                include: {
+                    model: User
+                }
             }
         }
     });
-
-    console.log("conversations", conversations);
 
     res.status(200).json({
         status: 'success',
