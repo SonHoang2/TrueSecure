@@ -18,7 +18,7 @@ const Message = sequelize.define('message', {
         allowNull: false
     },
     content: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: false
     },
     messageType: {
