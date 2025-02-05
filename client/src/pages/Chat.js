@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
-import { SERVER_URL } from "../config/config";
+import { SERVER_URL, CONVERSATIONS_URL } from "../config/config";
 import { useAuth } from "../hooks/useAuth";
+import { axiosPrivate } from "../api/axios";
 
 const socket = io(SERVER_URL, {
     withCredentials: true,
@@ -12,8 +13,9 @@ const socket = io(SERVER_URL, {
 const Chat = () => {
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState([]);
+    const [receiverId, setReceiverId] = useState(null);
     const { user, refreshTokens } = useAuth();
-    const { chatId } = useParams();
+    const { conversationId } = useParams();
     
     const messagesEndRef = useRef(null)
 
@@ -27,6 +29,8 @@ const Chat = () => {
 
 
     useEffect(() => {
+        getMessages();
+
         socket.on("connect_error", (error) => {
             console.log(error.message);
             if (error.message === "Unauthorized") {
@@ -34,7 +38,7 @@ const Chat = () => {
             }
         });
 
-        socket.on("receiveMessage", (data) => {
+        socket.on("private message", (data) => {
             setMessages((prevMessages) => [...prevMessages, data]);
         });
 
@@ -43,18 +47,33 @@ const Chat = () => {
         };
     }, []);
 
+    const getMessages = async () => {
+        try {
+            const conversation = await axiosPrivate.get(CONVERSATIONS_URL + `/${conversationId}/messages`)
+
+            for (let x of conversation.data.convParticipants) {
+                if (x.userId !== user.id) {
+                    setReceiverId(x.userId);
+                }
+            }
+            setMessages(conversation.data.messages);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
     const sendMessage = () => {
         try {
             if (message.trim()) {
                 const messageData = {
-                    from: user.id,
-                    to: Number(chatId),
-                    text: message,
-                    time: new Date().toLocaleTimeString(),
+                    senderId: user.id,
+                    conversationId: Number(conversationId),
+                    receiverId: receiverId,
+                    content: message,
                 };
                 console.log(messageData);
 
-                socket.emit("sendMessage", messageData);
+                socket.emit("private message", messageData);
                 setMessages(prevMessages => [...prevMessages, messageData]);
                 setMessage("");
             }
@@ -95,17 +114,17 @@ const Chat = () => {
                 </div>
                 <div className="flex-grow overflow-y-auto flex flex-col pb-4">
                     {messages.map((msg, index) => (
-                        <div key={index} className={`flex w-full p-2 ${msg.from === user.id ? "justify-end" : "justify-start"}`}>
+                        <div key={index} className={`flex w-full p-2 ${msg.senderId === user.id ? "justify-end" : "justify-start"}`}>
                             <div className="flex max-w-md">
-                                {msg.from !== user.id && (
+                                {msg.senderId !== user.id && (
                                     <div className="flex pe-2 items-end">
                                         <img className="size-8 rounded-full" src="/img/user-avatar-default.jpg" alt="" />
                                     </div>
                                 )}
                                 <p className={`rounded-3xl px-3 py-2 break-words max-w-full text-sm 
-                                    ${msg.from === user.id ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white" : "bg-gray-100 text-black"}`
+                                    ${msg.senderId === user.id ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white" : "bg-gray-100 text-black"}`
                                 }>
-                                    {msg.text}
+                                    {msg.content}
                                 </p>
                             </div>
                         </div>
