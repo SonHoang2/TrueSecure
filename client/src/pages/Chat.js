@@ -29,6 +29,7 @@ const Chat = () => {
 
 
     useEffect(() => {
+        getConversations();
         getMessages();
 
         socket.on("connect_error", (error) => {
@@ -49,14 +50,14 @@ const Chat = () => {
 
     const getMessages = async () => {
         try {
-            const conversation = await axiosPrivate.get(CONVERSATIONS_URL + `/${conversationId}/messages`)
-
-            for (let x of conversation.data.convParticipants) {
+            const res = await axiosPrivate.get(CONVERSATIONS_URL + `/${conversationId}/messages`)
+            
+            for (let x of res.data.data.conversation.convParticipants) {
                 if (x.userId !== user.id) {
                     setReceiverId(x.userId);
                 }
             }
-            setMessages(conversation.data.messages);
+            setMessages(res.data.data.conversation.messages);
         } catch (error) {
             console.error(error);
         }
@@ -71,8 +72,7 @@ const Chat = () => {
                     receiverId: receiverId,
                     content: message,
                 };
-                console.log(messageData);
-
+                
                 socket.emit("private message", messageData);
                 setMessages(prevMessages => [...prevMessages, messageData]);
                 setMessage("");
@@ -82,6 +82,15 @@ const Chat = () => {
 
         }
     };
+
+    const getConversations = async () => {
+        try {
+            const conversations = await axiosPrivate.get(CONVERSATIONS_URL);
+            console.log(conversations);
+        } catch (error) {
+            console.error(error);
+        }
+    }
 
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
