@@ -9,6 +9,9 @@ router.use(authController.protect);
 router.route('/private')
     .post(conversationController.createPrivateConversation);
 
+router.route('/')
+    .get(conversationController.getConversations);
+
 router.route('/:id/messages')
     .get(conversationController.getConversationMessages);
 

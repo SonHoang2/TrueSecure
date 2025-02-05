@@ -19,7 +19,6 @@ export const initSocket = (server) => {
     io.on('connection', (socket) => {
         console.log("A user connected", socket.id);
         users.set(socket.user.id, socket.id);
-        console.log('users', users);
 
         socket.on('private message', async (data) => {
             await Message.create({
@@ -31,8 +30,6 @@ export const initSocket = (server) => {
             });
 
             const userId = users.get(data.receiverId);
-            console.log('userId', userId);
-
             io.to(userId).emit('private message', data);
         });
 

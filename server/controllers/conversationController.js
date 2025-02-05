@@ -69,8 +69,39 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
         return next(new AppError('Conversation not found', 404));
     }
 
-    console.log(conversation);
+    res.status(200).json(
+        {
+            status: 'success',
+            data: {
+                conversation
+            }
+        }
+    );
+})
 
+export const getConversations = catchAsync(async (req, res, next) => {
+    const userId = req.user.id;
+    const conversations = await ConvParticipant.findAll({
+        where: {
+            userId
+        },
+        include: {
+            model: Conversation,
+            include: {
+                model: ConvParticipant,
+                where: {
+                    userId: { [Op.ne]: userId }
+                }
+            }
+        }
+    });
 
-    res.status(200).json(conversation);
+    console.log("conversations", conversations);
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            conversations
+        }
+    });
 })

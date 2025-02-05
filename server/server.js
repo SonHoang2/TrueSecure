@@ -31,7 +31,7 @@ Object.keys(db).forEach((modelName) => {
     }
 });
 
-sequelize.sync({ force: true })
+// sequelize.sync({ force: true })
 
 initSocket(server);
 
