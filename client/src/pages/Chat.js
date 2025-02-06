@@ -86,16 +86,13 @@ const Chat = () => {
     const getConversations = async () => {
         try {
             const res = await axiosPrivate.get(CONVERSATIONS_URL);
-            // console.log(res.data.data.conversations);
+            console.log(res.data.data.conversations);
 
             setConversations(res.data.data.conversations);
         } catch (error) {
             console.error(error);
         }
     }
-
-    console.log(user);
-    
 
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
@@ -110,18 +107,29 @@ const Chat = () => {
             <div className="rounded-lg p-3 bg-white me-4 w-1/5">
                 <h1 className="text-2xl font-bold">Chats</h1>
                 <div className="flex flex-col">
-                    {conversations.map((conv) => (
-                        <div key={conv.conversationId} className="p-3">
-                            123
-                        </div>
-                    ))}
+                    {conversations.map((conv) => {          
+                        const user = conv.conversation.convParticipants[0].user;
+                        const message = conv.conversation.messages[0];
+
+                        return (
+                            <div key={conv.conversationId} className="py-2 flex items-center cursor-pointer hover:bg-gray-100">
+                                <div>
+                                    <img  className="inline-block size-10 rounded-full ring-2 ring-0" src={`${IMAGES_URL}/${user.avatar}`} alt="" />
+                                </div>
+                                <div className="flex flex-col ms-2">
+                                    <span className="text-base font-bold">{user.firstName + " " + user.lastName}</span>
+                                    <span className="text-sm text-gray-500">{message ? message.content : "No message yet" }</span>
+                                </div>
+                            </div>
+                        )
+                    })}
                 </div>
             </div>
             <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
                 <div className="flex justify-between p-3 shadow-md">
                     <div className="flex">
                         <div>
-                            <img className="inline-block size-10 rounded-full ring-2 ring-white" src={`${IMAGES_URL}/${receiver?.avatar}`}  alt="" />
+                            <img className="inline-block size-10 rounded-full ring-2 ring-0" src={`${IMAGES_URL}/${receiver?.avatar}`} alt="" />
                         </div>
                         <div className="flex flex-col ms-2">
                             <span className="text-base font-bold">John Doe</span>
@@ -138,7 +146,7 @@ const Chat = () => {
                             <div className="flex max-w-md">
                                 {msg.senderId !== user.id && (
                                     <div className="flex pe-2 items-end">
-                                        <img className="size-8 rounded-full" src={`${IMAGES_URL}/${receiver?.avatar}`}  alt="" />
+                                        <img className="size-8 rounded-full" src={`${IMAGES_URL}/${receiver?.avatar}`} alt="" />
                                     </div>
                                 )}
                                 <p className={`rounded-3xl px-3 py-2 break-words max-w-full text-sm 
