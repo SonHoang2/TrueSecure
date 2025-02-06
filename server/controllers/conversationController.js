@@ -55,12 +55,13 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
         include: [
             {
                 model: ConvParticipant,
+                include: {
+                    model: User,
+                    attributes: ['id', 'avatar', 'firstName', 'lastName']
+                }
             },
             {
                 model: Message,
-                include: {
-                    model: User,
-                }
             }
         ]
     });

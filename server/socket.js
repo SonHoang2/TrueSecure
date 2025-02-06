@@ -14,11 +14,17 @@ export const initSocket = (server) => {
 
     io.use(socketProtect);
 
-    const users = new Map([]);
+    const onlineUsers = new Map([]);
+    const lastSeen = new Map(); 
 
     io.on('connection', (socket) => {
         console.log("A user connected", socket.id);
-        users.set(socket.user.id, socket.id);
+        onlineUsers.set(socket.user.id, socket.id);
+
+        io.emit('online users', {
+            onlineUsers: Array.from(onlineUsers.keys()),
+            lastSeen: Object.fromEntries(lastSeen)
+        });
 
         socket.on('private message', async (data) => {
             await Message.create({
@@ -29,13 +35,14 @@ export const initSocket = (server) => {
                 messageType: data.messageType
             });
 
-            const userId = users.get(data.receiverId);
+            const userId = onlineUsers.get(data.receiverId);
             io.to(userId).emit('private message', data);
         });
 
         socket.on("disconnect", () => {
             console.log("A user disconnected");
-            users.delete(socket.user.id);
+            onlineUsers.delete(socket.user.id);
+            lastSeen.set(socket.user.id, new Date());
         });
     });
 
