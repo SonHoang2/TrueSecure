@@ -15,6 +15,10 @@ const Chat = () => {
     const [messages, setMessages] = useState([]);
     const [receiver, setReceiver] = useState(null);
     const [conversations, setConversations] = useState([]);
+    const [userStatus, setUserStatus] = useState({
+        onlineUsers: [],
+        lastSeen: {},
+    });
     const { user, refreshTokens } = useAuth();
     const { conversationId } = useParams();
 
@@ -37,6 +41,11 @@ const Chat = () => {
             if (error.message === "Unauthorized") {
                 refreshTokens();
             }
+        });
+
+        socket.on("online users", (data) => {
+            console.log(data);
+            setUserStatus(data);
         });
 
         socket.on("private message", (data) => {
@@ -86,13 +95,26 @@ const Chat = () => {
     const getConversations = async () => {
         try {
             const res = await axiosPrivate.get(CONVERSATIONS_URL);
-            console.log(res.data.data.conversations);
-
             setConversations(res.data.data.conversations);
         } catch (error) {
             console.error(error);
         }
     }
+
+    const getLastSeenTime = (timestamp) => {
+        if (!timestamp) return "Never";
+
+        const now = new Date();
+        const lastSeen = new Date(timestamp);
+        const diffInSeconds = Math.floor((now - lastSeen) / 1000);
+
+        if (diffInSeconds < 60) return `${diffInSeconds} sec ago`;
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} min ago`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+        if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+
+        return `${Math.floor(diffInSeconds / 604800)} weeks ago`;
+    };
 
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
@@ -120,9 +142,6 @@ const Chat = () => {
                     {conversations.map((conv) => {
                         const otherUser = conv.conversation.convParticipants[0].user;
                         const message = conv.conversation.messages[0];
-
-                        console.log(message?.senderId, user.id, message?.senderId === user.id);
-
                         return (
                             <div key={conv.conversationId} className="p-2 flex items-center cursor-pointer hover:bg-gray-100 rounded-md">
                                 <div>
@@ -152,7 +171,12 @@ const Chat = () => {
                         </div>
                         <div className="flex flex-col ms-2">
                             <span className="text-base font-bold">{receiver?.firstName + " " + receiver?.lastName}</span>
-                            <span className="text-sm text-gray-500">Active now</span>
+                            <span className="text-sm text-gray-500">
+                                {userStatus.onlineUsers.includes(receiver?.id)
+                                    ? "Online"
+                                    : `Last seen ${getLastSeenTime(userStatus.lastSeen[receiver?.id])}`
+                                }
+                            </span>
                         </div>
                     </div>
                     <div className="flex items-center">
