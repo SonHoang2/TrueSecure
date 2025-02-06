@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
-import { SERVER_URL, CONVERSATIONS_URL } from "../config/config";
+import { SERVER_URL, CONVERSATIONS_URL, IMAGES_URL } from "../config/config";
 import { useAuth } from "../hooks/useAuth";
 import { axiosPrivate } from "../api/axios";
 
@@ -13,10 +13,11 @@ const socket = io(SERVER_URL, {
 const Chat = () => {
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState([]);
-    const [receiverId, setReceiverId] = useState(null);
+    const [receiver, setReceiver] = useState(null);
+    const [conversations, setConversations] = useState([]);
     const { user, refreshTokens } = useAuth();
     const { conversationId } = useParams();
-    
+
     const messagesEndRef = useRef(null)
 
     const scrollToBottom = () => {
@@ -26,7 +27,6 @@ const Chat = () => {
     useEffect(() => {
         scrollToBottom()
     }, [messages]);
-
 
     useEffect(() => {
         getConversations();
@@ -51,10 +51,10 @@ const Chat = () => {
     const getMessages = async () => {
         try {
             const res = await axiosPrivate.get(CONVERSATIONS_URL + `/${conversationId}/messages`)
-            
+
             for (let x of res.data.data.conversation.convParticipants) {
                 if (x.userId !== user.id) {
-                    setReceiverId(x.userId);
+                    setReceiver(x.user);
                 }
             }
             setMessages(res.data.data.conversation.messages);
@@ -69,10 +69,10 @@ const Chat = () => {
                 const messageData = {
                     senderId: user.id,
                     conversationId: Number(conversationId),
-                    receiverId: receiverId,
+                    receiverId: receiver.id,
                     content: message,
                 };
-                
+
                 socket.emit("private message", messageData);
                 setMessages(prevMessages => [...prevMessages, messageData]);
                 setMessage("");
@@ -85,12 +85,17 @@ const Chat = () => {
 
     const getConversations = async () => {
         try {
-            const conversations = await axiosPrivate.get(CONVERSATIONS_URL);
-            console.log(conversations);
+            const res = await axiosPrivate.get(CONVERSATIONS_URL);
+            // console.log(res.data.data.conversations);
+
+            setConversations(res.data.data.conversations);
         } catch (error) {
             console.error(error);
         }
     }
+
+    console.log(user);
+    
 
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
@@ -99,18 +104,24 @@ const Chat = () => {
                     <span className="material-symbols-outlined text-xl">chat_bubble</span>
                 </div>
                 <div className="hover:bg-gray-100 cursor-pointer" onClick={() => { alert("Clicked") }}>
-                    <img className="inline-block size-10 rounded-full " src="/img/user-avatar-default.jpg" alt="" />
+                    <img className="inline-block size-10 rounded-full " src={`${IMAGES_URL}/${user?.avatar}`} alt="" />
                 </div>
             </div>
             <div className="rounded-lg p-3 bg-white me-4 w-1/5">
                 <h1 className="text-2xl font-bold">Chats</h1>
-                <h1>Chat list </h1>
+                <div className="flex flex-col">
+                    {conversations.map((conv) => (
+                        <div key={conv.conversationId} className="p-3">
+                            123
+                        </div>
+                    ))}
+                </div>
             </div>
             <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
                 <div className="flex justify-between p-3 shadow-md">
                     <div className="flex">
                         <div>
-                            <img className="inline-block size-10 rounded-full ring-2 ring-white" src="/img/user-avatar-default.jpg" alt="" />
+                            <img className="inline-block size-10 rounded-full ring-2 ring-white" src={`${IMAGES_URL}/${receiver?.avatar}`}  alt="" />
                         </div>
                         <div className="flex flex-col ms-2">
                             <span className="text-base font-bold">John Doe</span>
@@ -127,7 +138,7 @@ const Chat = () => {
                             <div className="flex max-w-md">
                                 {msg.senderId !== user.id && (
                                     <div className="flex pe-2 items-end">
-                                        <img className="size-8 rounded-full" src="/img/user-avatar-default.jpg" alt="" />
+                                        <img className="size-8 rounded-full" src={`${IMAGES_URL}/${receiver?.avatar}`}  alt="" />
                                     </div>
                                 )}
                                 <p className={`rounded-3xl px-3 py-2 break-words max-w-full text-sm 
