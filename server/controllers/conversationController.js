@@ -82,26 +82,34 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
 export const getConversations = catchAsync(async (req, res, next) => {
     const userId = req.user.id;
     const conversations = await ConvParticipant.findAll({
+        attributes: ['conversationId', 'role', 'userId'],
         where: {
             userId
         },
-        include: {
-            model: Conversation,
-            include: {
-                model: ConvParticipant,
-                where: {
-                    userId: { [Op.ne]: userId }
-                }
-            },
-            include: {
-                model: Message,
-                limit: 1,
-                order: [['createdAt', 'DESC']],
-                include: {
-                    model: User
-                }
+        include: [
+            {
+                model: Conversation,
+                include: [
+                    {
+                        model: ConvParticipant,
+                        attributes: ['id', 'role'],
+                        where: {
+                            userId: { [Op.ne]: userId }
+                        },
+                        include: {
+                            model: User,
+                            attributes: ['id', 'avatar', 'firstName', 'lastName']
+                        }
+                    },
+                    {
+                        model: Message,
+                        attributes: ['id', 'content', 'createdAt', 'senderId', 'messageType'],
+                        limit: 1,
+                        order: [['createdAt', 'DESC']],
+                    }
+                ]
             }
-        }
+        ]
     });
 
     res.status(200).json({
