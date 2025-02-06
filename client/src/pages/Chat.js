@@ -104,21 +104,40 @@ const Chat = () => {
                     <img className="inline-block size-10 rounded-full " src={`${IMAGES_URL}/${user?.avatar}`} alt="" />
                 </div>
             </div>
-            <div className="rounded-lg p-3 bg-white me-4 w-1/5">
-                <h1 className="text-2xl font-bold">Chats</h1>
+            <div className="rounded-lg p-2 bg-white me-4 w-3/12">
+                <h1 className="text-2xl font-bold p-2">Chats</h1>
+                <div className="flex my-4 relative m-2">
+                    <input
+                        type="text"
+                        className="flex-grow bg-gray-100 ps-10 py-2 rounded-3xl focus:outline-none caret-blue-500 w-full"
+                        placeholder="Search"
+                    />
+                    <span className="material-symbols-outlined absolute text-gray-400 text-xl h-full ms-3 flex items-center">
+                        search
+                    </span>
+                </div>
                 <div className="flex flex-col">
-                    {conversations.map((conv) => {          
-                        const user = conv.conversation.convParticipants[0].user;
+                    {conversations.map((conv) => {
+                        const otherUser = conv.conversation.convParticipants[0].user;
                         const message = conv.conversation.messages[0];
 
+                        console.log(message?.senderId, user.id, message?.senderId === user.id);
+
                         return (
-                            <div key={conv.conversationId} className="py-2 flex items-center cursor-pointer hover:bg-gray-100">
+                            <div key={conv.conversationId} className="p-2 flex items-center cursor-pointer hover:bg-gray-100 rounded-md">
                                 <div>
-                                    <img  className="inline-block size-10 rounded-full ring-2 ring-0" src={`${IMAGES_URL}/${user.avatar}`} alt="" />
+                                    <img className="inline-block size-10 rounded-full ring-0" src={`${IMAGES_URL}/${otherUser.avatar}`} alt="" />
                                 </div>
                                 <div className="flex flex-col ms-2">
-                                    <span className="text-base font-bold">{user.firstName + " " + user.lastName}</span>
-                                    <span className="text-sm text-gray-500">{message ? message.content : "No message yet" }</span>
+                                    <span className="text-base font-bold">{otherUser.firstName + " " + otherUser.lastName}</span>
+                                    <span className="text-sm text-gray-500">
+                                        {message ?
+                                            message.senderId === user.id ?
+                                                "You: " + message.content :
+                                                message.content
+                                            : "No message yet"
+                                        }
+                                    </span>
                                 </div>
                             </div>
                         )
@@ -129,10 +148,10 @@ const Chat = () => {
                 <div className="flex justify-between p-3 shadow-md">
                     <div className="flex">
                         <div>
-                            <img className="inline-block size-10 rounded-full ring-2 ring-0" src={`${IMAGES_URL}/${receiver?.avatar}`} alt="" />
+                            <img className="inline-block size-10 rounded-full ring-0" src={`${IMAGES_URL}/${receiver?.avatar}`} alt="" />
                         </div>
                         <div className="flex flex-col ms-2">
-                            <span className="text-base font-bold">John Doe</span>
+                            <span className="text-base font-bold">{receiver?.firstName + " " + receiver?.lastName}</span>
                             <span className="text-sm text-gray-500">Active now</span>
                         </div>
                     </div>
