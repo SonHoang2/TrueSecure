@@ -4,11 +4,11 @@ import { io } from "socket.io-client";
 import { SERVER_URL, CONVERSATIONS_URL, IMAGES_URL } from "../config/config";
 import { useAuth } from "../hooks/useAuth";
 import { axiosPrivate } from "../api/axios";
+import { ChatLeftPanel } from "../component/ChatLeftPanel";
 
 const socket = io(SERVER_URL, {
     withCredentials: true,
 });
-
 
 const Chat = () => {
     const [chatState, setChatState] = useState({
@@ -23,44 +23,11 @@ const Chat = () => {
     });
     const { user, refreshTokens } = useAuth();
     const { conversationId } = useParams();
-
     const messagesEndRef = useRef(null)
 
     const scrollToBottom = () => {
         messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-
-    useEffect(() => {
-        scrollToBottom()
-    }, [chatState.messages]);
-
-    useEffect(() => {
-        getConversations();
-        getMessages();
-
-        socket.on("connect_error", (error) => {
-            console.log(error.message);
-            if (error.message === "Unauthorized") {
-                refreshTokens();
-            }
-        });
-
-        socket.on("online users", (data) => {
-            console.log(data);
-            setUserStatus(data);
-        });
-
-        socket.on("private message", (data) => {
-            setChatState((prevState) => ({
-                ...prevState,
-                messages: [...prevState.messages, data]
-            }));
-        });
-
-        return () => {
-            socket.off("receiveMessage");
-        };
-    }, []);
 
     const getMessages = async () => {
         try {
@@ -99,16 +66,17 @@ const Chat = () => {
             }
         } catch (error) {
             console.error(error);
-
         }
     };
 
     const getConversations = async () => {
         try {
             const res = await axiosPrivate.get(CONVERSATIONS_URL);
+            const { conversations } = res.data.data;
+
             setChatState((prevState) => ({
                 ...prevState,
-                conversations: res.data.data.conversations
+                conversations: conversations
             }));
         } catch (error) {
             console.error(error);
@@ -129,6 +97,40 @@ const Chat = () => {
         return `last seen ${Math.floor(diffInSeconds / 604800)} weeks ago`;
     };
 
+    useEffect(() => {
+        scrollToBottom()
+    }, [chatState.messages]);
+
+    useEffect(() => {
+        socket.on("connect_error", (error) => {
+            console.log(error.message);
+            if (error.message === "Unauthorized") {
+                refreshTokens();
+            }
+        });
+
+        socket.on("online users", (data) => {
+            console.log(data);
+            setUserStatus(data);
+        });
+
+        socket.on("private message", (data) => {
+            setChatState((prevState) => ({
+                ...prevState,
+                messages: [...prevState.messages, data]
+            }));
+        });
+
+        return () => {
+            socket.off("receiveMessage");
+        };
+    }, []);
+
+    useEffect(() => {
+        getConversations();
+        getMessages();
+    }, [conversationId]);
+
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
             <div className="rounded mx-4 flex flex-col justify-between">
@@ -139,43 +141,7 @@ const Chat = () => {
                     <img className="inline-block size-10 rounded-full " src={`${IMAGES_URL}/${user?.avatar}`} alt="" />
                 </div>
             </div>
-            <div className="rounded-lg p-2 bg-white me-4 w-3/12">
-                <h1 className="text-2xl font-bold p-3">Chats</h1>
-                <div className="flex my-4 relative m-3">
-                    <input
-                        type="text"
-                        className="flex-grow bg-gray-100 ps-10 py-2 rounded-3xl focus:outline-none caret-blue-500 w-full"
-                        placeholder="Search"
-                    />
-                    <span className="material-symbols-outlined absolute text-gray-400 text-xl h-full ms-3 flex items-center">
-                        search
-                    </span>
-                </div>
-                <div className="flex flex-col">
-                    {chatState.conversations.map((conv) => {
-                        const otherUser = conv.conversation.convParticipants[0].user;
-                        const message = conv.conversation.messages[0];
-                        return (
-                            <div key={conv.conversationId} className="p-3 flex items-center cursor-pointer hover:bg-gray-100 rounded-md">
-                                <div>
-                                    <img className="inline-block size-12 rounded-full ring-0" src={`${IMAGES_URL}/${otherUser.avatar}`} alt="" />
-                                </div>
-                                <div className="flex flex-col ms-2">
-                                    <span className="text-base font-bold">{otherUser.firstName + " " + otherUser.lastName}</span>
-                                    <span className="text-sm text-gray-500">
-                                        {message ?
-                                            message.senderId === user.id ?
-                                                "You: " + message.content :
-                                                message.content
-                                            : "No message yet"
-                                        }
-                                    </span>
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-            </div>
+            <ChatLeftPanel chatState={chatState} user={user} />
             <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
                 <div className="flex justify-between p-3 shadow-md">
                     <div className="flex">
