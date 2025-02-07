@@ -11,10 +11,12 @@ const socket = io(SERVER_URL, {
 
 
 const Chat = () => {
-    const [message, setMessage] = useState("");
-    const [messages, setMessages] = useState([]);
-    const [receiver, setReceiver] = useState(null);
-    const [conversations, setConversations] = useState([]);
+    const [chatState, setChatState] = useState({
+        message: "",
+        messages: [],
+        receiver: null,
+        conversations: []
+    });
     const [userStatus, setUserStatus] = useState({
         onlineUsers: [],
         lastSeen: {},
@@ -30,7 +32,7 @@ const Chat = () => {
 
     useEffect(() => {
         scrollToBottom()
-    }, [messages]);
+    }, [chatState.messages]);
 
     useEffect(() => {
         getConversations();
@@ -49,7 +51,10 @@ const Chat = () => {
         });
 
         socket.on("private message", (data) => {
-            setMessages((prevMessages) => [...prevMessages, data]);
+            setChatState((prevState) => ({
+                ...prevState,
+                messages: [...prevState.messages, data]
+            }));
         });
 
         return () => {
@@ -61,12 +66,15 @@ const Chat = () => {
         try {
             const res = await axiosPrivate.get(CONVERSATIONS_URL + `/${conversationId}/messages`)
 
-            for (let x of res.data.data.conversation.convParticipants) {
-                if (x.userId !== user.id) {
-                    setReceiver(x.user);
-                }
-            }
-            setMessages(res.data.data.conversation.messages);
+            const { convParticipants, messages } = res.data.data.conversation;
+            
+            const receiver = convParticipants.find(x => x.userId !== user.id)?.user || null;
+
+            setChatState((prevState) => ({
+                ...prevState,
+                messages: messages,
+                receiver: receiver
+            }));
         } catch (error) {
             console.error(error);
         }
@@ -74,17 +82,20 @@ const Chat = () => {
 
     const sendMessage = () => {
         try {
-            if (message.trim()) {
+            if (chatState.message.trim()) {
                 const messageData = {
                     senderId: user.id,
                     conversationId: Number(conversationId),
-                    receiverId: receiver.id,
-                    content: message,
+                    receiverId: chatState.receiver.id,
+                    content: chatState.message,
                 };
 
                 socket.emit("private message", messageData);
-                setMessages(prevMessages => [...prevMessages, messageData]);
-                setMessage("");
+                setChatState((prevState) => ({
+                    ...prevState,
+                    messages: [...prevState.messages, messageData],
+                    message: ""
+                }));
             }
         } catch (error) {
             console.error(error);
@@ -95,25 +106,30 @@ const Chat = () => {
     const getConversations = async () => {
         try {
             const res = await axiosPrivate.get(CONVERSATIONS_URL);
-            setConversations(res.data.data.conversations);
+            setChatState((prevState) => ({
+                ...prevState,
+                conversations: res.data.data.conversations
+            }));
         } catch (error) {
             console.error(error);
         }
     }
 
     const getLastSeenTime = (timestamp) => {
-        if (!timestamp) return "Never";
+        if (!timestamp) return "";
 
+        let result;
         const now = new Date();
         const lastSeen = new Date(timestamp);
         const diffInSeconds = Math.floor((now - lastSeen) / 1000);
 
-        if (diffInSeconds < 60) return `${diffInSeconds} sec ago`;
-        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} min ago`;
-        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
-        if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+        if (diffInSeconds < 60) result = `${diffInSeconds} sec ago`;
+        if (diffInSeconds < 3600) result = `${Math.floor(diffInSeconds / 60)} min ago`;
+        if (diffInSeconds < 86400) result = `${Math.floor(diffInSeconds / 3600)} hours ago`;
+        if (diffInSeconds < 604800) result = `${Math.floor(diffInSeconds / 86400)} days ago`;
+        if (diffInSeconds >= 604800) result = `${Math.floor(diffInSeconds / 604800)} weeks ago`
 
-        return `${Math.floor(diffInSeconds / 604800)} weeks ago`;
+        return "last seen " + result;
     };
 
     return (
@@ -127,8 +143,8 @@ const Chat = () => {
                 </div>
             </div>
             <div className="rounded-lg p-2 bg-white me-4 w-3/12">
-                <h1 className="text-2xl font-bold p-2">Chats</h1>
-                <div className="flex my-4 relative m-2">
+                <h1 className="text-2xl font-bold p-3">Chats</h1>
+                <div className="flex my-4 relative m-3">
                     <input
                         type="text"
                         className="flex-grow bg-gray-100 ps-10 py-2 rounded-3xl focus:outline-none caret-blue-500 w-full"
@@ -139,13 +155,13 @@ const Chat = () => {
                     </span>
                 </div>
                 <div className="flex flex-col">
-                    {conversations.map((conv) => {
+                    {chatState.conversations.map((conv) => {
                         const otherUser = conv.conversation.convParticipants[0].user;
                         const message = conv.conversation.messages[0];
                         return (
-                            <div key={conv.conversationId} className="p-2 flex items-center cursor-pointer hover:bg-gray-100 rounded-md">
+                            <div key={conv.conversationId} className="p-3 flex items-center cursor-pointer hover:bg-gray-100 rounded-md">
                                 <div>
-                                    <img className="inline-block size-10 rounded-full ring-0" src={`${IMAGES_URL}/${otherUser.avatar}`} alt="" />
+                                    <img className="inline-block size-12 rounded-full ring-0" src={`${IMAGES_URL}/${otherUser.avatar}`} alt="" />
                                 </div>
                                 <div className="flex flex-col ms-2">
                                     <span className="text-base font-bold">{otherUser.firstName + " " + otherUser.lastName}</span>
@@ -167,14 +183,14 @@ const Chat = () => {
                 <div className="flex justify-between p-3 shadow-md">
                     <div className="flex">
                         <div>
-                            <img className="inline-block size-10 rounded-full ring-0" src={`${IMAGES_URL}/${receiver?.avatar}`} alt="" />
+                            <img className="inline-block size-10 rounded-full ring-0" src={`${IMAGES_URL}/${chatState.receiver?.avatar}`} alt="" />
                         </div>
                         <div className="flex flex-col ms-2">
-                            <span className="text-base font-bold">{receiver?.firstName + " " + receiver?.lastName}</span>
+                            <span className="text-base font-bold">{chatState.receiver?.firstName + " " + chatState.receiver?.lastName}</span>
                             <span className="text-sm text-gray-500">
-                                {userStatus.onlineUsers.includes(receiver?.id)
+                                {userStatus.onlineUsers.includes(chatState.receiver?.id)
                                     ? "Online"
-                                    : `Last seen ${getLastSeenTime(userStatus.lastSeen[receiver?.id])}`
+                                    : getLastSeenTime(userStatus.lastSeen[chatState.receiver?.id])
                                 }
                             </span>
                         </div>
@@ -184,12 +200,12 @@ const Chat = () => {
                     </div>
                 </div>
                 <div className="flex-grow overflow-y-auto flex flex-col pb-4">
-                    {messages.map((msg, index) => (
+                    {chatState.messages.map((msg, index) => (
                         <div key={index} className={`flex w-full p-2 ${msg.senderId === user.id ? "justify-end" : "justify-start"}`}>
                             <div className="flex max-w-md">
                                 {msg.senderId !== user.id && (
                                     <div className="flex pe-2 items-end">
-                                        <img className="size-8 rounded-full" src={`${IMAGES_URL}/${receiver?.avatar}`} alt="" />
+                                        <img className="size-8 rounded-full" src={`${IMAGES_URL}/${chatState.receiver?.avatar}`} alt="" />
                                     </div>
                                 )}
                                 <p className={`rounded-3xl px-3 py-2 break-words max-w-full text-sm 
@@ -222,8 +238,8 @@ const Chat = () => {
                         type="text"
                         className="flex-grow ms-2 bg-gray-100 px-3 py-2 rounded-3xl focus:outline-none caret-blue-500 me-2"
                         placeholder="Aa"
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
+                        value={chatState.message}
+                        onChange={(e) => setChatState(prevState => ({ ...prevState, message: e.target.value }))}
                         onKeyDown={(e) => {
                             if (e.key === "Enter") {
                                 sendMessage();
