@@ -67,7 +67,7 @@ const Chat = () => {
             const res = await axiosPrivate.get(CONVERSATIONS_URL + `/${conversationId}/messages`)
 
             const { convParticipants, messages } = res.data.data.conversation;
-            
+
             const receiver = convParticipants.find(x => x.userId !== user.id)?.user || null;
 
             setChatState((prevState) => ({
@@ -118,18 +118,15 @@ const Chat = () => {
     const getLastSeenTime = (timestamp) => {
         if (!timestamp) return "";
 
-        let result;
         const now = new Date();
         const lastSeen = new Date(timestamp);
+
         const diffInSeconds = Math.floor((now - lastSeen) / 1000);
-
-        if (diffInSeconds < 60) result = `${diffInSeconds} sec ago`;
-        if (diffInSeconds < 3600) result = `${Math.floor(diffInSeconds / 60)} min ago`;
-        if (diffInSeconds < 86400) result = `${Math.floor(diffInSeconds / 3600)} hours ago`;
-        if (diffInSeconds < 604800) result = `${Math.floor(diffInSeconds / 86400)} days ago`;
-        if (diffInSeconds >= 604800) result = `${Math.floor(diffInSeconds / 604800)} weeks ago`
-
-        return "last seen " + result;
+        if (diffInSeconds < 60) return `last seen ${diffInSeconds} sec ago`;
+        if (diffInSeconds < 3600) return `last seen ${Math.floor(diffInSeconds / 60)} min ago`;
+        if (diffInSeconds < 86400) return `last seen ${Math.floor(diffInSeconds / 3600)} hours ago`;
+        if (diffInSeconds < 604800) return `last seen ${Math.floor(diffInSeconds / 86400)} days ago`;
+        return `last seen ${Math.floor(diffInSeconds / 604800)} weeks ago`;
     };
 
     return (
@@ -200,8 +197,8 @@ const Chat = () => {
                     </div>
                 </div>
                 <div className="flex-grow overflow-y-auto flex flex-col pb-4">
-                    {chatState.messages.map((msg, index) => (
-                        <div key={index} className={`flex w-full p-2 ${msg.senderId === user.id ? "justify-end" : "justify-start"}`}>
+                    {chatState.messages.map((msg) => (
+                        <div key={msg.id} className={`flex w-full p-2 ${msg.senderId === user.id ? "justify-end" : "justify-start"}`}>
                             <div className="flex max-w-md">
                                 {msg.senderId !== user.id && (
                                     <div className="flex pe-2 items-end">
