@@ -4,6 +4,7 @@ import { AuthProvider } from './hooks/useAuth';
 import { ProtectedRoute } from './component/ProtectedRoute';
 import { Routes, Route } from 'react-router-dom';
 import Login from "./pages/Login";
+import ChatRouter from "./pages/ChatRouter";
 
 const App = () => {
     return (
@@ -13,6 +14,8 @@ const App = () => {
                     path="/"
                     element={<ProtectedRoute />}
                 >
+                    <Route path="" element={<ChatRouter />} />
+                    <Route path="chat" element={<ChatRouter />} />
                     <Route path="chat/:conversationId" element={<Chat />} />
                 </Route>
                 <Route
