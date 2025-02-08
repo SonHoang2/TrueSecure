@@ -185,13 +185,84 @@ export const login = catchAsync(
     }
 )
 
-export const logout = (req, res) => {
-    res.cookie('access_token', '', {
-        expires: new Date(Date.now() + 10 * 1000),
-        httpOnly: true
-    });
+export const logout = catchAsync(
+    async (req, res) => {
+        const { refresh_token: refreshToken } = req.cookies;
 
-    res.status(200).json(
-        { status: 'success' }
-    );
-}
+        const user = await client.get(refreshToken);
+        if (user) {
+            await client.del(refreshToken);
+        }
+
+        const ATOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production' ? true : false
+        };
+
+        const RTOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production' ? true : false,
+            path: '/api/v1/auth/'
+        };
+
+        res.clearCookie('access_token', ATOptions);
+        res.clearCookie('refresh_token', RTOptions);
+
+        res.status(200).json(
+            { status: 'success' }
+        );
+    }
+)
+
+export const refreshToken = catchAsync(
+    async (req, res, next) => {
+        const { refresh_token: refreshToken } = req.cookies;
+
+        if (!refreshToken) {
+            return next(new AppError('You are not logged in! Please log in to get access', 401));
+        }
+
+        const user = await client.get(refreshToken);
+        if (!user) {
+            jwt.verify(refreshToken, config.jwt.secret, async (err, decoded) => {
+                if (err) {
+                    return next(new AppError('Invalid token', 403));
+                }
+                // Detected refresh token reuse!
+                console.log('attempted refresh token reuse! User: ', decoded.id);
+                return next(new AppError('Invalid token', 403));
+            });
+        }
+
+        await client.del(refreshToken);
+
+        const accessToken = signToken(user, config.jwt.ATExpiresIn);
+        const newRefreshToken = signToken(user, config.jwt.RTExpiresIn);
+
+        await client.set(newRefreshToken, user, 'EX', 7 * 24 * 60 * 60); // auto delete after 7 day
+
+        const ATOptions = {
+            expires: new Date(
+                Date.now() + config.jwt.ATCookieExpiresIn * 60 * 60 * 1000
+            ),
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production' ? true : false
+        };
+
+        const RTOptions = {
+            expires: new Date(
+                Date.now() + config.jwt.RTCookieExpiresIn * 24 * 60 * 60 * 1000
+            ),
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production' ? true : false,
+            path: '/api/v1/auth/'
+        };
+
+        res.cookie('access_token', accessToken, ATOptions);
+        res.cookie('refresh_token', newRefreshToken, RTOptions);
+
+        res.json({
+            status: 'success'
+        })
+    }
+)
