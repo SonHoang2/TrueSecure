@@ -7,17 +7,19 @@ import config from "../config/config.js";
 // import { client } from "../redisClient.js";
 
 export const protect = catchAsync(async (req, res, next) => {
-    let token;
-    if (req.headers.cookie) {
-        token = req.headers.cookie.replace("access_token=", "");
+    const { access_token: accessToken, refresh_token : refreshToken } = req.cookies;
+
+    if (refreshToken) {
+        return next()
     }
-    if (!token) {
+
+    if (!accessToken) {
         return next(
             new AppError('You are not logged in! Please log in to get access', 401)
         );
     }
     // verification token
-    const decoded = jwt.verify(token, config.jwt.secret);
+    const decoded = jwt.verify(accessToken, config.jwt.secret);
     // check if user still exists
     const currentUser = await User.findOne(
         {
@@ -74,7 +76,7 @@ export const socketProtect = async (socket, next) => {
     }
 
     socket.user = currentUser;
-    
+
     next();
 }
 
@@ -90,25 +92,39 @@ export const restrictTo = (...roles) => {
     }
 }
 
-const signToken = id => {
+const signToken = (id, time) => {
     return jwt.sign({ id }, config.jwt.secret, {
-        expiresIn: config.jwt.expiresIn
-    })
-}
+        expiresIn: time
+    });
+};
 
-const createSendToken = (user, statusCode, res) => {
-    const token = signToken(user.id);
+const createSendToken = async (user, statusCode, res) => {
+    const accessToken = signToken(user.id, config.jwt.ATExpiresIn);
+    const refreshToken = signToken(user.id, config.jwt.RTExpiresIn);
 
-    const cookieOptions = {
+    const ATOptions = {
         expires: new Date(
-            Date.now() + config.jwt.cookieExpiresIn * 60 * 60 * 1000
+            Date.now() + config.jwt.ATCookieExpiresIn * 60 * 60 * 1000
         ),
-        httpOnly: true
+        httpOnly: true,
+        secure: config.env === 'production' ? true : false
     };
-    // cookie only send on secure connection (https)
-    if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
 
-    res.cookie('access_token', token, cookieOptions);
+    const RTOptions = {
+        expires: new Date(
+            Date.now() + config.jwt.RTCookieExpiresIn * 24 * 60 * 60 * 1000
+        ),
+        httpOnly: true,
+        secure: config.env === 'production' ? true : false,
+        path: '/api/v1/auth/'
+    };
+
+    res.cookie('access_token', accessToken, ATOptions);
+    res.cookie('refresh_token', refreshToken, RTOptions);
+
+    const value = String(user.id);
+
+    await client.set(refreshToken, value, 'EX', 7 * 24 * 60 * 60); // auto delete after 7 days
 
     // remove password from output
     user.password = undefined;
@@ -118,8 +134,9 @@ const createSendToken = (user, statusCode, res) => {
         data: {
             user
         }
-    })
-}
+    });
+};
+
 
 export const signup = catchAsync(
     async (req, res, next) => {
@@ -154,8 +171,8 @@ export const login = catchAsync(
             next(new AppError('Please provide email and password!', 400));
         }
 
-        const user = await User.scope('withPassword').findOne({ where: { email: email} });
-        
+        const user = await User.scope('withPassword').findOne({ where: { email: email } });
+
         if (!user || !user.validPassword(password)) {
             next(new AppError('Incorrect email or password', 401));
         }
@@ -178,71 +195,3 @@ export const logout = (req, res) => {
         { status: 'success' }
     );
 }
-
-// export const forgotPassword = catchAsync(
-//     async (req, res, next) => {
-//         const { email } = req.body;
-//         const user = await User.findOne({ where: { email: email } });
-
-//         if (!user) {
-//             return next(new AppError('There is no user with email address.', 404));
-//         }
-
-//         const resetToken = user.createPasswordResetToken();
-
-//         await client.set(resetToken, email, 'EX', 10 * 60);
-
-//         await sendEmail({
-//             email: user.email,
-//             subject: 'Your password reset token (valid for 10 min)',
-//             html: `
-//             <div>
-//                 <p>Your token is: ${resetToken}</p>
-//                 <p>If you didn't forget your password, please ignore this email!</p>
-//             </div>
-//         `,
-//         });
-
-//         res.status(200).json({
-//             status: 'success',
-//             message: 'Token sent to email!'
-//         })
-//     }
-// )
-
-// export const resetPassword = catchAsync(
-//     async (req, res, next) => {
-//         const { resetToken } = req.params;
-//         const { password, passwordConfirm } = req.body;
-
-//         const email = await client.get(resetToken);
-
-//         console.log(email);
-
-//         if (!email) {
-//             return next(new AppError('Token is invalid or has expired', 400));
-//         }
-
-//         if (!password || !passwordConfirm) {
-//             return next(new AppError('Please provide password and passwordConfirm', 400));
-//         }
-
-//         if (password !== passwordConfirm) {
-//             return next(new AppError('Passwords do not match', 400));
-//         }
-
-//         const user = await User.scope('withPassword').findOne({ where: { email: email } });
-
-//         await user.update({
-//             password: password,
-//             passwordChangedAt: Date.now() - 1000
-//         });
-
-//         await client.del(resetToken);
-
-//         res.status(200).json({
-//             status: 'success',
-//             message: 'Password reset successfully!'
-//         })
-//     }
-// )

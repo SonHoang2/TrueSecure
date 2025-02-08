@@ -51,6 +51,7 @@ export const createPrivateConversation = catchAsync(async (req, res, next) => {
 
 export const getConversationMessages = catchAsync(async (req, res, next) => {
     const conversationId = req.params.id;
+
     const conversation = await Conversation.findByPk(conversationId, {
         include: [
             {
@@ -68,6 +69,12 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
 
     if (!conversation) {
         return next(new AppError('Conversation not found', 404));
+    }
+
+    const user = conversation.convParticipants.find(participant => participant.userId === req.user.id);
+
+    if (!user) {
+        return next(new AppError('You are not a participant of this conversation', 403));
     }
 
     res.status(200).json(

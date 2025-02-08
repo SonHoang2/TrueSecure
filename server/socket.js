@@ -27,6 +27,9 @@ export const initSocket = (server) => {
         });
 
         socket.on('private message', async (data) => {
+            const userId = onlineUsers.get(data.receiverId);
+            io.to(userId).emit('private message', data);
+            
             await Message.create({
                 conversationId: data.conversationId,
                 senderId: data.senderId,
@@ -34,9 +37,6 @@ export const initSocket = (server) => {
                 content: data.content,
                 messageType: data.messageType
             });
-
-            const userId = onlineUsers.get(data.receiverId);
-            io.to(userId).emit('private message', data);
         });
 
         socket.on("disconnect", () => {
