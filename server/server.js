@@ -7,6 +7,7 @@ import ConvParticipant from "./models/convParticipantModel.js";
 import Message from "./models/messageModel.js";
 import User from "./models/userModel.js";
 import MessageStatus from "./models/messageStatusModel.js";
+import { connectRedis } from "./redisClient.js";
 
 const server = createServer(app);
 
@@ -30,6 +31,8 @@ Object.keys(db).forEach((modelName) => {
         db[modelName].associate(db);
     }
 });
+
+await connectRedis();
 
 // sequelize.sync({ force: true })
 

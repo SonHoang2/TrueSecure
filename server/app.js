@@ -10,6 +10,7 @@ import { rateLimit } from 'express-rate-limit'
 import morgan from 'morgan'
 import AppError from './utils/AppError.js'
 import config from './config/config.js'
+import cookieParser from 'cookie-parser'
 const app = express()
 
 app.use(cors(
@@ -29,6 +30,8 @@ const limiter = rateLimit({
 if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'));
 }
+
+app.use(cookieParser())
 
 // Body parser, reading data from body into req.body
 app.use(express.json());
