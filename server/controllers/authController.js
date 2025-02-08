@@ -3,8 +3,7 @@ import User from "../models/userModel.js";
 import AppError from "../utils/AppError.js";
 import jwt from 'jsonwebtoken';
 import config from "../config/config.js";
-// import { sendEmail } from "../utils/email.js";
-// import { client } from "../redisClient.js";
+import { client } from "../redisClient.js";
 
 export const protect = catchAsync(async (req, res, next) => {
     const { access_token: accessToken, refresh_token : refreshToken } = req.cookies;
