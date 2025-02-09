@@ -3,11 +3,15 @@ import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import { SERVER_URL, CONVERSATIONS_URL, IMAGES_URL } from "../config/config";
 import { useAuth } from "../hooks/useAuth";
-import { axiosPrivate } from "../api/axios";
-import { ChatLeftPanel } from "../component/ChatLeftPanel";
+import ChatLeftPanel from "../component/ChatLeftPanel";
+import useAxiosPrivate from "../hooks/useAxiosPrivate";
 
 const socket = io(SERVER_URL, {
     withCredentials: true,
+});
+
+const peer = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
 });
 
 const Chat = () => {
@@ -21,9 +25,15 @@ const Chat = () => {
         onlineUsers: [],
         lastSeen: {},
     });
+    const [isCalling, setIsCalling] = useState(false);
     const { user, refreshTokens } = useAuth();
     const { conversationId } = useParams();
     const messagesEndRef = useRef(null)
+    const localAudio = useRef(null);
+    const remoteAudio = useRef(null);
+
+
+    const axiosPrivate = useAxiosPrivate();
 
     const scrollToBottom = () => {
         messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -97,6 +107,15 @@ const Chat = () => {
         return `last seen ${Math.floor(diffInSeconds / 604800)} weeks ago`;
     };
 
+    const startCall = async () => {
+        const offer = await peer.createOffer();
+        await peer.setLocalDescription(offer);
+        console.log("start:", offer);
+        console.log({ offer, receiverId: chatState.receiver.id });
+        socket.emit("offer", { offer, receiverId: chatState.receiver.id });
+        setIsCalling(true);
+    };
+
     useEffect(() => {
         scrollToBottom()
     }, [chatState.messages]);
@@ -110,21 +129,75 @@ const Chat = () => {
         });
 
         socket.on("online users", (data) => {
-            console.log(data);
             setUserStatus(data);
         });
 
         socket.on("private message", (data) => {
             setChatState((prevState) => ({
                 ...prevState,
-                messages: [...prevState.messages, data]
+                messages: [...prevState.messages, data],
             }));
         });
 
+
         return () => {
-            socket.off("receiveMessage");
+            // Cleanup event listeners
+            socket.off("connect_error");
+            socket.off("online users");
+            socket.off("private message");
         };
     }, []);
+
+    useEffect(() => {
+        if (chatState.receiver) {
+            navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+                if (localAudio.current) {
+                    localAudio.current.srcObject = stream;
+                }
+                stream.getTracks().forEach((track) => peer.addTrack(track, stream));
+            });
+
+            // Handle incoming audio stream
+            peer.ontrack = (event) => {
+                remoteAudio.current.srcObject = event.streams[0];
+            };
+
+            // Send ICE candidates to the peer
+            peer.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit("ice-candidate", { candidate: event.candidate, receiverId: chatState.receiver.id });
+                }
+            };
+
+            // Receive WebRTC Offer
+            socket.on("offer", async ({ offer, senderId }) => {
+                console.log("Offer received:", offer);
+
+                await peer.setRemoteDescription(new RTCSessionDescription(offer));
+                const answer = await peer.createAnswer();
+                await peer.setLocalDescription(answer);
+                socket.emit("answer", { answer, receiverId: senderId });
+            });
+
+            // Receive WebRTC Answer
+            socket.on("answer", async ({ answer }) => {
+                console.log("Answer:", answer);
+                await peer.setRemoteDescription(new RTCSessionDescription(answer));
+            });
+
+            // Receive ICE Candidates
+            socket.on("ice-candidate", async ({ candidate }) => {
+                console.log("ICE Candidate:", candidate);
+                await peer.addIceCandidate(new RTCIceCandidate(candidate));
+            });
+
+            return () => {
+                socket.off("offer");
+                socket.off("answer");
+                socket.off("ice-candidate");
+            }
+        }
+    }, [chatState.receiver]);
 
     useEffect(() => {
         getConversations();
@@ -142,6 +215,14 @@ const Chat = () => {
                 </div>
             </div>
             <ChatLeftPanel chatState={chatState} user={user} />
+            {
+                isCalling &&
+                <div className="absolute top-0 left-0 right-0 bottom-0 flex flex-col items-center justify-center">
+                    <audio ref={localAudio} autoPlay className="bg-black p-5"/>
+                    <audio ref={remoteAudio} autoPlay className="bg-black p-5" />
+                    <h1>Calling ...</h1>
+                </div>
+            }
             <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
                 <div className="flex justify-between p-3 shadow-md">
                     <div className="flex">
@@ -159,7 +240,24 @@ const Chat = () => {
                         </div>
                     </div>
                     <div className="flex items-center">
-                        <span className="material-symbols-outlined text-blue-500">more_horiz</span>
+                        <button
+                            className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
+                            onClick={startCall}
+                        >
+                            <span className="material-symbols-outlined text-blue-500 text-2xl">
+                                call
+                            </span>
+                        </button>
+                        <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
+                            <span className="material-symbols-outlined text-blue-500 text-2xl">
+                                videocam
+                            </span>
+                        </button>
+                        <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
+                            <span className="material-symbols-outlined text-blue-500 text-2xl">
+                                more_horiz
+                            </span>
+                        </button>
                     </div>
                 </div>
                 <div className="flex-grow overflow-y-auto flex flex-col pb-4">
