@@ -25,7 +25,12 @@ const Chat = () => {
         onlineUsers: [],
         lastSeen: {},
     });
-    const [isCalling, setIsCalling] = useState(false);
+    const [callState, setCallState] = useState({
+        isCalling: false, // Outgoing call
+        isRinging: false, // Incoming call
+        senderId: null,
+        offer: null,
+    });
     const { user, refreshTokens } = useAuth();
     const { conversationId } = useParams();
     const messagesEndRef = useRef(null)
@@ -111,10 +116,36 @@ const Chat = () => {
         const offer = await peer.createOffer();
         await peer.setLocalDescription(offer);
         console.log("start:", offer);
-        console.log({ offer, receiverId: chatState.receiver.id });
-        socket.emit("offer", { offer, receiverId: chatState.receiver.id });
-        setIsCalling(true);
+        socket.emit("offer", { offer, receiverId: chatState.receiver.id, senderId: user.id });
+        setCallState(prev => ({ ...prev, isCalling: true }));
     };
+
+    const acceptCall = async () => {
+        if (!callState.offer) return;
+
+        await peer.setRemoteDescription(new RTCSessionDescription(callState.offer));
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log("Stream:", stream);
+        
+        localAudio.current.srcObject = stream;
+        stream.getTracks().forEach((track) => peer.addTrack(track, stream));
+
+        const answer = await peer.createAnswer();
+        await peer.setLocalDescription(answer);
+        socket.emit("answer", { answer, receiverId: callState.senderId });
+
+        // Reset incoming call and mark as in a call
+        setCallState({ isCalling: true ,isRinging: false, senderId: null, offer: null });
+    };
+
+
+    const rejectCall = () => {
+        socket.emit("call-rejected", { receiverId: callState.senderId });
+
+        setCallState({ isRinging: false, senderId: null, offer: null });
+    };
+
 
     useEffect(() => {
         scrollToBottom()
@@ -150,33 +181,22 @@ const Chat = () => {
 
     useEffect(() => {
         if (chatState.receiver) {
-            navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-                if (localAudio.current) {
-                    localAudio.current.srcObject = stream;
-                }
-                stream.getTracks().forEach((track) => peer.addTrack(track, stream));
-            });
 
             // Handle incoming audio stream
             peer.ontrack = (event) => {
                 remoteAudio.current.srcObject = event.streams[0];
             };
 
-            // Send ICE candidates to the peer
-            peer.onicecandidate = (event) => {
-                if (event.candidate) {
-                    socket.emit("ice-candidate", { candidate: event.candidate, receiverId: chatState.receiver.id });
-                }
-            };
-
             // Receive WebRTC Offer
             socket.on("offer", async ({ offer, senderId }) => {
                 console.log("Offer received:", offer);
-
-                await peer.setRemoteDescription(new RTCSessionDescription(offer));
-                const answer = await peer.createAnswer();
-                await peer.setLocalDescription(answer);
-                socket.emit("answer", { answer, receiverId: senderId });
+                
+                setCallState((prevState) => ({
+                    ...prevState,
+                    isRinging: true,
+                    senderId: senderId,
+                    offer: offer,
+                }));
             });
 
             // Receive WebRTC Answer
@@ -185,10 +205,22 @@ const Chat = () => {
                 await peer.setRemoteDescription(new RTCSessionDescription(answer));
             });
 
+            // Send ICE candidates to the peer
+            peer.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit("ice-candidate", { candidate: event.candidate, receiverId: chatState.receiver.id });
+                }
+            };
+
             // Receive ICE Candidates
             socket.on("ice-candidate", async ({ candidate }) => {
                 console.log("ICE Candidate:", candidate);
                 await peer.addIceCandidate(new RTCIceCandidate(candidate));
+            });
+
+            socket.on("call-rejected", () => {
+                console.log("Call was rejected");
+                setCallState({ isRinging: false, senderId: null, offer: null });
             });
 
             return () => {
@@ -215,14 +247,6 @@ const Chat = () => {
                 </div>
             </div>
             <ChatLeftPanel chatState={chatState} user={user} />
-            {
-                isCalling &&
-                <div className="absolute top-0 left-0 right-0 bottom-0 flex flex-col items-center justify-center">
-                    <audio ref={localAudio} autoPlay className="bg-black p-5"/>
-                    <audio ref={remoteAudio} autoPlay className="bg-black p-5" />
-                    <h1>Calling ...</h1>
-                </div>
-            }
             <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
                 <div className="flex justify-between p-3 shadow-md">
                     <div className="flex">
@@ -316,6 +340,22 @@ const Chat = () => {
                     </button>
                 </div>
             </div>
+            <audio ref={localAudio} autoPlay />
+            <audio ref={remoteAudio} autoPlay />
+            {callState.isRinging && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 p-5">
+                    <h2 className="text-white text-lg">Incoming Call...</h2>
+                    <div className="mt-4 flex gap-4">
+                        <button onClick={acceptCall} className="bg-green-500 px-4 py-2 rounded text-white">Accept</button>
+                        <button onClick={rejectCall} className="bg-red-500 px-4 py-2 rounded text-white">Reject</button>
+                    </div>
+                </div>
+            )}
+            {callState.isCalling && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 p-5">
+                    <h2 className="text-white text-lg">Calling...</h2>
+                </div>
+            )}
         </div>
     );
 };
