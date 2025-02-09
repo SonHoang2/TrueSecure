@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { SERVER_URL, CONVERSATIONS_URL, IMAGES_URL } from "../config/config";
+import { CONVERSATIONS_URL, IMAGES_URL } from "../config/config";
 import { useAuth } from "../hooks/useAuth";
-import { axiosPrivate } from "../api/axios";
 import { ChatLeftPanel } from "../component/ChatLeftPanel";
+import useAxiosPrivate from "../hooks/useAxiosPrivate";
 
 const ChatRouter = () => {
     const [chatState, setChatState] = useState({
@@ -19,31 +19,14 @@ const ChatRouter = () => {
     const { user } = useAuth();
     const { conversationId } = useParams();
 
-    const getMessages = async () => {
-        try {
-            const res = await axiosPrivate.get(CONVERSATIONS_URL + `/${conversationId}/messages`)
-
-            const { convParticipants, messages } = res.data.data.conversation;
-
-            console.log(convParticipants, messages);
-
-
-            const receiver = convParticipants.find(x => x.userId !== user.id)?.user || null;
-
-            setChatState((prevState) => ({
-                ...prevState,
-                messages: messages,
-                receiver: receiver
-            }));
-        } catch (error) {
-            console.error(error);
-        }
-    };
+    const axiosPrivate = useAxiosPrivate();
 
     const getConversations = async () => {
         try {
             const res = await axiosPrivate.get(CONVERSATIONS_URL);
             const { conversations } = res.data.data;
+            console.log(conversations);
+            
 
             setChatState((prevState) => ({
                 ...prevState,
@@ -56,7 +39,6 @@ const ChatRouter = () => {
 
     useEffect(() => {
         getConversations();
-        getMessages();
     }, []);
 
     return (

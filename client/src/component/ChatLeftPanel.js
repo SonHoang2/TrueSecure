@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 export const ChatLeftPanel = ({ chatState, user }) => {
     const navigate = useNavigate();
-    
+
     const getLastSeenTime = (timestamp) => {
         if (!timestamp) return "";
 
@@ -20,11 +20,16 @@ export const ChatLeftPanel = ({ chatState, user }) => {
 
     return (
         <div className="rounded-lg p-2 bg-white me-4 w-3/12">
-            <h1 className="text-2xl font-bold p-3">Chats</h1>
+            <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold p-3">Chats</h1>
+                <span className="material-symbols-outlined text-stone-800 bg-gray-100 nofill p-2 rounded-full cursor-pointer text-md">
+                    edit_square
+                </span>
+            </div>
             <div className="flex my-4 relative m-3">
                 <input
                     type="text"
-                    className="flex-grow bg-gray-100 ps-10 py-2 rounded-3xl focus:outline-none caret-blue-500 w-full"
+                    className="flex-grow bg-neutral-100 ps-10 py-2 rounded-3xl focus:outline-none caret-blue-500 w-full"
                     placeholder="Search"
                 />
                 <span className="material-symbols-outlined absolute text-gray-400 text-xl h-full ms-3 flex items-center">
@@ -61,3 +66,5 @@ export const ChatLeftPanel = ({ chatState, user }) => {
         </div>
     )
 }
+
+export default ChatLeftPanel;
