@@ -15,10 +15,9 @@ export const initSocket = (server) => {
     io.use(socketProtect);
 
     const onlineUsers = new Map([]);
-    const lastSeen = new Map(); 
+    const lastSeen = new Map();
 
     io.on('connection', (socket) => {
-        console.log("A user connected", socket.id);
         onlineUsers.set(socket.user.id, socket.id);
 
         io.emit('online users', {
@@ -26,10 +25,46 @@ export const initSocket = (server) => {
             lastSeen: Object.fromEntries(lastSeen)
         });
 
+        console.log(onlineUsers);
+        
+
+        // Handle offer
+        socket.on("offer", (data) => {
+            console.log("Offer received", data);
+            const receiverSocketId = onlineUsers.get(data.receiverId);
+            if (receiverSocketId) {
+                io.to(receiverSocketId).emit("offer", { offer: data.offer, senderId: socket.id });
+            } else {
+                console.log("Receiver not found");
+            }
+        });
+
+        // Handle answer
+        socket.on("answer", (data) => {
+            console.log("Answer received", data);
+            const receiverSocketId = onlineUsers.get(data.receiverId);
+            if (receiverSocketId) {
+                io.to(receiverSocketId).emit("answer", { answer: data.answer });
+            } else {
+                console.log("Receiver not found");
+            }
+        });
+
+        // Handle ICE candidate
+        socket.on("ice-candidate", (data) => {
+            console.log("ICE candidate received", data);
+            const receiverSocketId = onlineUsers.get(data.receiverId);
+            if (receiverSocketId) {
+                io.to(receiverSocketId).emit("ice-candidate", { candidate: data.candidate });
+            } else {
+                console.log("Receiver not found");
+            }
+        });
+
         socket.on('private message', async (data) => {
-            const userId = onlineUsers.get(data.receiverId);
-            io.to(userId).emit('private message', data);
-            
+            const receiverSocketId = onlineUsers.get(data.receiverId);
+            io.to(receiverSocketId).emit('private message', data);
+
             await Message.create({
                 conversationId: data.conversationId,
                 senderId: data.senderId,
