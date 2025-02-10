@@ -113,11 +113,33 @@ const Chat = () => {
     };
 
     const startCall = async () => {
-        const offer = await peer.createOffer();
-        await peer.setLocalDescription(offer);
-        console.log("start:", offer);
-        socket.emit("offer", { offer, receiverId: chatState.receiver.id, senderId: user.id });
-        setCallState(prev => ({ ...prev, isCalling: true }));
+        try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                console.error("getUserMedia is not supported in this browser.");
+                return;
+            }
+
+            // Get audio stream before creating offer
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            console.log("Caller microphone stream:", stream);
+
+            localAudio.current.srcObject = stream; // Play local audio
+
+            // Add tracks to peer connection
+            stream.getTracks().forEach((track) => peer.addTrack(track, stream));
+
+            // Create and send WebRTC offer
+            const offer = await peer.createOffer();
+            await peer.setLocalDescription(offer);
+            console.log("Start call, sending offer:", offer);
+
+            socket.emit("offer", { offer, receiverId: chatState.receiver.id, senderId: user.id });
+
+            // Update call state
+            setCallState(prev => ({ ...prev, isCalling: true }));
+        } catch (error) {
+            console.error("Error starting call:", error);
+        }
     };
 
     const acceptCall = async () => {
@@ -127,7 +149,7 @@ const Chat = () => {
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         console.log("Stream:", stream);
-        
+
         localAudio.current.srcObject = stream;
         stream.getTracks().forEach((track) => peer.addTrack(track, stream));
 
@@ -136,7 +158,7 @@ const Chat = () => {
         socket.emit("answer", { answer, receiverId: callState.senderId });
 
         // Reset incoming call and mark as in a call
-        setCallState({ isCalling: true ,isRinging: false, senderId: null, offer: null });
+        setCallState({ isCalling: true, isRinging: false, senderId: null, offer: null });
     };
 
 
@@ -181,7 +203,6 @@ const Chat = () => {
 
     useEffect(() => {
         if (chatState.receiver) {
-
             // Handle incoming audio stream
             peer.ontrack = (event) => {
                 remoteAudio.current.srcObject = event.streams[0];
@@ -190,7 +211,7 @@ const Chat = () => {
             // Receive WebRTC Offer
             socket.on("offer", async ({ offer, senderId }) => {
                 console.log("Offer received:", offer);
-                
+
                 setCallState((prevState) => ({
                     ...prevState,
                     isRinging: true,
@@ -214,8 +235,16 @@ const Chat = () => {
 
             // Receive ICE Candidates
             socket.on("ice-candidate", async ({ candidate }) => {
-                console.log("ICE Candidate:", candidate);
-                await peer.addIceCandidate(new RTCIceCandidate(candidate));
+                if (peer.remoteDescription && peer.remoteDescription.type) {
+                    try {
+                        await peer.addIceCandidate(new RTCIceCandidate(candidate));
+                        console.log("Added ICE candidate.");
+                    } catch (err) {
+                        console.error("Error adding ICE candidate:", err);
+                    }
+                } else {
+                    console.warn("Remote description not set yet, candidate not added:", candidate);
+                }
             });
 
             socket.on("call-rejected", () => {
@@ -227,9 +256,10 @@ const Chat = () => {
                 socket.off("offer");
                 socket.off("answer");
                 socket.off("ice-candidate");
+                socket.off("call-rejected");
             }
         }
-    }, [chatState.receiver]);
+    }, [chatState.receiver, callState.isCalling]);
 
     useEffect(() => {
         getConversations();
@@ -340,7 +370,7 @@ const Chat = () => {
                     </button>
                 </div>
             </div>
-            <audio ref={localAudio} autoPlay />
+            <audio ref={localAudio} autoPlay muted />
             <audio ref={remoteAudio} autoPlay />
             {callState.isRinging && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 p-5">
