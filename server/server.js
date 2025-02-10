@@ -1,4 +1,5 @@
-import { createServer } from "http";
+import https from "https";
+import { readFileSync } from "fs";
 import { initSocket } from "./socket.js";
 import sequelize from "./db.js";
 import app from "./app.js";
@@ -8,8 +9,17 @@ import Message from "./models/messageModel.js";
 import User from "./models/userModel.js";
 import MessageStatus from "./models/messageStatusModel.js";
 import { connectRedis } from "./redisClient.js";
+import config from "./config/config.js";
 
-const server = createServer(app);
+console.log(config.sslKey, config.sslCert);
+
+
+const sslOptions = {
+    key: readFileSync(config.sslKey), 
+    cert: readFileSync(config.sslCert)
+};
+
+const server = https.createServer(sslOptions, app);
 
 try {
     await sequelize.authenticate();
