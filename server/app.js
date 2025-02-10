@@ -13,11 +13,6 @@ import config from './config/config.js'
 import cookieParser from 'cookie-parser'
 const app = express()
 
-app.options('*', cors({
-    origin: config.client,
-    credentials: true
-}));
-
 app.use(cors(
     {
         origin: config.client,

@@ -11,9 +11,6 @@ import MessageStatus from "./models/messageStatusModel.js";
 import { connectRedis } from "./redisClient.js";
 import config from "./config/config.js";
 
-console.log(config.sslKey, config.sslCert);
-
-
 const sslOptions = {
     key: readFileSync(config.sslKey), 
     cert: readFileSync(config.sslCert)
