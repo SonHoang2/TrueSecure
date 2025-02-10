@@ -14,6 +14,8 @@ const peer = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
 });
 
+let candidateQueue = [];
+
 const Chat = () => {
     const [chatState, setChatState] = useState({
         message: "",
@@ -146,9 +148,9 @@ const Chat = () => {
         if (!callState.offer) return;
 
         await peer.setRemoteDescription(new RTCSessionDescription(callState.offer));
+        await flushCandidateQueue();  // Flush queued ICE candidates
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        console.log("Stream:", stream);
 
         localAudio.current.srcObject = stream;
         stream.getTracks().forEach((track) => peer.addTrack(track, stream));
@@ -166,6 +168,19 @@ const Chat = () => {
         socket.emit("call-rejected", { receiverId: callState.senderId });
 
         setCallState({ isRinging: false, senderId: null, offer: null });
+    };
+
+    const flushCandidateQueue = async () => {
+        for (const candidate of candidateQueue) {
+            try {
+                await peer.addIceCandidate(new RTCIceCandidate(candidate));
+                console.log("Flushed ICE candidate:", candidate);
+            } catch (err) {
+                console.error("Error adding flushed ICE candidate:", err);
+            }
+        }
+        // Clear the queue
+        candidateQueue = [];
     };
 
 
@@ -205,7 +220,15 @@ const Chat = () => {
         if (chatState.receiver) {
             // Handle incoming audio stream
             peer.ontrack = (event) => {
-                remoteAudio.current.srcObject = event.streams[0];
+                console.log("Received track:", event.track);
+                if (remoteAudio.current) {
+                    remoteAudio.current.srcObject = event.streams[0];
+                    remoteAudio.current.play().catch((err) => {
+                        console.warn("Remote audio playback error:", err);
+                    });
+                } else {
+                    console.warn("remoteAudio reference is null!");
+                }
             };
 
             // Receive WebRTC Offer
@@ -235,15 +258,18 @@ const Chat = () => {
 
             // Receive ICE Candidates
             socket.on("ice-candidate", async ({ candidate }) => {
+                // Check if remote description is set
                 if (peer.remoteDescription && peer.remoteDescription.type) {
                     try {
                         await peer.addIceCandidate(new RTCIceCandidate(candidate));
-                        console.log("Added ICE candidate.");
+                        console.log("Added ICE candidate immediately.");
                     } catch (err) {
                         console.error("Error adding ICE candidate:", err);
                     }
                 } else {
-                    console.warn("Remote description not set yet, candidate not added:", candidate);
+                    // Queue the candidate if remote description is not set
+                    candidateQueue.push(candidate);
+                    console.log("Queued ICE candidate:", candidate);
                 }
             });
 
