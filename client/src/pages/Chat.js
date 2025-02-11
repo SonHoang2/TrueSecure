@@ -10,7 +10,7 @@ const socket = io(SERVER_URL, {
     withCredentials: true,
 });
 
-const peer = new RTCPeerConnection({
+let peer = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
 });
 
@@ -74,7 +74,7 @@ const Chat = () => {
                     content: chatState.message,
                 };
 
-                socket.emit("private message", messageData);
+                socket.emit("private-message", messageData);
                 setChatState((prevState) => ({
                     ...prevState,
                     messages: [...prevState.messages, messageData],
@@ -170,6 +170,29 @@ const Chat = () => {
         setCallState({ isRinging: false, senderId: null, offer: null });
     };
 
+    const endCall = (shouldNotifyPeer = true) => {
+        if (peer) {
+            peer.close();
+        }
+
+        peer = new RTCPeerConnection({
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        });
+
+        // Stop all media tracks
+        if (localAudio.current && localAudio.current.srcObject) {
+            localAudio.current.srcObject.getTracks().forEach(track => track.stop());
+            localAudio.current.srcObject = null;
+        }
+
+        if (shouldNotifyPeer) {
+            socket.emit("call-ended", { receiverId: chatState.receiver.id });
+        }
+
+        setCallState({ isCalling: false, isRinging: false, senderId: null, offer: null });
+    };
+
+
     const flushCandidateQueue = async () => {
         for (const candidate of candidateQueue) {
             try {
@@ -183,7 +206,6 @@ const Chat = () => {
         candidateQueue = [];
     };
 
-
     useEffect(() => {
         scrollToBottom()
     }, [chatState.messages]);
@@ -196,23 +218,22 @@ const Chat = () => {
             }
         });
 
-        socket.on("online users", (data) => {
+        socket.on("online-users", (data) => {
             setUserStatus(data);
         });
 
-        socket.on("private message", (data) => {
+        socket.on("private-message", (data) => {
             setChatState((prevState) => ({
                 ...prevState,
                 messages: [...prevState.messages, data],
             }));
         });
 
-
         return () => {
             // Cleanup event listeners
             socket.off("connect_error");
-            socket.off("online users");
-            socket.off("private message");
+            socket.off("online-users");
+            socket.off("private-message");
         };
     }, []);
 
@@ -233,7 +254,8 @@ const Chat = () => {
 
             // Receive WebRTC Offer
             socket.on("offer", async ({ offer, sender }) => {
-                console.log("Offer received:", offer);
+                await peer.setRemoteDescription(new RTCSessionDescription(offer)); // Process immediately
+                await flushCandidateQueue(); // Flush ICE candidates
 
                 setCallState((prevState) => ({
                     ...prevState,
@@ -274,8 +296,11 @@ const Chat = () => {
             });
 
             socket.on("call-rejected", () => {
-                console.log("Call was rejected");
                 setCallState({ isRinging: false, senderId: null, offer: null });
+            });
+
+            socket.on("call-ended", () => {
+                endCall(false);
             });
 
             return () => {
@@ -403,6 +428,7 @@ const Chat = () => {
                     <div className="relative bg-white p-6 rounded-2xl shadow-xl w-80 text-center animate-fade-in">
                         <button
                             className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 transition"
+                            onClick={rejectCall}
                         >
                             <span className="material-symbols-outlined text-lg">close</span>
                         </button>
@@ -442,8 +468,23 @@ const Chat = () => {
                 </div>
             )}
             {callState.isCalling && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 p-5">
-                    <h2 className="text-white text-lg">Calling...</h2>
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+                    <div className="relative bg-white p-6 rounded-2xl shadow-xl w-80 text-center animate-fade-in">
+                        <button
+                            className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 transition"
+                            onClick={endCall}
+                        >
+                            <span className="material-symbols-outlined text-lg">close</span>
+                        </button>
+                        <div className="my-4 flex justify-center">
+                            <img
+                                className="size-16 rounded-full shadow-md border-2 border-gray-300"
+                                src={`${IMAGES_URL}/${chatState.receiver.avatar}`}
+                                alt="Caller Avatar"
+                            />
+                        </div>
+                        <h2 className="text-gray-800 text-xl font-semibold">Calling ...</h2>
+                    </div>
                 </div>
             )}
         </div>
