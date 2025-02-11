@@ -13,16 +13,24 @@ import config from './config/config.js'
 import cookieParser from 'cookie-parser'
 const app = express()
 
-app.use(cors(
-    {
-        origin: config.client,
-        credentials: true
-    }
-))
+const allowedOrigins = [config.client, "https://localhost:3000"];
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new AppError("Not allowed by CORS"));
+        }
+    },
+    credentials: true,
+};
+
+app.use(cors(corsOptions));
 
 const limiter = rateLimit({
-	windowMs: 15 * 60 * 1000, 
-	limit: 100,
+    windowMs: 15 * 60 * 1000,
+    limit: 100,
 })
 
 // app.use(limiter)
