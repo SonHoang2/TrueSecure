@@ -21,17 +21,19 @@ export const initSocket = (server) => {
         console.log("A user connected", socket.id);
         onlineUsers.set(socket.user.id, socket.id);
 
-        io.emit('online users', {
+        io.emit('online-users', {
             onlineUsers: Array.from(onlineUsers.keys()),
             lastSeen: Object.fromEntries(lastSeen)
         });
+
+        console.log("Online users", onlineUsers);      
 
         // Handle offer
         socket.on("offer", (data) => {
             console.log("Offer received", data);
             const receiverSocketId = onlineUsers.get(data.receiverId);
 
-            io.to(receiverSocketId).emit("offer", { offer: data.offer, senderId: data.senderId });
+            io.to(receiverSocketId).emit("offer", { offer: data.offer, sender: data.sender });
 
         });
 
@@ -51,9 +53,21 @@ export const initSocket = (server) => {
             io.to(receiverSocketId).emit("ice-candidate", { candidate: data.candidate });
         });
 
-        socket.on('private message', async (data) => {
+        socket.on("call-rejected", (data) => {
+            console.log("Call rejected", data);
             const receiverSocketId = onlineUsers.get(data.receiverId);
-            io.to(receiverSocketId).emit('private message', data);
+            io.to(receiverSocketId).emit("call-rejected");
+        });
+
+        socket.on("call-ended", (data) => {
+            console.log("Call ended", data);
+            const receiverSocketId = onlineUsers.get(data.receiverId);
+            io.to(receiverSocketId).emit("call-ended");
+        });
+
+        socket.on('private-message', async (data) => {
+            const receiverSocketId = onlineUsers.get(data.receiverId);
+            io.to(receiverSocketId).emit('private-message', data);
 
             await Message.create({
                 conversationId: data.conversationId,
