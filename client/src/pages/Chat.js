@@ -30,7 +30,7 @@ const Chat = () => {
     const [callState, setCallState] = useState({
         isCalling: false, // Outgoing call
         isRinging: false, // Incoming call
-        senderId: null,
+        sender: null,
         offer: null,
     });
     const { user, refreshTokens } = useAuth();
@@ -135,7 +135,7 @@ const Chat = () => {
             await peer.setLocalDescription(offer);
             console.log("Start call, sending offer:", offer);
 
-            socket.emit("offer", { offer, receiverId: chatState.receiver.id, senderId: user.id });
+            socket.emit("offer", { offer, receiverId: chatState.receiver.id, sender: user });
 
             // Update call state
             setCallState(prev => ({ ...prev, isCalling: true }));
@@ -157,7 +157,7 @@ const Chat = () => {
 
         const answer = await peer.createAnswer();
         await peer.setLocalDescription(answer);
-        socket.emit("answer", { answer, receiverId: callState.senderId });
+        socket.emit("answer", { answer, receiverId: callState.sender.id });
 
         // Reset incoming call and mark as in a call
         setCallState({ isCalling: true, isRinging: false, senderId: null, offer: null });
@@ -165,7 +165,7 @@ const Chat = () => {
 
 
     const rejectCall = () => {
-        socket.emit("call-rejected", { receiverId: callState.senderId });
+        socket.emit("call-rejected", { receiverId: callState.sender.id });
 
         setCallState({ isRinging: false, senderId: null, offer: null });
     };
@@ -232,13 +232,13 @@ const Chat = () => {
             };
 
             // Receive WebRTC Offer
-            socket.on("offer", async ({ offer, senderId }) => {
+            socket.on("offer", async ({ offer, sender }) => {
                 console.log("Offer received:", offer);
 
                 setCallState((prevState) => ({
                     ...prevState,
                     isRinging: true,
-                    senderId: senderId,
+                    sender: sender,
                     offer: offer,
                 }));
             });
@@ -399,11 +399,45 @@ const Chat = () => {
             <audio ref={localAudio} autoPlay muted />
             <audio ref={remoteAudio} autoPlay />
             {callState.isRinging && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 p-5">
-                    <h2 className="text-white text-lg">Incoming Call...</h2>
-                    <div className="mt-4 flex gap-4">
-                        <button onClick={acceptCall} className="bg-green-500 px-4 py-2 rounded text-white">Accept</button>
-                        <button onClick={rejectCall} className="bg-red-500 px-4 py-2 rounded text-white">Reject</button>
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-md">
+                    <div className="relative bg-white p-6 rounded-2xl shadow-xl w-80 text-center animate-fade-in">
+                        <button
+                            className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 transition"
+                        >
+                            <span className="material-symbols-outlined text-lg">close</span>
+                        </button>
+
+                        <h2 className="text-gray-800 text-xl font-semibold">Incoming Call</h2>
+
+                        <div className="mt-4 flex justify-center">
+                            <img
+                                className="size-16 rounded-full shadow-md border-2 border-gray-300"
+                                src={`${IMAGES_URL}/${callState.sender.avatar}`}
+                                alt="Caller Avatar"
+                            />
+                        </div>
+
+                        <h1 className="text-gray-700 text-lg font-medium mt-2">
+                            {callState.sender.firstName} {callState.sender.lastName} is calling you
+                        </h1>
+
+                        <div className="mt-6 flex justify-center gap-4">
+                            <button
+                                onClick={rejectCall}
+                                className="flex items-center gap-2 bg-red-500 px-5 py-2 rounded-full text-white font-medium shadow-md hover:bg-red-600 transition-transform transform hover:scale-110 active:scale-95"
+                            >
+                                <span className="material-symbols-outlined text-lg">close</span>
+                                Reject
+                            </button>
+
+                            <button
+                                onClick={acceptCall}
+                                className="flex items-center gap-2 bg-green-500 px-5 py-2 rounded-full text-white font-medium shadow-md hover:bg-green-600 transition-transform transform hover:scale-110 active:scale-95"
+                            >
+                                <span className="material-symbols-outlined text-lg">call</span>
+                                Accept
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
