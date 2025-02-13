@@ -45,6 +45,12 @@ Message.associate = (db) => {
             name: 'senderId'
         }
     });
+
+    Message.hasMany(db.MessageStatus, {
+        foreignKey: {
+            name: 'messageId'
+        }
+    });
 }
 
 export default Message;
