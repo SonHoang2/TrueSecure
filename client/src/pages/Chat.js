@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
-import { SERVER_URL, CONVERSATIONS_URL, IMAGES_URL } from "../config/config";
+import { SERVER_URL, CONVERSATIONS_URL, IMAGES_URL, messageStatus } from "../config/config";
 import { useAuth } from "../hooks/useAuth";
 import ChatLeftPanel from "../component/ChatLeftPanel";
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
@@ -19,6 +19,7 @@ let candidateQueue = [];
 const Chat = () => {
     const [chatState, setChatState] = useState({
         message: "",
+        mesageStatus: "",
         messages: [],
         receiver: null,
         conversations: []
@@ -57,7 +58,8 @@ const Chat = () => {
             setChatState((prevState) => ({
                 ...prevState,
                 messages: messages,
-                receiver: receiver
+                receiver: receiver,
+                mesageStatus: messageStatus.SENT,
             }));
         } catch (error) {
             console.error(error);
@@ -78,13 +80,15 @@ const Chat = () => {
                 setChatState((prevState) => ({
                     ...prevState,
                     messages: [...prevState.messages, messageData],
-                    message: ""
+                    message: "",
+                    messageStatus: messageStatus.SENT,
                 }));
             }
         } catch (error) {
             console.error(error);
         }
     };
+
 
     const getConversations = async () => {
         try {
@@ -123,7 +127,6 @@ const Chat = () => {
 
             // Get audio stream before creating offer
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log("Caller microphone stream:", stream);
 
             localAudio.current.srcObject = stream; // Play local audio
 
@@ -133,7 +136,6 @@ const Chat = () => {
             // Create and send WebRTC offer
             const offer = await peer.createOffer();
             await peer.setLocalDescription(offer);
-            console.log("Start call, sending offer:", offer);
 
             socket.emit("offer", { offer, receiverId: chatState.receiver.id, sender: user });
 
@@ -197,7 +199,6 @@ const Chat = () => {
         for (const candidate of candidateQueue) {
             try {
                 await peer.addIceCandidate(new RTCIceCandidate(candidate));
-                console.log("Flushed ICE candidate:", candidate);
             } catch (err) {
                 console.error("Error adding flushed ICE candidate:", err);
             }
@@ -212,7 +213,7 @@ const Chat = () => {
 
     useEffect(() => {
         socket.on("connect_error", (error) => {
-            console.log(error.message);
+            console.error(error.message);
             if (error.message === "Unauthorized") {
                 refreshTokens();
             }
@@ -241,14 +242,13 @@ const Chat = () => {
         if (chatState.receiver) {
             // Handle incoming audio stream
             peer.ontrack = (event) => {
-                console.log("Received track:", event.track);
                 if (remoteAudio.current) {
                     remoteAudio.current.srcObject = event.streams[0];
                     remoteAudio.current.play().catch((err) => {
-                        console.warn("Remote audio playback error:", err);
+                        console.error("Remote audio playback error:", err);
                     });
                 } else {
-                    console.warn("remoteAudio reference is null!");
+                    console.error("remoteAudio reference is null!");
                 }
             };
 
@@ -267,7 +267,6 @@ const Chat = () => {
 
             // Receive WebRTC Answer
             socket.on("answer", async ({ answer }) => {
-                console.log("Answer:", answer);
                 await peer.setRemoteDescription(new RTCSessionDescription(answer));
             });
 
@@ -284,14 +283,12 @@ const Chat = () => {
                 if (peer.remoteDescription && peer.remoteDescription.type) {
                     try {
                         await peer.addIceCandidate(new RTCIceCandidate(candidate));
-                        console.log("Added ICE candidate immediately.");
                     } catch (err) {
                         console.error("Error adding ICE candidate:", err);
                     }
                 } else {
                     // Queue the candidate if remote description is not set
                     candidateQueue.push(candidate);
-                    console.log("Queued ICE candidate:", candidate);
                 }
             });
 
@@ -367,21 +364,26 @@ const Chat = () => {
                 </div>
                 <div className="flex-grow overflow-y-auto flex flex-col pb-4">
                     {chatState.messages.map((msg) => (
-                        <div key={msg.id} className={`flex w-full p-2 ${msg.senderId === user.id ? "justify-end" : "justify-start"}`}>
+                        <div key={msg.id} className={`flex w-full p-1 ${msg.senderId === user.id ? "justify-end" : "justify-start"}`}>
                             <div className="flex max-w-md">
                                 {msg.senderId !== user.id && (
                                     <div className="flex pe-2 items-end">
                                         <img className="size-8 rounded-full" src={`${IMAGES_URL}/${chatState.receiver?.avatar}`} alt="" />
                                     </div>
                                 )}
-                                <p className={`rounded-3xl px-3 py-2 break-words max-w-full text-sm 
+                                <div className="flex flex-col">
+                                    <p className={`rounded-3xl px-3 py-2 break-words max-w-full text-sm 
                                     ${msg.senderId === user.id ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white" : "bg-gray-100 text-black"}`
-                                }>
-                                    {msg.content}
-                                </p>
+                                    }>
+                                        {msg.content}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     ))}
+                    <div className="flex justify-end">
+                        <p className="text-xs pe-5 text-gray-600">{chatState.mesageStatus}</p>
+                    </div>
                     <div ref={messagesEndRef} />
                 </div>
                 <div className="flex p-1 items-center mb-2">
@@ -423,71 +425,75 @@ const Chat = () => {
             </div>
             <audio ref={localAudio} autoPlay muted />
             <audio ref={remoteAudio} autoPlay />
-            {callState.isRinging && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-md">
-                    <div className="relative bg-white p-6 rounded-2xl shadow-xl w-80 text-center animate-fade-in">
-                        <button
-                            className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 transition"
-                            onClick={rejectCall}
-                        >
-                            <span className="material-symbols-outlined text-lg">close</span>
-                        </button>
-
-                        <h2 className="text-gray-800 text-xl font-semibold">Incoming Call</h2>
-
-                        <div className="mt-4 flex justify-center">
-                            <img
-                                className="size-16 rounded-full shadow-md border-2 border-gray-300"
-                                src={`${IMAGES_URL}/${callState.sender.avatar}`}
-                                alt="Caller Avatar"
-                            />
-                        </div>
-
-                        <h1 className="text-gray-700 text-lg font-medium mt-2">
-                            {callState.sender.firstName} {callState.sender.lastName} is calling you
-                        </h1>
-
-                        <div className="mt-6 flex justify-center gap-4">
+            {
+                callState.isRinging && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-md">
+                        <div className="relative bg-white p-6 rounded-2xl shadow-xl w-80 text-center animate-fade-in">
                             <button
+                                className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 transition"
                                 onClick={rejectCall}
-                                className="flex items-center gap-2 bg-red-500 px-5 py-2 rounded-full text-white font-medium shadow-md hover:bg-red-600 transition-transform transform hover:scale-110 active:scale-95"
                             >
                                 <span className="material-symbols-outlined text-lg">close</span>
-                                Reject
                             </button>
 
+                            <h2 className="text-gray-800 text-xl font-semibold">Incoming Call</h2>
+
+                            <div className="mt-4 flex justify-center">
+                                <img
+                                    className="size-16 rounded-full shadow-md border-2 border-gray-300"
+                                    src={`${IMAGES_URL}/${callState.sender.avatar}`}
+                                    alt="Caller Avatar"
+                                />
+                            </div>
+
+                            <h1 className="text-gray-700 text-lg font-medium mt-2">
+                                {callState.sender.firstName} {callState.sender.lastName} is calling you
+                            </h1>
+
+                            <div className="mt-6 flex justify-center gap-4">
+                                <button
+                                    onClick={rejectCall}
+                                    className="flex items-center gap-2 bg-red-500 px-5 py-2 rounded-full text-white font-medium shadow-md hover:bg-red-600 transition-transform transform hover:scale-110 active:scale-95"
+                                >
+                                    <span className="material-symbols-outlined text-lg">close</span>
+                                    Reject
+                                </button>
+
+                                <button
+                                    onClick={acceptCall}
+                                    className="flex items-center gap-2 bg-green-500 px-5 py-2 rounded-full text-white font-medium shadow-md hover:bg-green-600 transition-transform transform hover:scale-110 active:scale-95"
+                                >
+                                    <span className="material-symbols-outlined text-lg">call</span>
+                                    Accept
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+            {
+                callState.isCalling && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+                        <div className="relative bg-white p-6 rounded-2xl shadow-xl w-80 text-center animate-fade-in">
                             <button
-                                onClick={acceptCall}
-                                className="flex items-center gap-2 bg-green-500 px-5 py-2 rounded-full text-white font-medium shadow-md hover:bg-green-600 transition-transform transform hover:scale-110 active:scale-95"
+                                className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 transition"
+                                onClick={endCall}
                             >
-                                <span className="material-symbols-outlined text-lg">call</span>
-                                Accept
+                                <span className="material-symbols-outlined text-lg">close</span>
                             </button>
+                            <div className="my-4 flex justify-center">
+                                <img
+                                    className="size-16 rounded-full shadow-md border-2 border-gray-300"
+                                    src={`${IMAGES_URL}/${chatState.receiver.avatar}`}
+                                    alt="Caller Avatar"
+                                />
+                            </div>
+                            <h2 className="text-gray-800 text-xl font-semibold">Calling ...</h2>
                         </div>
                     </div>
-                </div>
-            )}
-            {callState.isCalling && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-                    <div className="relative bg-white p-6 rounded-2xl shadow-xl w-80 text-center animate-fade-in">
-                        <button
-                            className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 transition"
-                            onClick={endCall}
-                        >
-                            <span className="material-symbols-outlined text-lg">close</span>
-                        </button>
-                        <div className="my-4 flex justify-center">
-                            <img
-                                className="size-16 rounded-full shadow-md border-2 border-gray-300"
-                                src={`${IMAGES_URL}/${chatState.receiver.avatar}`}
-                                alt="Caller Avatar"
-                            />
-                        </div>
-                        <h2 className="text-gray-800 text-xl font-semibold">Calling ...</h2>
-                    </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 
