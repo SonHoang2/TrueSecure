@@ -69,8 +69,8 @@ export const initSocket = (server) => {
 
         socket.on('private-message', async (data) => {
             const receiverSocketId = onlineUsers.get(data.receiverId);
-            io.to(receiverSocketId).emit('private-message', data);
-
+            const senderSocketId = onlineUsers.get(data.senderId);
+            
             const message = await Message.create({
                 conversationId: data.conversationId,
                 senderId: data.senderId,
@@ -78,10 +78,16 @@ export const initSocket = (server) => {
                 content: data.content,
                 messageType: data.messageType
             });
-
+            
             await MessageStatus.create({
                 messageId: message.id,
                 userId: data.receiverId,
+                status: messageStatus.Sent
+            });
+
+            io.to(receiverSocketId).emit('private-message', data);
+            io.to(senderSocketId).emit('message-status-update', {
+                messageId: message.id,
                 status: messageStatus.Sent
             });
         });

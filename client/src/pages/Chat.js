@@ -55,7 +55,6 @@ const Chat = () => {
                 ...prevState,
                 messages: messages,
                 receiver: receiver,
-                mesageStatus: messageStatus.Sent,
             }));
         } catch (error) {
             console.error(error);
@@ -73,11 +72,12 @@ const Chat = () => {
                 };
 
                 socket.emit("private-message", messageData);
+
                 setChatState((prevState) => ({
                     ...prevState,
                     messages: [...prevState.messages, messageData],
                     message: "",
-                    messageStatus: messageStatus.Sent,
+                    mesageStatus: messageStatus.Sending,
                 }));
             }
         } catch (error) {
@@ -229,6 +229,13 @@ const Chat = () => {
             setChatState((prevState) => ({
                 ...prevState,
                 messages: [...prevState.messages, data],
+            }));
+        });
+
+        socket.on("message-status-update", (data) => {
+            setChatState((prevState) => ({
+                ...prevState,
+                mesageStatus: data.status
             }));
         });
 
