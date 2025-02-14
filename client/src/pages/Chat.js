@@ -1,14 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { io } from "socket.io-client";
-import { SERVER_URL, CONVERSATIONS_URL, IMAGES_URL, messageStatus } from "../config/config";
+import socket from "../utils/socket";
+import { CONVERSATIONS_URL, IMAGES_URL, messageStatus } from "../config/config";
 import { useAuth } from "../hooks/useAuth";
 import ChatLeftPanel from "../component/ChatLeftPanel";
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
-
-const socket = io(SERVER_URL, {
-    withCredentials: true,
-});
 
 let peer = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -214,6 +210,10 @@ const Chat = () => {
     }, [chatState.messages.length]);
 
     useEffect(() => {
+        if (!socket.connected) {
+            socket.connect();
+        }
+
         socket.on("connect_error", (error) => {
             console.error(error.message);
             if (error.message === "Unauthorized") {
@@ -328,105 +328,105 @@ const Chat = () => {
             </div>
             <ChatLeftPanel chatState={chatState} user={user} />
             {
-                chatState.receiver &&
-                <div div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
-                    <div className="flex justify-between p-3 shadow-md">
-                        <div className="flex">
-                            <div>
-                                <img className="inline-block size-10 rounded-full ring-0" src={`${IMAGES_URL}/${chatState.receiver.avatar}`} alt="" />
-                            </div>
-                            <div className="flex flex-col ms-2">
-                                <span className="text-base font-bold">{chatState.receiver?.firstName + " " + chatState.receiver?.lastName}</span>
-                                <span className="text-sm text-gray-500">
-                                    {userStatus.onlineUsers.includes(chatState.receiver?.id)
-                                        ? "Online"
-                                        : getLastSeenTime(userStatus.lastSeen[chatState.receiver?.id])
-                                    }
-                                </span>
-                            </div>
-                        </div>
-                        <div className="flex items-center">
-                            <button
-                                className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
-                                onClick={startCall}
-                            >
-                                <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                    call
-                                </span>
-                            </button>
-                            <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                                <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                    videocam
-                                </span>
-                            </button>
-                            <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                                <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                    more_horiz
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <div className="flex-grow overflow-y-auto flex flex-col pb-4 pt-2">
-                        {chatState.messages.map((msg) => (
-                            <div key={msg.id} className={`flex w-full px-2 py-1  ${msg.senderId === user.id ? "justify-end" : "justify-start"}`}>
-                                <div className="flex max-w-md">
-                                    {msg.senderId !== user.id && (
-                                        <div className="flex pe-2 items-end">
-                                            <img className="size-8 rounded-full" src={`${IMAGES_URL}/${chatState.receiver?.avatar}`} alt="" />
-                                        </div>
-                                    )}
-                                    <div className="flex flex-col">
-                                        <p className={`rounded-3xl px-3 py-2 break-words max-w-full text-sm 
-                                    ${msg.senderId === user.id ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white" : "bg-gray-100 text-black"}`
-                                        }>
-                                            {msg.content}
-                                        </p>
-                                    </div>
+                chatState.receiver && (
+                    <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
+                        <div className="flex justify-between p-3 shadow-md">
+                            <div className="flex">
+                                <div>
+                                    <img className="inline-block size-10 rounded-full ring-0" src={`${IMAGES_URL}/${chatState.receiver.avatar}`} alt="" />
+                                </div>
+                                <div className="flex flex-col ms-2">
+                                    <span className="text-base font-bold">{chatState.receiver?.firstName + " " + chatState.receiver?.lastName}</span>
+                                    <span className="text-sm text-gray-500">
+                                        {userStatus.onlineUsers.includes(chatState.receiver?.id)
+                                            ? "Online"
+                                            : getLastSeenTime(userStatus.lastSeen[chatState.receiver?.id])
+                                        }
+                                    </span>
                                 </div>
                             </div>
-                        ))}
-                        <div className="flex justify-end">
-                            <p className="text-xs pe-5 text-gray-600 first-letter:uppercase">{chatState.mesageStatus}</p>
+                            <div className="flex items-center">
+                                <button
+                                    className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
+                                    onClick={startCall}
+                                >
+                                    <span className="material-symbols-outlined text-blue-500 text-2xl">
+                                        call
+                                    </span>
+                                </button>
+                                <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
+                                    <span className="material-symbols-outlined text-blue-500 text-2xl">
+                                        videocam
+                                    </span>
+                                </button>
+                                <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
+                                    <span className="material-symbols-outlined text-blue-500 text-2xl">
+                                        more_horiz
+                                    </span>
+                                </button>
+                            </div>
                         </div>
-                        <div ref={messagesEndRef} />
-                    </div>
-                    <div className="flex p-1 items-center mb-2">
-                        <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                            <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                add_circle
-                            </span>
-                        </button>
-                        <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                            <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                imagesmode
-                            </span>
-                        </button>
-                        <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                            <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                gif_box
-                            </span>
-                        </button>
-                        <input
-                            type="text"
-                            className="flex-grow ms-2 bg-gray-100 px-3 py-2 rounded-3xl focus:outline-none caret-blue-500 me-2"
-                            placeholder="Aa"
-                            value={chatState.message}
-                            onChange={(e) => setChatState(prevState => ({ ...prevState, message: e.target.value }))}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                    sendMessage();
-                                }
-                            }}
-                        />
-                        <button
-                            className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
-                        >
-                            <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                thumb_up
-                            </span>
-                        </button>
-                    </div>
-                </div>
+                        <div className="flex-grow overflow-y-auto flex flex-col pb-4 pt-2">
+                            {chatState.messages.map((msg) => (
+                                <div key={msg.id} className={`flex w-full px-2 py-1  ${msg.senderId === user.id ? "justify-end" : "justify-start"}`}>
+                                    <div className="flex max-w-md">
+                                        {msg.senderId !== user.id && (
+                                            <div className="flex pe-2 items-end">
+                                                <img className="size-8 rounded-full" src={`${IMAGES_URL}/${chatState.receiver?.avatar}`} alt="" />
+                                            </div>
+                                        )}
+                                        <div className="flex flex-col">
+                                            <p className={`rounded-3xl px-3 py-2 break-words max-w-full text-s 
+                                                ${msg.senderId === user.id ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white" : "bg-gray-100 text-black"}`
+                                            }>
+                                                {msg.content}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            <div className="flex justify-end">
+                                <p className="text-xs pe-5 text-gray-600 first-letter:uppercase">{chatState.mesageStatus}</p>
+                            </div>
+                            <div ref={messagesEndRef} />
+                        </div>
+                        <div className="flex p-1 items-center mb-2">
+                            <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
+                                <span className="material-symbols-outlined text-blue-500 text-2xl">
+                                    add_circle
+                                </span>
+                            </button>
+                            <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
+                                <span className="material-symbols-outlined text-blue-500 text-2xl">
+                                    imagesmode
+                                </span>
+                            </button>
+                            <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
+                                <span className="material-symbols-outlined text-blue-500 text-2xl">
+                                    gif_box
+                                </span>
+                            </button>
+                            <input
+                                type="text"
+                                className="flex-grow ms-2 bg-gray-100 px-3 py-2 rounded-3xl focus:outline-none caret-blue-500 me-2"
+                                placeholder="Aa"
+                                value={chatState.message}
+                                onChange={(e) => setChatState(prevState => ({ ...prevState, message: e.target.value }))}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        sendMessage();
+                                    }
+                                }}
+                            />
+                            <button
+                                className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
+                            >
+                                <span className="material-symbols-outlined text-blue-500 text-2xl">
+                                    thumb_up
+                                </span>
+                            </button>
+                        </div>
+                    </div>)
             }
             <audio ref={localAudio} autoPlay muted />
             <audio ref={remoteAudio} autoPlay />
