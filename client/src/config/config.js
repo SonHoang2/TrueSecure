@@ -6,8 +6,8 @@ export const USERS_URL = "/api/v1/users";
 export const CONVERSATIONS_URL = "/api/v1/conversations";
 
 export const messageStatus = {
-    SENDING: "Sending",
-    SENT: "Sent",
-    DELIVERED: "Delivered",
-    SEEN: "Seen",
+    Sending: 'sending',
+    Sent: 'sent',
+    Delivered: 'delivered',
+    Seen: 'seen'
 };
