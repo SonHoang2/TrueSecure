@@ -2,6 +2,8 @@ import { Server } from "socket.io";
 import { socketProtect } from "./controllers/authController.js";
 import config from "./config/config.js";
 import Message from "./models/messageModel.js";
+import MessageStatus from "./models/messageStatusModel.js";
+import { messageStatus } from "./shareVariable.js"
 
 export const initSocket = (server) => {
     const io = new Server(server, {
@@ -26,7 +28,7 @@ export const initSocket = (server) => {
             lastSeen: Object.fromEntries(lastSeen)
         });
 
-        console.log("Online users", onlineUsers);      
+        console.log("Online users", onlineUsers);
 
         // Handle offer
         socket.on("offer", (data) => {
@@ -69,12 +71,18 @@ export const initSocket = (server) => {
             const receiverSocketId = onlineUsers.get(data.receiverId);
             io.to(receiverSocketId).emit('private-message', data);
 
-            await Message.create({
+            const message = await Message.create({
                 conversationId: data.conversationId,
                 senderId: data.senderId,
                 receiverId: data.receiverId,
                 content: data.content,
                 messageType: data.messageType
+            });
+
+            await MessageStatus.create({
+                messageId: message.id,
+                userId: data.receiverId,
+                status: messageStatus.Sent
             });
         });
 
