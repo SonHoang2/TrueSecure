@@ -18,6 +18,9 @@ export const ChatLeftPanel = ({ chatState, user, userStatus }) => {
         return `last seen ${Math.floor(diffInSeconds / 604800)} weeks ago`;
     };
 
+    console.log(userStatus);
+    
+
     return (
         <div className="rounded-lg p-2 bg-white me-4 w-3/12">
             <div className="flex justify-between items-center">
