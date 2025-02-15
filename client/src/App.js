@@ -8,26 +8,24 @@ import ChatRouter from "./pages/ChatRouter";
 
 const App = () => {
     return (
-        <AuthProvider>
-            <Routes>
+        <Routes>
+            <Route
+                path="/"
+                element={<ProtectedRoute />}
+            >
+                <Route path="" element={<ChatRouter />} />
+                <Route path="chat" element={<ChatRouter />} />
+                <Route path="chat/:conversationId" element={<Chat />} />
+            </Route>
+            <Route
+                path='/auth'
+            >
                 <Route
-                    path="/"
-                    element={<ProtectedRoute />}
-                >
-                    <Route path="" element={<ChatRouter />} />
-                    <Route path="chat" element={<ChatRouter />} />
-                    <Route path="chat/:conversationId" element={<Chat />} />
-                </Route>
-                <Route
-                    path='/auth'
-                >
-                    <Route
-                        path='login'
-                        element={<Login />}
-                    />
-                </Route>
-            </Routes>
-        </AuthProvider>
+                    path='login'
+                    element={<Login />}
+                />
+            </Route>
+        </Routes>
     );
 };
 
