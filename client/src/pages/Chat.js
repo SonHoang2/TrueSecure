@@ -71,7 +71,7 @@ const Chat = () => {
                     status: messageStatus.Sending,
                 };
 
-                socket.emit("private-message", messageData);
+                socket.emit("send-message", messageData);
 
                 setChatState((prevState) => ({
                     ...prevState,
@@ -224,7 +224,7 @@ const Chat = () => {
             setUserStatus(data);
         });
 
-        socket.on("private-message", (data) => {
+        socket.on("new-message", (data) => {
             setChatState((prevState) => ({
                 ...prevState,
                 messages: [...prevState.messages, data],
@@ -259,7 +259,7 @@ const Chat = () => {
             // Cleanup event listeners
             socket.off("connect_error");
             socket.off("online-users");
-            socket.off("private-message");
+            socket.off("new-message");
         };
     }, []);
 

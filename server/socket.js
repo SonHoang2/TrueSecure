@@ -67,7 +67,7 @@ export const initSocket = (server) => {
             io.to(receiverSocketId).emit("call-ended");
         });
 
-        socket.on('private-message', async (data) => {
+        socket.on('send-message', async (data) => {
             const receiverSocketId = onlineUsers.get(data.receiverId);
             const senderSocketId = onlineUsers.get(data.senderId);
             
@@ -85,7 +85,7 @@ export const initSocket = (server) => {
                 status: messageStatus.Sent
             });
 
-            io.to(receiverSocketId).emit('private-message', data);
+            io.to(receiverSocketId).emit('new-message', data);
             io.to(senderSocketId).emit('message-status-update', {
                 messageId: message.id,
                 status: messageStatus.Sent
