@@ -1,10 +1,12 @@
 import Conversation from "../models/conversationModel.js";
 import ConvParticipant from "../models/convParticipantModel.js"
 import Message from "../models/messageModel.js";
+import MessageStatus from "../models/messageStatusModel.js";
 import User from "../models/userModel.js";
+import { messageStatus } from "../shareVariable.js";
 import AppError from "../utils/AppError.js";
 import catchAsync from "../utils/catchAsync.js";
-import { Op, Sequelize } from "sequelize";
+import { Op, Sequelize, where } from "sequelize";
 
 export const createPrivateConversation = catchAsync(async (req, res, next) => {
     const { users } = req.body;
@@ -52,6 +54,9 @@ export const createPrivateConversation = catchAsync(async (req, res, next) => {
 export const getConversationMessages = catchAsync(async (req, res, next) => {
     const conversationId = req.params.id;
 
+    console.log(req.user.id);
+
+
     const conversation = await Conversation.findByPk(conversationId, {
         include: [
             {
@@ -77,11 +82,46 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
         return next(new AppError('You are not a participant of this conversation', 403));
     }
 
+    let messages = [];
+
+    if (!conversation.isGroup) {
+        messages = await Promise.all(conversation.messages.map(async message => {
+            const messagesStatus = await MessageStatus.findOne({
+                attributes: ['messageId', 'status'],
+                where: {
+                    messageId: message.id
+                }
+            });
+
+            return {
+                ...message.toJSON(),
+                status: messagesStatus.status
+            }
+        }));
+    } else {
+        messages = await Promise.all(conversation.messages.map(async message => {
+            const messagesStatus = await MessageStatus.findAll({
+                attributes: ['messageId', 'status'],
+                where: {
+                    messageId: message.id
+                }
+            });
+
+            return {
+                ...message.toJSON(),
+                statuses: messagesStatus
+            }
+        }));
+    }
+
     res.status(200).json(
         {
             status: 'success',
             data: {
-                conversation
+                conversation: {
+                    ...conversation.toJSON(),
+                    messages
+                }
             }
         }
     );
