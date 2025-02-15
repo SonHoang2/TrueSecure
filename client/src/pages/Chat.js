@@ -12,17 +12,14 @@ let peer = new RTCPeerConnection({
 
 let candidateQueue = [];
 
-const Chat = () => {
+const Chat = ({ userStatus }) => {
     const [chatState, setChatState] = useState({
         message: "",
         messages: [],
         receiver: null,
         conversations: []
     });
-    const [userStatus, setUserStatus] = useState({
-        onlineUsers: [],
-        lastSeen: {},
-    });
+
     const [callState, setCallState] = useState({
         isCalling: false, // Outgoing call
         isRinging: false, // Incoming call
@@ -209,21 +206,6 @@ const Chat = () => {
     }, [chatState.messages.length]);
 
     useEffect(() => {
-        if (!socket.connected) {
-            socket.connect();
-        }
-
-        socket.on("connect_error", (error) => {
-            console.error(error.message);
-            if (error.message === "Unauthorized") {
-                refreshTokens();
-            }
-        });
-
-        socket.on("online-users", (data) => {
-            setUserStatus(data);
-        });
-
         socket.on("new-message", (data) => {
             setChatState((prevState) => ({
                 ...prevState,
@@ -349,7 +331,7 @@ const Chat = () => {
                     <img className="inline-block size-10 rounded-full " src={`${IMAGES_URL}/${user?.avatar}`} alt="" />
                 </div>
             </div>
-            <ChatLeftPanel chatState={chatState} user={user} userStatus={userStatus}/>
+            <ChatLeftPanel chatState={chatState} user={user} userStatus={userStatus} />
             {
                 chatState.receiver && (
                     <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
