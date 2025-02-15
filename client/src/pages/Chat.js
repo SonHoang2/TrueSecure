@@ -355,8 +355,16 @@ const Chat = () => {
                     <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
                         <div className="flex justify-between p-3 shadow-md">
                             <div className="flex">
-                                <div>
-                                    <img className="inline-block size-10 rounded-full ring-0" src={`${IMAGES_URL}/${chatState.receiver.avatar}`} alt="" />
+                                <div className="relative flex items-center">
+                                    <img
+                                        className="inline-block size-10 rounded-full ring-0"
+                                        src={`${IMAGES_URL}/${chatState.receiver.avatar}`}
+                                        alt=""
+                                    />
+                                    {
+                                        userStatus.onlineUsers.includes(chatState.receiver?.id) &&
+                                        <span className="absolute bottom-0 right-0 block size-3 bg-green-500 border-2 border-white rounded-full"></span>
+                                    }
                                 </div>
                                 <div className="flex flex-col ms-2">
                                     <span className="text-base font-bold">{chatState.receiver?.firstName + " " + chatState.receiver?.lastName}</span>
@@ -411,7 +419,7 @@ const Chat = () => {
                                                     isLastMessage && isSentByUser &&
                                                     (
                                                         <div className="flex justify-end">
-                                                            <p className="text-xs pe-5 text-gray-600 first-letter:uppercase">
+                                                            <p className="text-xs pe-3 text-gray-600 first-letter:uppercase">
                                                                 {msg?.status}
                                                             </p>
                                                         </div>
