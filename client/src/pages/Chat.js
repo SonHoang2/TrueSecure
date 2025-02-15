@@ -68,6 +68,7 @@ const Chat = () => {
                     conversationId: Number(conversationId),
                     receiverId: chatState.receiver.id,
                     content: chatState.message,
+                    status: messageStatus.Sending,
                 };
 
                 socket.emit("private-message", messageData);
@@ -232,15 +233,20 @@ const Chat = () => {
 
         socket.on("message-status-update", (data) => {
             setChatState((prevState) => {
-                const messageIndex = prevState.messages.findIndex((msg) => msg.id === data.messageId);
+                const messageIndex = prevState.messages.findIndex((msg) => msg.status === messageStatus.Sending);
 
-                if (messageIndex === -1) return prevState; // If no match, return unchanged state
+                if (messageIndex === -1) return prevState;
 
                 const updatedMessages = [...prevState.messages];
                 updatedMessages[messageIndex] = {
                     ...updatedMessages[messageIndex],
                     status: data.status,
                 };
+
+                console.log({
+                    ...prevState,
+                    messages: updatedMessages,
+                });
 
                 return {
                     ...prevState,
@@ -387,12 +393,8 @@ const Chat = () => {
                             {chatState.messages.map((msg, index) => {
                                 const isSentByUser = msg.senderId === user.id;
                                 const isLastMessage = index === chatState.messages.length - 1;
-                                if (isLastMessage) {
-                                    console.log(msg?.messageStatuses?.[0]?.status);
-                                    
-                                }
                                 return (
-                                    <div key={msg.id} className={`flex w-full px-2 py-1  ${isSentByUser ? "justify-end" : "justify-start"}`}>
+                                    <div key={index} className={`flex w-full px-2 py-1  ${isSentByUser ? "justify-end" : "justify-start"}`}>
                                         <div className="flex max-w-md">
                                             {!isSentByUser && (
                                                 <div className="flex pe-2 items-end">
@@ -405,18 +407,18 @@ const Chat = () => {
                                                 }>
                                                     {msg.content}
                                                 </p>
+                                                {
+                                                    isLastMessage && isSentByUser &&
+                                                    (
+                                                        <div className="flex justify-end">
+                                                            <p className="text-xs pe-5 text-gray-600 first-letter:uppercase">
+                                                                {msg?.status}
+                                                            </p>
+                                                        </div>
+                                                    )
+                                                }
                                             </div>
                                         </div>
-                                        {
-                                            isLastMessage && isSentByUser &&
-                                            (
-                                                <div className="flex justify-end">
-                                                    <p className="text-xs pe-5 text-gray-600 first-letter:uppercase">
-                                                        {msg?.messageStatuses?.[0]?.status ?? messageStatus.Sending}
-                                                    </p>
-                                                </div>
-                                            )
-                                        }
                                     </div>
                                 )
                             })}
