@@ -15,7 +15,6 @@ let candidateQueue = [];
 const Chat = () => {
     const [chatState, setChatState] = useState({
         message: "",
-        mesageStatus: "",
         messages: [],
         receiver: null,
         conversations: []
@@ -77,7 +76,6 @@ const Chat = () => {
                     ...prevState,
                     messages: [...prevState.messages, messageData],
                     message: "",
-                    mesageStatus: messageStatus.Sending,
                 }));
             }
         } catch (error) {
@@ -233,10 +231,22 @@ const Chat = () => {
         });
 
         socket.on("message-status-update", (data) => {
-            setChatState((prevState) => ({
-                ...prevState,
-                mesageStatus: data.status
-            }));
+            setChatState((prevState) => {
+                const messageIndex = prevState.messages.findIndex((msg) => msg.id === data.messageId);
+
+                if (messageIndex === -1) return prevState; // If no match, return unchanged state
+
+                const updatedMessages = [...prevState.messages];
+                updatedMessages[messageIndex] = {
+                    ...updatedMessages[messageIndex],
+                    status: data.status,
+                };
+
+                return {
+                    ...prevState,
+                    messages: updatedMessages,
+                };
+            });
         });
 
         return () => {
@@ -374,27 +384,42 @@ const Chat = () => {
                             </div>
                         </div>
                         <div className="flex-grow overflow-y-auto flex flex-col pb-4 pt-2">
-                            {chatState.messages.map((msg) => (
-                                <div key={msg.id} className={`flex w-full px-2 py-1  ${msg.senderId === user.id ? "justify-end" : "justify-start"}`}>
-                                    <div className="flex max-w-md">
-                                        {msg.senderId !== user.id && (
-                                            <div className="flex pe-2 items-end">
-                                                <img className="size-8 rounded-full" src={`${IMAGES_URL}/${chatState.receiver?.avatar}`} alt="" />
+                            {chatState.messages.map((msg, index) => {
+                                const isSentByUser = msg.senderId === user.id;
+                                const isLastMessage = index === chatState.messages.length - 1;
+                                if (isLastMessage) {
+                                    console.log(msg?.messageStatuses?.[0]?.status);
+                                    
+                                }
+                                return (
+                                    <div key={msg.id} className={`flex w-full px-2 py-1  ${isSentByUser ? "justify-end" : "justify-start"}`}>
+                                        <div className="flex max-w-md">
+                                            {!isSentByUser && (
+                                                <div className="flex pe-2 items-end">
+                                                    <img className="size-8 rounded-full" src={`${IMAGES_URL}/${chatState.receiver?.avatar}`} alt="" />
+                                                </div>
+                                            )}
+                                            <div className="flex flex-col">
+                                                <p className={`rounded-3xl px-3 py-2 break-words max-w-full text-s 
+                                                ${isSentByUser ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white" : "bg-gray-100 text-black"}`
+                                                }>
+                                                    {msg.content}
+                                                </p>
                                             </div>
-                                        )}
-                                        <div className="flex flex-col">
-                                            <p className={`rounded-3xl px-3 py-2 break-words max-w-full text-s 
-                                                ${msg.senderId === user.id ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white" : "bg-gray-100 text-black"}`
-                                            }>
-                                                {msg.content}
-                                            </p>
                                         </div>
+                                        {
+                                            isLastMessage && isSentByUser &&
+                                            (
+                                                <div className="flex justify-end">
+                                                    <p className="text-xs pe-5 text-gray-600 first-letter:uppercase">
+                                                        {msg?.messageStatuses?.[0]?.status ?? messageStatus.Sending}
+                                                    </p>
+                                                </div>
+                                            )
+                                        }
                                     </div>
-                                </div>
-                            ))}
-                            <div className="flex justify-end">
-                                <p className="text-xs pe-5 text-gray-600 first-letter:uppercase">{chatState.mesageStatus}</p>
-                            </div>
+                                )
+                            })}
                             <div ref={messagesEndRef} />
                         </div>
                         <div className="flex p-1 items-center mb-2">
