@@ -349,7 +349,7 @@ const Chat = () => {
                     <img className="inline-block size-10 rounded-full " src={`${IMAGES_URL}/${user?.avatar}`} alt="" />
                 </div>
             </div>
-            <ChatLeftPanel chatState={chatState} user={user} />
+            <ChatLeftPanel chatState={chatState} user={user} userStatus={userStatus}/>
             {
                 chatState.receiver && (
                     <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">

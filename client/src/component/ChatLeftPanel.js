@@ -1,7 +1,7 @@
 import { IMAGES_URL } from "../config/config";
 import { useNavigate } from "react-router-dom";
 
-export const ChatLeftPanel = ({ chatState, user }) => {
+export const ChatLeftPanel = ({ chatState, user, userStatus }) => {
     const navigate = useNavigate();
 
     const getLastSeenTime = (timestamp) => {
@@ -46,7 +46,13 @@ export const ChatLeftPanel = ({ chatState, user }) => {
                             onClick={() => navigate(`/chat/${conv.conversationId}`)}
                         >
                             <div>
-                                <img className="inline-block size-12 rounded-full ring-0" src={`${IMAGES_URL}/${otherUser.avatar}`} alt="" />
+                            </div>
+                            <div className="relative flex items-center">
+                                <img className="inline-block size-10 rounded-full ring-0" src={`${IMAGES_URL}/${otherUser.avatar}`} alt="" />
+                                {
+                                    userStatus?.onlineUsers.includes(otherUser.id) &&
+                                    <span className="absolute bottom-0 right-0 block size-3 bg-green-500 border-2 border-white rounded-full"></span>
+                                }
                             </div>
                             <div className="flex flex-col ms-2">
                                 <span className="text-base font-bold">{otherUser.firstName + " " + otherUser.lastName}</span>
