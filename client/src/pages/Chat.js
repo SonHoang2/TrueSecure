@@ -26,12 +26,13 @@ const Chat = ({ userStatus }) => {
         sender: null,
         offer: null,
     });
+
+    const conversationId = Number(useParams()?.conversationId);
+
     const { user, refreshTokens } = useAuth();
-    const { conversationId } = useParams();
     const messagesEndRef = useRef(null)
     const localAudio = useRef(null);
     const remoteAudio = useRef(null);
-
 
     const axiosPrivate = useAxiosPrivate();
 
@@ -62,7 +63,7 @@ const Chat = ({ userStatus }) => {
             if (chatState.message.trim()) {
                 const messageData = {
                     senderId: user.id,
-                    conversationId: Number(conversationId),
+                    conversationId: conversationId,
                     receiverId: chatState.receiver.id,
                     content: chatState.message,
                     status: messageStatus.Sending,
@@ -211,11 +212,25 @@ const Chat = ({ userStatus }) => {
                 ...prevState,
                 messages: [...prevState.messages, data],
             }));
+
+            console.log(data.conversationId === conversationId, data.conversationId, conversationId);
+
+            if (data.conversationId === conversationId) {
+                socket.emit("message-seen", {
+                    senderId: data.senderId,
+                    messageId: data.messageId,
+                    conversationId: data.conversationId,
+                    messageStatusId: data.messageStatusId,
+                })
+            }
         });
 
         socket.on("message-status-update", (data) => {
             setChatState((prevState) => {
-                const messageIndex = prevState.messages.findIndex((msg) => msg.status === messageStatus.Sending);
+                const messageIndex = prevState.messages.findLastIndex((msg) => {
+                    if (msg.status === messageStatus.Sending) return true;
+                    return msg.id === data.messageId;
+                });
 
                 if (messageIndex === -1) return prevState;
 
@@ -223,12 +238,8 @@ const Chat = ({ userStatus }) => {
                 updatedMessages[messageIndex] = {
                     ...updatedMessages[messageIndex],
                     status: data.status,
+                    id: data.messageId,
                 };
-
-                console.log({
-                    ...prevState,
-                    messages: updatedMessages,
-                });
 
                 return {
                     ...prevState,
@@ -238,10 +249,8 @@ const Chat = ({ userStatus }) => {
         });
 
         return () => {
-            // Cleanup event listeners
-            socket.off("connect_error");
-            socket.off("online-users");
             socket.off("new-message");
+            socket.off("message-status-update");
         };
     }, []);
 

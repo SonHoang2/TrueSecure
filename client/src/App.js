@@ -32,8 +32,8 @@ const App = () => {
         });
 
         return () => {
-            // Cleanup event listeners
             socket.off("connect_error");
+            socket.off("online-users");
         };
     }, []);
 
