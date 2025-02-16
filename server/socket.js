@@ -70,7 +70,7 @@ export const initSocket = (server) => {
         socket.on('send-message', async (data) => {
             const receiverSocketId = onlineUsers.get(data.receiverId);
             const senderSocketId = onlineUsers.get(data.senderId);
-            
+
             const message = await Message.create({
                 conversationId: data.conversationId,
                 senderId: data.senderId,
@@ -78,17 +78,42 @@ export const initSocket = (server) => {
                 content: data.content,
                 messageType: data.messageType
             });
-            
-            await MessageStatus.create({
+
+            const status = await MessageStatus.create({
                 messageId: message.id,
                 userId: data.receiverId,
                 status: messageStatus.Sent
             });
 
-            io.to(receiverSocketId).emit('new-message', data);
+            io.to(receiverSocketId).emit('new-message', {
+                ...data,
+                messageId: message.id,
+                messageStatusId: status.id
+            });
+
             io.to(senderSocketId).emit('message-status-update', {
                 messageId: message.id,
                 status: messageStatus.Sent
+            });
+        });
+
+        socket.on("message-seen", (data) => {
+            const senderSocketId = onlineUsers.get(data.senderId);
+
+            const { messageId } = data;
+
+            MessageStatus.update(
+                { status: messageStatus.Seen },
+                {
+                    where: {
+                        id: data.messageStatusId
+                    }
+                }
+            );
+
+            io.to(senderSocketId).emit("message-status-update", {
+                messageId: messageId,
+                status: messageStatus.Seen
             });
         });
 

@@ -20,8 +20,6 @@ const ChatRouter = ({ userStatus }) => {
         try {
             const res = await axiosPrivate.get(CONVERSATIONS_URL);
             const { conversations } = res.data.data;
-            console.log(conversations);
-
 
             setChatState((prevState) => ({
                 ...prevState,

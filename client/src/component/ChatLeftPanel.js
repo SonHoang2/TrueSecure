@@ -4,23 +4,6 @@ import { useNavigate } from "react-router-dom";
 export const ChatLeftPanel = ({ chatState, user, userStatus }) => {
     const navigate = useNavigate();
 
-    const getLastSeenTime = (timestamp) => {
-        if (!timestamp) return "";
-
-        const now = new Date();
-        const lastSeen = new Date(timestamp);
-
-        const diffInSeconds = Math.floor((now - lastSeen) / 1000);
-        if (diffInSeconds < 60) return `last seen ${diffInSeconds} sec ago`;
-        if (diffInSeconds < 3600) return `last seen ${Math.floor(diffInSeconds / 60)} min ago`;
-        if (diffInSeconds < 86400) return `last seen ${Math.floor(diffInSeconds / 3600)} hours ago`;
-        if (diffInSeconds < 604800) return `last seen ${Math.floor(diffInSeconds / 86400)} days ago`;
-        return `last seen ${Math.floor(diffInSeconds / 604800)} weeks ago`;
-    };
-
-    console.log(userStatus);
-    
-
     return (
         <div className="rounded-lg p-2 bg-white me-4 w-3/12">
             <div className="flex justify-between items-center">
