@@ -28,12 +28,12 @@ const Chat = ({ userStatus }) => {
     });
 
     const conversationId = Number(useParams()?.conversationId);
-    console.log("conversationId", conversationId);
 
+    const messageSoundRef = useRef(new Audio("/sound/notification-sound.m4a"));
     const conversationIdRef = useRef(conversationId);
+    const messagesEndRef = useRef(null)
 
     const { user, refreshTokens } = useAuth();
-    const messagesEndRef = useRef(null)
     const localAudio = useRef(null);
     const remoteAudio = useRef(null);
 
@@ -218,7 +218,10 @@ const Chat = ({ userStatus }) => {
 
     useEffect(() => {
         socket.on("new-message", (data) => {
-            console.log("data conversationId", data.conversationId, conversationIdRef.current);
+            messageSoundRef.current.play().catch((error) =>
+                console.error("Audio play error:", error)
+            );
+
             if (data.conversationId === conversationIdRef.current) {
                 setChatState((prevState) => ({
                     ...prevState,
