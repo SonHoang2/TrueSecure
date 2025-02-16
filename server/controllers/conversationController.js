@@ -54,9 +54,6 @@ export const createPrivateConversation = catchAsync(async (req, res, next) => {
 export const getConversationMessages = catchAsync(async (req, res, next) => {
     const conversationId = req.params.id;
 
-    console.log(req.user.id);
-
-
     const conversation = await Conversation.findByPk(conversationId, {
         include: [
             {
@@ -92,6 +89,17 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
                     messageId: message.id
                 }
             });
+
+            if (messagesStatus.status === messageStatus.Sent) {
+                MessageStatus.update({
+                    status: messageStatus.Seen
+                }, {
+                    where: {
+                        messageId: message.id,
+                        userId: req.user.id
+                    }
+                });
+            }
 
             return {
                 ...message.toJSON(),
