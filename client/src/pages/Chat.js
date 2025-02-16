@@ -28,6 +28,9 @@ const Chat = ({ userStatus }) => {
     });
 
     const conversationId = Number(useParams()?.conversationId);
+    console.log("conversationId", conversationId);
+
+    const conversationIdRef = useRef(conversationId);
 
     const { user, refreshTokens } = useAuth();
     const messagesEndRef = useRef(null)
@@ -207,15 +210,21 @@ const Chat = ({ userStatus }) => {
     }, [chatState.messages.length]);
 
     useEffect(() => {
+        conversationIdRef.current = conversationId;
+
+        getConversations();
+        getMessages();
+    }, [conversationId]);
+
+    useEffect(() => {
         socket.on("new-message", (data) => {
-            setChatState((prevState) => ({
-                ...prevState,
-                messages: [...prevState.messages, data],
-            }));
+            console.log("data conversationId", data.conversationId, conversationIdRef.current);
+            if (data.conversationId === conversationIdRef.current) {
+                setChatState((prevState) => ({
+                    ...prevState,
+                    messages: [...prevState.messages, data],
+                }));
 
-            console.log(data.conversationId === conversationId, data.conversationId, conversationId);
-
-            if (data.conversationId === conversationId) {
                 socket.emit("message-seen", {
                     senderId: data.senderId,
                     messageId: data.messageId,
@@ -324,11 +333,6 @@ const Chat = ({ userStatus }) => {
             }
         }
     }, [chatState.receiver, callState.isCalling]);
-
-    useEffect(() => {
-        getConversations();
-        getMessages();
-    }, [conversationId]);
 
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
