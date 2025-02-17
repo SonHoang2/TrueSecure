@@ -6,8 +6,8 @@ const router = Router();
 
 router.use(authController.protect);
 
-router.route('/private')
-    .post(conversationController.createPrivateConversation);
+router.route('/')
+    .post(conversationController.createConversation);
 
 router.route('/')
     .get(conversationController.getConversations);
