@@ -6,34 +6,46 @@ import User from "../models/userModel.js";
 import { messageStatus } from "../shareVariable.js";
 import AppError from "../utils/AppError.js";
 import catchAsync from "../utils/catchAsync.js";
-import { Op, Sequelize, where } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 
-export const createPrivateConversation = catchAsync(async (req, res, next) => {
+export const createConversation = catchAsync(async (req, res, next) => {
     const { users } = req.body;
 
     const existUsers = await User.findAll({
         where: {
-            id: { [Op.in]: [users[0], users[1]] }
+            id: { [Op.in]: users }
         }
     });
 
-    if (existUsers.length !== 2) {
+    if (existUsers.length !== users.length) {
         return next(new AppError('Users not found', 404));
+    }
+
+    if (users.length < 2) {
+        return next(new AppError('The minimum number of users in a conversation is 2', 400));
+    }
+
+    if (users.length > 25) {
+        return next(new AppError('The maximum number of users in a group conversation is 25', 400));
     }
 
     let conversation = await ConvParticipant.findOne({
         attributes: [
-            [Sequelize.col('conversationId'), 'id']
+            [Sequelize.col('conversationId'), 'id'], 
         ],
         where: {
-            userId: { [Op.in]: [users[0], users[1]] }
+            userId: { [Op.in]: users }
         },
         group: ['conversationId'],
-        having: Sequelize.where(Sequelize.fn('COUNT', Sequelize.col('userId')), 2)
+        having: Sequelize.where(Sequelize.fn('COUNT', Sequelize.col('userId')), users.length)
     });
 
     if (!conversation) {
-        conversation = await Conversation.create();
+        conversation = await Conversation.create(
+            {
+                isGroup: users.length > 2 ? true : false
+            }
+        );
 
         for (let userId of users) {
             await ConvParticipant.create({
