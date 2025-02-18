@@ -9,7 +9,7 @@ import catchAsync from "../utils/catchAsync.js";
 import { Op, Sequelize } from "sequelize";
 
 export const createConversation = catchAsync(async (req, res, next) => {
-    const { users } = req.body;
+    const { users, avatar, title } = req.body;
 
     const existUsers = await User.findAll({
         where: {
@@ -29,9 +29,14 @@ export const createConversation = catchAsync(async (req, res, next) => {
         return next(new AppError('The maximum number of users in a group conversation is 25', 400));
     }
 
+    if (users.length > 2 && !title) {
+        return next(new AppError('Group chat must have a title', 400));
+    }
+
     let conversation = await ConvParticipant.findOne({
         attributes: [
-            [Sequelize.col('conversationId'), 'id'], 
+            [Sequelize.col('conversationId'), 'id'],
+            [Sequelize.fn('COUNT', Sequelize.col('userId')), 'count']
         ],
         where: {
             userId: { [Op.in]: users }
@@ -40,12 +45,24 @@ export const createConversation = catchAsync(async (req, res, next) => {
         having: Sequelize.where(Sequelize.fn('COUNT', Sequelize.col('userId')), users.length)
     });
 
-    if (!conversation) {
-        conversation = await Conversation.create(
-            {
-                isGroup: users.length > 2 ? true : false
+    if (conversation) {
+        let exactMatch = await ConvParticipant.count({
+            where: {
+                conversationId: conversation.id
             }
-        );
+        });
+
+        if (exactMatch !== users.length) {
+            conversation = null;
+        }
+    }
+
+    if (!conversation) {
+        conversation = await Conversation.create({
+            isGroup: users.length > 2,
+            title: users.length > 2 ? req.body.title : null,
+            avatar: users.length > 2 ? avatar ?? "group-avatar-default.png" : null
+        });
 
         for (let userId of users) {
             await ConvParticipant.create({
