@@ -14,7 +14,10 @@ const Conversation = sequelize.define('conversation', {
     isGroup: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
-    }
+    },
+    avatar: {
+        type: DataTypes.STRING,
+    },
 },
     {
         timestamps: false
