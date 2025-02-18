@@ -17,7 +17,8 @@ const Chat = ({ userStatus }) => {
         message: "",
         messages: [],
         receiver: null,
-        conversations: []
+        conversations: [],
+        conversation: {},
     });
 
     const [callState, setCallState] = useState({
@@ -33,7 +34,7 @@ const Chat = ({ userStatus }) => {
     const conversationIdRef = useRef(conversationId);
     const messagesEndRef = useRef(null)
 
-    const { user, refreshTokens } = useAuth();
+    const { user } = useAuth();
     const localAudio = useRef(null);
     const remoteAudio = useRef(null);
 
@@ -47,7 +48,7 @@ const Chat = ({ userStatus }) => {
         try {
             const res = await axiosPrivate.get(CONVERSATIONS_URL + `/${conversationId}/messages`)
 
-            const { convParticipants, messages } = res.data.data.conversation;
+            const { convParticipants, messages, title, isGroup, avatar } = res.data.data.conversation;
 
             const receiver = convParticipants.find(x => x.userId !== user.id)?.user || null;
 
@@ -55,6 +56,11 @@ const Chat = ({ userStatus }) => {
                 ...prevState,
                 messages: messages,
                 receiver: receiver,
+                conversation: {
+                    title: title,
+                    isGroup: isGroup,
+                    avatar: avatar,
+                },
             }));
         } catch (error) {
             console.error(error);
@@ -347,7 +353,7 @@ const Chat = ({ userStatus }) => {
                     <img className="inline-block size-10 rounded-full " src={`${IMAGES_URL}/${user?.avatar}`} alt="" />
                 </div>
             </div>
-            <ChatLeftPanel chatState={chatState} user={user} userStatus={userStatus} conversationId={conversationId}/>
+            <ChatLeftPanel chatState={chatState} user={user} userStatus={userStatus} conversationId={conversationId} />
             {
                 chatState.receiver && (
                     <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
@@ -356,16 +362,21 @@ const Chat = ({ userStatus }) => {
                                 <div className="relative flex items-center">
                                     <img
                                         className="inline-block size-10 rounded-full ring-0"
-                                        src={`${IMAGES_URL}/${chatState.receiver.avatar}`}
-                                        alt=""
+                                        src={`${IMAGES_URL}/${chatState.conversation?.isGroup ? chatState.conversation?.avatar : chatState.receiver.avatar}`}
+                                        alt="avatar"
                                     />
-                                    {
-                                        userStatus.onlineUsers.includes(chatState.receiver?.id) &&
+                                    {!chatState.conversation?.isGroup && userStatus?.onlineUsers.includes(chatState.receiver?.id) && (
                                         <span className="absolute bottom-0 right-0 block size-3 bg-green-500 border-2 border-white rounded-full"></span>
-                                    }
+                                    )}
                                 </div>
                                 <div className="flex flex-col ms-2">
-                                    <span className="text-base font-bold">{chatState.receiver?.firstName + " " + chatState.receiver?.lastName}</span>
+                                    <span className="text-base font-bold">{
+                                        chatState.conversation?.isGroup
+                                            ? chatState.conversation?.title
+                                            : chatState.receiver
+                                                ? `${chatState.receiver.firstName} ${chatState.receiver.lastName}`
+                                                : "Unknown User"
+                                    }</span>
                                     <span className="text-sm text-gray-500">
                                         {userStatus.onlineUsers.includes(chatState.receiver?.id)
                                             ? "Online"
