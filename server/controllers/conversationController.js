@@ -147,7 +147,7 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
     );
 })
 
-export const getConversations = catchAsync(async (req, res, next) => {
+export const getUserConversations = catchAsync(async (req, res, next) => {
     const userId = req.user.id;
     const conversations = await ConvParticipant.findAll({
         attributes: ['conversationId', 'role', 'userId'],
