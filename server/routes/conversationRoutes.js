@@ -9,8 +9,8 @@ router.use(authController.protect);
 router.route('/')
     .post(conversationController.createConversation);
 
-router.route('/')
-    .get(conversationController.getConversations);
+router.route('/me')
+    .get(conversationController.getUserConversations);
 
 router.route('/:id/messages')
     .get(conversationController.getConversationMessages);
