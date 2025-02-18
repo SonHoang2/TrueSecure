@@ -88,7 +88,7 @@ const Chat = ({ userStatus }) => {
 
     const getConversations = async () => {
         try {
-            const res = await axiosPrivate.get(CONVERSATIONS_URL);
+            const res = await axiosPrivate.get(CONVERSATIONS_URL + "/me");
             const { conversations } = res.data.data;
 
             setChatState((prevState) => ({
@@ -347,7 +347,7 @@ const Chat = ({ userStatus }) => {
                     <img className="inline-block size-10 rounded-full " src={`${IMAGES_URL}/${user?.avatar}`} alt="" />
                 </div>
             </div>
-            <ChatLeftPanel chatState={chatState} user={user} userStatus={userStatus} />
+            <ChatLeftPanel chatState={chatState} user={user} userStatus={userStatus} conversationId={conversationId}/>
             {
                 chatState.receiver && (
                     <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
