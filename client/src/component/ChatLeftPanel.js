@@ -1,7 +1,7 @@
 import { IMAGES_URL } from "../config/config";
 import { useNavigate } from "react-router-dom";
 
-export const ChatLeftPanel = ({ chatState, user, userStatus }) => {
+export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId }) => {
     const navigate = useNavigate();
 
     return (
@@ -24,35 +24,49 @@ export const ChatLeftPanel = ({ chatState, user, userStatus }) => {
             </div>
             <div className="flex flex-col">
                 {chatState.conversations.map((conv) => {
-                    const otherUser = conv.conversation.convParticipants[0].user;
-                    const message = conv.conversation.messages[0];
+                    const { conversation } = conv;
+                    const { convParticipants, messages, isGroup } = conversation;
+
+                    // Safely get the first participant and message
+                    const otherUser = convParticipants[0]?.user;
+                    const lastMessage = messages[0];
+
+                    // Determine the display name
+                    const displayName = isGroup
+                        ? conversation.title
+                        : otherUser
+                            ? `${otherUser.firstName} ${otherUser.lastName}`
+                            : "Unknown User"
+
+                    // Determine the message content
+                    const messageContent = lastMessage
+                        ? lastMessage.senderId === user.id
+                            ? `You: ${lastMessage.content}`
+                            : lastMessage.content
+                        : "No message yet";
+
                     return (
                         <div
-                            key={conv.conversationId} className="p-3 flex items-center cursor-pointer hover:bg-gray-100 rounded-md"
+                            key={conv.conversationId}
+                            className={`p-3 flex items-center cursor-pointer hover:bg-gray-100 rounded-md ${conversationId === conv.conversationId ? "bg-gray-100" : ""}`}
                             onClick={() => navigate(`/chat/${conv.conversationId}`)}
                         >
-                            <div>
-                            </div>
                             <div className="relative flex items-center">
-                                <img className="inline-block size-10 rounded-full ring-0" src={`${IMAGES_URL}/${otherUser.avatar}`} alt="" />
-                                {
-                                    userStatus?.onlineUsers.includes(otherUser.id) &&
+                                <img
+                                    className="inline-block size-10 rounded-full ring-0"
+                                    src={`${IMAGES_URL}/${isGroup ? conversation?.avatar : otherUser?.avatar}`}
+                                    alt={displayName}
+                                />
+                                {!isGroup && userStatus?.onlineUsers.includes(otherUser?.id) && (
                                     <span className="absolute bottom-0 right-0 block size-3 bg-green-500 border-2 border-white rounded-full"></span>
-                                }
+                                )}
                             </div>
                             <div className="flex flex-col ms-2">
-                                <span className="text-base font-bold">{otherUser.firstName + " " + otherUser.lastName}</span>
-                                <span className="text-sm text-gray-500">
-                                    {message ?
-                                        message.senderId === user.id ?
-                                            "You: " + message.content :
-                                            message.content
-                                        : "No message yet"
-                                    }
-                                </span>
+                                <span className="text-base font-bold">{displayName}</span>
+                                <span className="text-sm text-gray-500">{messageContent}</span>
                             </div>
                         </div>
-                    )
+                    );
                 })}
             </div>
         </div>
