@@ -1,9 +1,11 @@
 import { Server } from "socket.io";
 import { socketProtect } from "./controllers/authController.js";
 import config from "./config/config.js";
+import ConvParticipant from "./models/convParticipantModel.js";
 import Message from "./models/messageModel.js";
 import MessageStatus from "./models/messageStatusModel.js";
 import { messageStatus } from "./shareVariable.js"
+import { Op } from "sequelize";
 
 export const initSocket = (server) => {
     const io = new Server(server, {
@@ -36,7 +38,6 @@ export const initSocket = (server) => {
             const receiverSocketId = onlineUsers.get(data.receiverId);
 
             io.to(receiverSocketId).emit("offer", { offer: data.offer, sender: data.sender });
-
         });
 
         // Handle answer
@@ -67,14 +68,13 @@ export const initSocket = (server) => {
             io.to(receiverSocketId).emit("call-ended");
         });
 
-        socket.on('send-message', async (data) => {
+        socket.on('send-private-message', async (data) => {
             const receiverSocketId = onlineUsers.get(data.receiverId);
             const senderSocketId = onlineUsers.get(data.senderId);
 
             const message = await Message.create({
                 conversationId: data.conversationId,
                 senderId: data.senderId,
-                receiverId: data.receiverId,
                 content: data.content,
                 messageType: data.messageType
             });
@@ -85,19 +85,19 @@ export const initSocket = (server) => {
                 status: messageStatus.Sent
             });
 
-            io.to(receiverSocketId).emit('new-message', {
+            io.to(receiverSocketId).emit('new-private-message', {
                 ...data,
                 messageId: message.id,
                 messageStatusId: status.id
             });
 
-            io.to(senderSocketId).emit('message-status-update', {
+            io.to(senderSocketId).emit('private-message-status-update', {
                 messageId: message.id,
                 status: messageStatus.Sent
             });
         });
 
-        socket.on("message-seen", (data) => {
+        socket.on("private-message-seen", (data) => {
             const senderSocketId = onlineUsers.get(data.senderId);
 
             const { messageId } = data;
@@ -111,9 +111,85 @@ export const initSocket = (server) => {
                 }
             );
 
-            io.to(senderSocketId).emit("message-status-update", {
+            io.to(senderSocketId).emit("private-message-status-update", {
                 messageId: messageId,
                 status: messageStatus.Seen
+            });
+        });
+
+        socket.on('send-group-message', async (data) => {
+            const message = await Message.create({
+                conversationId: data.conversationId,
+                senderId: data.senderId,
+                content: data.content,
+                messageType: data.messageType
+            });
+
+            const participants = await ConvParticipant.findAll({
+                where: {
+                    conversationId: data.conversationId,
+                    userId: { [Op.ne]: data.senderId }
+                }
+            });
+
+            const statusEntries = await Promise.all(
+                participants.map(async (participant) => {
+                    return await MessageStatus.create({
+                        messageId: message.id,
+                        userId: participant.userId,
+                        status: messageStatus.Sent
+                    });
+                })
+            );
+
+            const statusMap = new Map();
+            statusEntries.forEach(entry => {
+                statusMap.set(entry.userId, entry.id);
+            });
+
+            participants.forEach(async (participant) => {
+                const userSocketId = onlineUsers.get(participant.userId);
+                if (userSocketId) {
+                    io.to(userSocketId).emit('new-group-message', {
+                        ...data,
+                        messageId: message.id,
+                        messageStatusId: statusMap.get(participant.userId)
+                    });
+                }
+            });
+
+            const senderSocketId = onlineUsers.get(data.senderId);
+            if (senderSocketId) {
+                io.to(senderSocketId).emit('group-message-status-update', {
+                    messageId: message.id,
+                    status: messageStatus.Sent
+                });
+            }
+        });
+
+        socket.on("group-message-seen", async (data) => {
+            const status = await MessageStatus.findByPk(data.messageStatusId);
+            if (!status) return;
+
+            await status.update({ status: messageStatus.Seen });
+
+            const message = await Message.findByPk(status.messageId);
+
+            const participants = await ConvParticipant.findAll({
+                where: { conversationId: conversation.id }
+            });
+
+            const updateData = {
+                messageId: message.id,
+                userId: status.userId,
+                status: messageStatus.Seen
+            };
+
+            participants.forEach(participant => {
+                const socketId = onlineUsers.get(participant.userId);
+                if (socketId) {
+                    io.to(socketId).emit('group-message-status-update', updateData);
+                }
             });
         });
 
