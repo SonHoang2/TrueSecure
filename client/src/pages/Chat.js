@@ -78,7 +78,11 @@ const Chat = ({ userStatus }) => {
                     status: messageStatus.Sending,
                 };
 
-                socket.emit("send-message", messageData);
+                if (chatState.conversation.isGroup) {
+                    socket.emit("send-group-message", messageData);
+                } else {
+                    socket.emit("send-private-message", messageData);
+                }
 
                 setChatState((prevState) => ({
                     ...prevState,
@@ -223,54 +227,85 @@ const Chat = ({ userStatus }) => {
     }, [conversationId]);
 
     useEffect(() => {
-        socket.on("new-message", (data) => {
-            messageSoundRef.current.play().catch((error) =>
-                console.error("Audio play error:", error)
-            );
+        if (chatState.messages.length > 0) {
+            socket.on("new-private-message", (data) => {
+                messageSoundRef.current.play().catch((error) =>
+                    console.error("Audio play error:", error)
+                );
 
-            if (data.conversationId === conversationIdRef.current) {
-                setChatState((prevState) => ({
-                    ...prevState,
-                    messages: [...prevState.messages, data],
-                }));
+                if (data.conversationId === conversationIdRef.current) {
+                    setChatState((prevState) => ({
+                        ...prevState,
+                        messages: [...prevState.messages, data],
+                    }));
 
-                socket.emit("message-seen", {
-                    senderId: data.senderId,
-                    messageId: data.messageId,
-                    conversationId: data.conversationId,
-                    messageStatusId: data.messageStatusId,
-                })
-            }
-        });
-
-        socket.on("message-status-update", (data) => {
-            setChatState((prevState) => {
-                const messageIndex = prevState.messages.findLastIndex((msg) => {
-                    if (msg.status === messageStatus.Sending) return true;
-                    return msg.id === data.messageId;
-                });
-
-                if (messageIndex === -1) return prevState;
-
-                const updatedMessages = [...prevState.messages];
-                updatedMessages[messageIndex] = {
-                    ...updatedMessages[messageIndex],
-                    status: data.status,
-                    id: data.messageId,
-                };
-
-                return {
-                    ...prevState,
-                    messages: updatedMessages,
-                };
+                    socket.emit("private-message-seen", {
+                        senderId: data.senderId,
+                        messageId: data.messageId,
+                        conversationId: data.conversationId,
+                        messageStatusId: data.messageStatusId,
+                    })
+                }
             });
-        });
 
-        return () => {
-            socket.off("new-message");
-            socket.off("message-status-update");
-        };
-    }, []);
+            socket.on("private-message-status-update", (data) => {
+                setChatState((prevState) => {
+                    const messageIndex = prevState.messages.findLastIndex((msg) => {
+                        if (msg.status === messageStatus.Sending) return true;
+                        return msg.id === data.messageId;
+                    });
+
+                    if (messageIndex === -1) return prevState;
+
+                    const updatedMessages = [...prevState.messages];
+                    updatedMessages[messageIndex] = {
+                        ...updatedMessages[messageIndex],
+                        status: data.status,
+                        id: data.messageId,
+                    };
+
+                    return {
+                        ...prevState,
+                        messages: updatedMessages,
+                    };
+                });
+            });
+
+            socket.on("new-group-message", (data) => {
+                messageSoundRef.current.play().catch((error) =>
+                    console.error("Audio play error:", error)
+                );
+
+                if (data.conversationId === conversationIdRef.current) {
+                    setChatState((prevState) => ({
+                        ...prevState,
+                        messages: [...prevState.messages, data],
+                    }));
+
+                    console.log(data);
+
+                    socket.emit("group-message-seen", {
+                        senderId: data.senderId,
+                        messageId: data.messageId,
+                        conversationId: data.conversationId,
+                        messageStatusId: data.messageStatusId,
+                    })
+                }
+            });
+
+            socket.on("group-message-status-update", (data) => {
+                console.log(data);
+                
+            });
+
+            return () => {
+                socket.off("new-private-message");
+                socket.off("private-message-status-update");
+                socket.off("group-message-status-update");
+                socket.off("new-group-message");
+            };
+        }
+    }, [chatState.messages.length]);
 
     useEffect(() => {
         if (chatState.receiver) {
