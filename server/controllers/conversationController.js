@@ -113,7 +113,7 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
     if (!conversation.isGroup) {
         messages = await Promise.all(conversation.messages.map(async message => {
             const messagesStatus = await MessageStatus.findOne({
-                attributes: ['messageId', 'status'],
+                attributes: ['status'],
                 where: {
                     messageId: message.id
                 }
@@ -138,9 +138,12 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
     } else {
         messages = await Promise.all(conversation.messages.map(async message => {
             const messagesStatus = await MessageStatus.findAll({
-                attributes: ['messageId', 'status'],
+                attributes: ['status', 'userId'],
                 where: {
-                    messageId: message.id
+                    messageId: message.id,
+                    status: {
+                        [Op.ne]: messageStatus.Sent
+                    }
                 }
             });
 
