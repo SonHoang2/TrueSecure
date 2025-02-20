@@ -73,7 +73,6 @@ const Chat = ({ userStatus }) => {
                 const messageData = {
                     senderId: user.id,
                     conversationId: conversationId,
-                    receiverId: chatState.receiver.id,
                     content: chatState.message,
                     status: messageStatus.Sending,
                 };
@@ -81,6 +80,7 @@ const Chat = ({ userStatus }) => {
                 if (chatState.conversation.isGroup) {
                     socket.emit("send-group-message", messageData);
                 } else {
+                    messageData.receiverId = chatState.receiver.id;
                     socket.emit("send-private-message", messageData);
                 }
 
@@ -282,8 +282,6 @@ const Chat = ({ userStatus }) => {
                         messages: [...prevState.messages, data],
                     }));
 
-                    console.log(data);
-
                     socket.emit("group-message-seen", {
                         senderId: data.senderId,
                         messageId: data.messageId,
@@ -293,10 +291,33 @@ const Chat = ({ userStatus }) => {
                 }
             });
 
-            socket.on("group-message-status-update", (data) => {
-                console.log(data);
-                
-            });
+            socket.on("group-message-status-update", ({ messageId, userId, status }) => {
+                setChatState((prevState) => {
+                    const updatedMessages = [...prevState.messages];
+                    const messageIndex = updatedMessages.findLastIndex(
+                        (msg) => msg.status === messageStatus.Sending || msg.id === messageId
+                    );
+            
+                    if (messageIndex === -1) return prevState;
+                    const message = updatedMessages[messageIndex];
+            
+                    if (status === messageStatus.Seen) {
+                        message.statuses = message.statuses || [];
+                        message.status = null;
+                        
+                        const statusIndex = message.statuses.findIndex((s) => s.userId === userId);
+                        if (statusIndex === -1) {
+                            message.statuses.push({ userId, status });
+                        } else {
+                            message.statuses[statusIndex].status = status;
+                        }
+                    } else {
+                        updatedMessages[messageIndex] = { ...message, status, id: messageId };
+                    }
+            
+                    return { ...prevState, messages: updatedMessages };
+                });
+            });            
 
             return () => {
                 socket.off("new-private-message");
