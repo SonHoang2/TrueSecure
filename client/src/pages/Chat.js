@@ -488,19 +488,27 @@ const Chat = ({ userStatus }) => {
 
                             const isLastSeenMessage = index === lastSeenIndex;
 
-                            const avatar = chatState.convParticipants.find(x => x.userId === msg.senderId)?.user?.avatar;
+                            const otherUser = chatState.convParticipants.find(x => x.userId === msg.senderId)?.user;
+
+                            const avatar = otherUser?.avatar;
 
                             return (
                                 <div key={index} className="flex flex-col">
+                                    {
+                                        !isSentByUser && chatState.conversation?.isGroup &&
+                                        (<div className="ps-14">
+                                            <p className="text-xs text-gray-500">{otherUser?.firstName + " " + otherUser?.lastName}</p>
+                                        </div>)
+                                    }
                                     <div className={`flex w-full px-2 py-1 ${isSentByUser ? "justify-end" : "justify-start"}`}>
-                                        <div className="flex max-w-md">
+                                        <div className="flex max-w-md items-end">
                                             {!isSentByUser && (
                                                 <div className="flex-none pe-2 items-end">
                                                     <img className="size-8 rounded-full" src={`${IMAGES_URL}/${avatar}`} alt="" />
                                                 </div>
                                             )}
                                             <div className="flex-grow flex flex-col">
-                                                <p className={`rounded-3xl px-3 py-2 break-all text-s 
+                                                <p className={`rounded-3xl px-3 py-2 break-all text-s
                                                         ${isSentByUser ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white" : "bg-gray-100 text-black"}`}>
                                                     {msg.content}
                                                 </p>
