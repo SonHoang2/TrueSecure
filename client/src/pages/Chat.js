@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import socket from "../utils/socket";
 import { CONVERSATIONS_URL, IMAGES_URL, messageStatus } from "../config/config";
@@ -405,6 +405,34 @@ const Chat = ({ userStatus }) => {
         }
     }, [chatState.receiver, callState.isCalling]);
 
+
+    const lastSeenStatus = useMemo(() => {
+        return chatState.convParticipants
+            .map(participant => {
+                if (participant.userId === user.id) {
+                    return null;
+                }
+
+                for (let i = chatState.messages.length - 1; i >= 0; i--) {
+                    const user = chatState.messages[i].statuses?.find(
+                        status => status.userId === participant.userId && status.status === messageStatus.Seen
+                    );
+                    if (user) {
+                        return {
+                            userId: participant.userId,
+                            messageId: chatState.messages[i].id,
+                            avatar: participant.user.avatar,
+                        };
+                    }
+                }
+                return null;
+            })
+            .filter(Boolean);
+    }, [chatState.convParticipants, chatState.messages]);
+
+    console.log("lastSeenStatus: ", lastSeenStatus);
+
+
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
             <div className="rounded mx-4 flex flex-col justify-between">
@@ -478,19 +506,11 @@ const Chat = ({ userStatus }) => {
                             const isSentByUser = msg.senderId === user.id;
                             const isLastMessage = index === chatState.messages.length - 1;
 
-                            // Find the last seen message index
-                            const lastSeenIndex = chatState.messages.reduce((acc, curr, idx) => {
-                                if (curr.status === messageStatus.Seen) {
-                                    return idx;
-                                }
-                                return acc;
-                            }, -1);
-
-                            const isLastSeenMessage = index === lastSeenIndex;
-
                             const otherUser = chatState.convParticipants.find(x => x.userId === msg.senderId)?.user;
 
                             const avatar = otherUser?.avatar;
+
+                            const statuses = lastSeenStatus.filter(item => item.messageId === msg.id);
 
                             return (
                                 <div key={index} className="flex flex-col">
@@ -523,16 +543,15 @@ const Chat = ({ userStatus }) => {
                                             </div>
                                         </div>
                                     </div>
-                                    {
-                                        isLastSeenMessage && msg?.status === messageStatus.Seen && (
-                                            <div className="flex justify-end w-full">
-                                                <div className="flex pe-4 items-end">
-                                                    <img className="size-4 rounded-full" src={`${IMAGES_URL}/${chatState.receiver?.avatar}`} alt="" />
+                                    <div className="flex justify-end w-full pe-3">
+                                        {
+                                            statuses.length > 0 && statuses.map(status => (
+                                                <div key={status.id} className="flex pe-1 items-end">
+                                                    <img className="size-4 rounded-full" src={`${IMAGES_URL}/${status.avatar}`} alt="" />
                                                 </div>
-                                            </div>
-                                        )
-                                    }
-
+                                            ))
+                                        }
+                                    </div>
                                 </div>
                             )
                         })}
