@@ -407,31 +407,32 @@ const Chat = ({ userStatus }) => {
 
 
     const lastSeenStatus = useMemo(() => {
-        return chatState.convParticipants
-            .map(participant => {
-                if (participant.userId === user.id) {
-                    return null;
-                }
-
-                for (let i = chatState.messages.length - 1; i >= 0; i--) {
-                    const user = chatState.messages[i].statuses?.find(
-                        status => status.userId === participant.userId && status.status === messageStatus.Seen
-                    );
-                    if (user) {
-                        return {
-                            userId: participant.userId,
-                            messageId: chatState.messages[i].id,
-                            avatar: participant.user.avatar,
-                        };
+        if (chatState.conversation.isGroup) {
+            return chatState.convParticipants
+                .map(participant => {
+                    if (participant.userId === user.id) {
+                        return null;
                     }
-                }
-                return null;
-            })
-            .filter(Boolean);
+
+                    for (let i = chatState.messages.length - 1; i >= 0; i--) {
+                        const user = chatState.messages[i].statuses?.find(
+                            status => status.userId === participant.userId && status.status === messageStatus.Seen
+                        );
+                        if (user) {
+                            return {
+                                userId: participant.userId,
+                                messageId: chatState.messages[i].id,
+                                avatar: participant.user.avatar,
+                            };
+                        }
+                    }
+                    return null;
+                })
+                .filter(Boolean);
+        }
+
+        return chatState.messages.findLast(message => message.status === messageStatus.Seen);
     }, [chatState.convParticipants, chatState.messages]);
-
-    console.log("lastSeenStatus: ", lastSeenStatus);
-
 
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
@@ -510,7 +511,10 @@ const Chat = ({ userStatus }) => {
 
                             const avatar = otherUser?.avatar;
 
-                            const statuses = lastSeenStatus.filter(item => item.messageId === msg.id);
+                            let statuses;
+                            if (chatState.conversation.isGroup) {
+                                statuses = lastSeenStatus.filter(item => item.messageId === msg.id);
+                            }
 
                             return (
                                 <div key={index} className="flex flex-col">
@@ -545,11 +549,16 @@ const Chat = ({ userStatus }) => {
                                     </div>
                                     <div className="flex justify-end w-full pe-3">
                                         {
-                                            statuses.length > 0 && statuses.map(status => (
-                                                <div key={status.id} className="flex pe-1 items-end">
-                                                    <img className="size-4 rounded-full" src={`${IMAGES_URL}/${status.avatar}`} alt="" />
+                                            chatState.conversation.isGroup ?
+                                                statuses.map(status => (
+                                                    <div key={status.id} className="flex pe-1 items-end">
+                                                        <img className="size-4 rounded-full" src={`${IMAGES_URL}/${status.avatar}`} alt="" />
+                                                    </div>
+                                                )) :
+                                                lastSeenStatus.id === msg.id &&
+                                                <div className="flex pe-1 items-end">
+                                                    <img className="size-4 rounded-full" src={`${IMAGES_URL}/${chatState.receiver?.avatar}`} alt="" />
                                                 </div>
-                                            ))
                                         }
                                     </div>
                                 </div>
