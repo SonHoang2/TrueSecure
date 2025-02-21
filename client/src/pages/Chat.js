@@ -504,22 +504,22 @@ const Chat = ({ userStatus }) => {
                     </div>
                     <div className="flex-grow overflow-y-auto flex flex-col pb-4 pt-2">
                         {chatState.messages.map((msg, index) => {
-                            const isSentByUser = msg.senderId === user.id;
-                            const isLastMessage = index === chatState.messages.length - 1;
+                            const { messages, convParticipants, conversation, receiver } = chatState;
+                            const { isGroup } = conversation;
 
-                            const otherUser = chatState.convParticipants.find(x => x.userId === msg.senderId)?.user;
+                            const isSentByUser = msg.senderId === user.id;
+                            const isLastMessage = index === messages.length - 1;
+
+                            const otherUser = isGroup ? convParticipants.find(x => x.userId === msg.senderId)?.user : receiver;
 
                             const avatar = otherUser?.avatar;
 
-                            let statuses;
-                            if (chatState.conversation.isGroup) {
-                                statuses = lastSeenStatus.filter(item => item.messageId === msg.id);
-                            }
+                            const statuses = isGroup ? lastSeenStatus.filter(item => item.messageId === msg.id) : [];
 
                             return (
                                 <div key={index} className="flex flex-col">
                                     {
-                                        !isSentByUser && chatState.conversation?.isGroup &&
+                                        !isSentByUser && isGroup &&
                                         (<div className="ps-14">
                                             <p className="text-xs text-gray-500">{otherUser?.firstName + " " + otherUser?.lastName}</p>
                                         </div>)
@@ -549,7 +549,7 @@ const Chat = ({ userStatus }) => {
                                     </div>
                                     <div className="flex justify-end w-full pe-3">
                                         {
-                                            chatState.conversation.isGroup ?
+                                            isGroup ?
                                                 statuses.map(status => (
                                                     <div key={status.id} className="flex pe-1 items-end">
                                                         <img className="size-4 rounded-full" src={`${IMAGES_URL}/${status.avatar}`} alt="" />
@@ -557,7 +557,7 @@ const Chat = ({ userStatus }) => {
                                                 )) :
                                                 lastSeenStatus.id === msg.id &&
                                                 <div className="flex pe-1 items-end">
-                                                    <img className="size-4 rounded-full" src={`${IMAGES_URL}/${chatState.receiver?.avatar}`} alt="" />
+                                                    <img className="size-4 rounded-full" src={`${IMAGES_URL}/${avatar}`} alt="" />
                                                 </div>
                                         }
                                     </div>
