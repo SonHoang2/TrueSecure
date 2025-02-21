@@ -135,4 +135,6 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-/upload
+/upload/images/*
+!/upload/images/group-avatar-default.png
+!/upload/images/user-avatar-default.jpg
