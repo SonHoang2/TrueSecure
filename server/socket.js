@@ -176,7 +176,8 @@ export const initSocket = (server) => {
             const message = await Message.findByPk(status.messageId);
 
             const participants = await ConvParticipant.findAll({
-                where: { conversationId: conversation.id }
+                where: { conversationId: message.conversationId },
+                raw: true
             });
 
             const updateData = {
