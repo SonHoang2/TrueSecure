@@ -61,9 +61,11 @@ export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId }) =
                                     <span className="absolute bottom-0 right-0 block size-3 bg-green-500 border-2 border-white rounded-full"></span>
                                 )}
                             </div>
-                            <div className="flex flex-col ms-2">
-                                <span className="text-base font-bold">{displayName}</span>
-                                <span className="text-sm text-gray-500">{messageContent}</span>
+                            <div className="flex flex-col ms-2 flex-1 min-w-0">
+                                <p className="text-base font-bold">{displayName}</p>
+                                <p className="text-sm text-gray-500 overflow-hidden text-ellipsis whitespace-nowrap break-all">
+                                    {messageContent}
+                                </p>
                             </div>
                         </div>
                     );
