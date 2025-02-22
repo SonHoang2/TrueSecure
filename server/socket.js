@@ -6,6 +6,8 @@ import Message from "./models/messageModel.js";
 import MessageStatus from "./models/messageStatusModel.js";
 import { messageStatus } from "./shareVariable.js"
 import { Op } from "sequelize";
+import { client } from "./redisClient.js";
+import catchAsyncSocket from "./utils/catchAsyncSocket.js";
 
 export const initSocket = (server) => {
     const io = new Server(server, {
@@ -13,64 +15,60 @@ export const initSocket = (server) => {
             origin: config.client,
             credentials: true,
         },
-
     });
 
     io.use(socketProtect);
 
-    const onlineUsers = new Map([]);
-    const lastSeen = new Map();
-
-    io.on('connection', (socket) => {
+    io.on('connection', catchAsyncSocket(async (socket) => {
         console.log("A user connected", socket.id);
-        onlineUsers.set(socket.user.id, socket.id);
+
+        // Add user to Redis online users
+        await client.hSet('onlineUsers', socket.user.id, socket.id);
+
+        // Get all online users and last seen data
+        const [onlineUsers, lastSeen] = await Promise.all([
+            client.hGetAll('onlineUsers'),
+            client.hGetAll('lastSeen')
+        ]);
 
         io.emit('online-users', {
-            onlineUsers: Array.from(onlineUsers.keys()),
-            lastSeen: Object.fromEntries(lastSeen)
+            onlineUsers: Object.keys(onlineUsers),
+            lastSeen: lastSeen
         });
 
         console.log("Online users", onlineUsers);
 
         // Handle offer
-        socket.on("offer", (data) => {
-            console.log("Offer received", data);
-            const receiverSocketId = onlineUsers.get(data.receiverId);
-
+        socket.on("offer", catchAsyncSocket(async (data) => {
+            const receiverSocketId = await client.hGet("onlineUsers", data.receiverId.toString());
             io.to(receiverSocketId).emit("offer", { offer: data.offer, sender: data.sender });
-        });
+        }));
 
         // Handle answer
-        socket.on("answer", (data) => {
-            console.log("Answer received", data);
-            const receiverSocketId = onlineUsers.get(data.receiverId);
-
+        socket.on("answer", catchAsyncSocket(async (data) => {
+            const receiverSocketId = await client.hGet("onlineUsers", data.receiverId.toString());
             io.to(receiverSocketId).emit("answer", { answer: data.answer });
-
-        });
+        }));
 
         // Handle ICE candidate
-        socket.on("ice-candidate", (data) => {
-            console.log("ICE candidate received", data);
-            const receiverSocketId = onlineUsers.get(data.receiverId);
+        socket.on("ice-candidate", catchAsyncSocket(async (data) => {
+            const receiverSocketId = await client.hGet("onlineUsers", data.receiverId.toString());
             io.to(receiverSocketId).emit("ice-candidate", { candidate: data.candidate });
-        });
+        }));
 
-        socket.on("call-rejected", (data) => {
-            console.log("Call rejected", data);
-            const receiverSocketId = onlineUsers.get(data.receiverId);
+        socket.on("call-rejected", catchAsyncSocket(async (data) => {
+            const receiverSocketId = await client.hGet("onlineUsers", data.receiverId.toString());
             io.to(receiverSocketId).emit("call-rejected");
-        });
+        }));
 
-        socket.on("call-ended", (data) => {
-            console.log("Call ended", data);
-            const receiverSocketId = onlineUsers.get(data.receiverId);
+        socket.on("call-ended", catchAsyncSocket(async (data) => {
+            const receiverSocketId = await client.hGet("onlineUsers", data.receiverId.toString());
             io.to(receiverSocketId).emit("call-ended");
-        });
+        }));
 
-        socket.on('send-private-message', async (data) => {
-            const receiverSocketId = onlineUsers.get(data.receiverId);
-            const senderSocketId = onlineUsers.get(data.senderId);
+        socket.on('send-private-message', catchAsyncSocket(async (data) => {
+            const receiverSocketId = await client.hGet("onlineUsers", data.receiverId.toString());
+            const senderSocketId = await client.hGet("onlineUsers", data.senderId.toString());
 
             const message = await Message.create({
                 conversationId: data.conversationId,
@@ -95,10 +93,10 @@ export const initSocket = (server) => {
                 messageId: message.id,
                 status: messageStatus.Sent
             });
-        });
+        }));
 
-        socket.on("private-message-seen", (data) => {
-            const senderSocketId = onlineUsers.get(data.senderId);
+        socket.on("private-message-seen", catchAsyncSocket(async (data) => {
+            const senderSocketId = await client.hGet("onlineUsers", data.senderId.toString());
 
             const { messageId } = data;
 
@@ -115,9 +113,9 @@ export const initSocket = (server) => {
                 messageId: messageId,
                 status: messageStatus.Seen
             });
-        });
+        }));
 
-        socket.on('send-group-message', async (data) => {
+        socket.on('send-group-message', catchAsyncSocket(async (data) => {
             const message = await Message.create({
                 conversationId: data.conversationId,
                 senderId: data.senderId,
@@ -148,7 +146,7 @@ export const initSocket = (server) => {
             });
 
             participants.forEach(async (participant) => {
-                const userSocketId = onlineUsers.get(participant.userId);
+                const userSocketId = await client.hGet("onlineUsers", participant.userId.toString());
                 if (userSocketId) {
                     io.to(userSocketId).emit('new-group-message', {
                         ...data,
@@ -158,16 +156,16 @@ export const initSocket = (server) => {
                 }
             });
 
-            const senderSocketId = onlineUsers.get(data.senderId);
+            const senderSocketId = await client.hGet("onlineUsers", data.senderId.toString());
             if (senderSocketId) {
                 io.to(senderSocketId).emit('group-message-status-update', {
                     messageId: message.id,
                     status: messageStatus.Sent
                 });
             }
-        });
+        }));
 
-        socket.on("group-message-seen", async (data) => {
+        socket.on("group-message-seen", catchAsyncSocket(async (data) => {
             const status = await MessageStatus.findByPk(data.messageStatusId);
             if (!status) return;
 
@@ -186,20 +184,22 @@ export const initSocket = (server) => {
                 status: messageStatus.Seen
             };
 
-            participants.forEach(participant => {
-                const socketId = onlineUsers.get(participant.userId);
+            participants.forEach(async participant => {
+                const socketId = await client.hGet("onlineUsers", participant.userId.toString());
                 if (socketId) {
                     io.to(socketId).emit('group-message-status-update', updateData);
                 }
             });
-        });
+        }));
 
-        socket.on("disconnect", () => {
+        socket.on("disconnect", catchAsyncSocket(async () => {
             console.log("A user disconnected");
-            onlineUsers.delete(socket.user.id);
-            lastSeen.set(socket.user.id, new Date());
-        });
-    });
+            await Promise.all([
+                client.hDel('onlineUsers', socket.user.id),
+                client.hSet('lastSeen', socket.user.id, new Date().toISOString())
+            ]);
+        }));
+    }));
 
     return io;
 }
