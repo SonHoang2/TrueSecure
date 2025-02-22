@@ -6,7 +6,7 @@ import config from "../config/config.js";
 import { client } from "../redisClient.js";
 
 export const protect = catchAsync(async (req, res, next) => {
-    const { access_token: accessToken, refresh_token : refreshToken } = req.cookies;
+    const { access_token: accessToken, refresh_token: refreshToken } = req.cookies;
 
     if (refreshToken) {
         return next()
@@ -106,7 +106,8 @@ const createSendToken = async (user, statusCode, res) => {
             Date.now() + config.jwt.ATCookieExpiresIn * 60 * 60 * 1000
         ),
         httpOnly: true,
-        secure: config.env === 'production' ? true : false
+        secure: config.env === 'production',
+        sameSite: 'Strict'
     };
 
     const RTOptions = {
@@ -114,16 +115,22 @@ const createSendToken = async (user, statusCode, res) => {
             Date.now() + config.jwt.RTCookieExpiresIn * 24 * 60 * 60 * 1000
         ),
         httpOnly: true,
-        secure: config.env === 'production' ? true : false,
-        path: '/api/v1/auth/'
+        secure: config.env === 'production',
+        path: '/api/v1/auth/',
+        sameSite: 'Strict',
     };
 
     res.cookie('access_token', accessToken, ATOptions);
     res.cookie('refresh_token', refreshToken, RTOptions);
 
-    const value = String(user.id);
+    const userId = String(user.id);
+    const userTokensKey = `user:${userId}:tokens`;
 
-    await client.set(refreshToken, value, 'EX', 7 * 24 * 60 * 60); // auto delete after 7 days
+    await client
+        .multi()
+        .set(refreshToken, userId, 'EX', config.jwt.RTCookieExpiresIn * 24 * 60 * 60)
+        .sAdd(userTokensKey, refreshToken) // Track token in user's token set
+        .exec();
 
     // remove password from output
     user.password = undefined;
@@ -188,20 +195,23 @@ export const logout = catchAsync(
     async (req, res) => {
         const { refresh_token: refreshToken } = req.cookies;
 
-        const user = await client.get(refreshToken);
-        if (user) {
+        const userId = await client.get(refreshToken);
+        if (userId) {
             await client.del(refreshToken);
+            await client.sRem(`user:${userId}:tokens`, refreshToken);
         }
 
         const ATOptions = {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production' ? true : false
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'Strict',
         };
 
         const RTOptions = {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production' ? true : false,
-            path: '/api/v1/auth/'
+            secure: process.env.NODE_ENV === 'production',
+            path: '/api/v1/auth/',
+            sameSite: 'Strict',
         };
 
         res.clearCookie('access_token', ATOptions);
@@ -221,40 +231,55 @@ export const refreshToken = catchAsync(
             return next(new AppError('You are not logged in! Please log in to get access', 401));
         }
 
-        const user = await client.get(refreshToken);
-        if (!user) {
+        const userId = await client.get(refreshToken);
+        if (!userId) {
             jwt.verify(refreshToken, config.jwt.secret, async (err, decoded) => {
-                if (err) {
-                    return next(new AppError('Invalid token', 403));
-                }
+                if (err) return next(new AppError('Invalid token', 403));
+
                 // Detected refresh token reuse!
-                console.log('attempted refresh token reuse! User: ', decoded.id);
-                return next(new AppError('Invalid token', 403));
+                console.log('Refresh token reuse detected for user:', decoded.id);
+
+                // Invalidate all tokens for the user
+                const userTokensKey = `user:${decoded.id}:tokens`;
+                const tokens = await client.sMembers(userTokensKey);         
+                if (tokens.length > 0) {
+                    await client.del(tokens); // Delete all token keys
+                    await client.del(userTokensKey); // Delete the user's token set
+                }
+
+                return next(new AppError('Security alert: Session compromised!', 403));
             });
+            return;
         }
 
+        // Delete the old token
         await client.del(refreshToken);
+        await client.sRem(`user:${userId}:tokens`, refreshToken);
 
-        const accessToken = signToken(user, config.jwt.ATExpiresIn);
-        const newRefreshToken = signToken(user, config.jwt.RTExpiresIn);
+        // Generate new tokens
+        const accessToken = signToken(userId, config.jwt.ATExpiresIn);
+        const newRefreshToken = signToken(userId, config.jwt.RTExpiresIn);
 
-        await client.set(newRefreshToken, user, 'EX', 7 * 24 * 60 * 60); // auto delete after 7 day
+        // Store new refresh token and track it
+        await client
+            .multi()
+            .set(newRefreshToken, userId, 'EX', config.jwt.RTCookieExpiresIn * 24 * 60 * 60)
+            .sAdd(`user:${userId}:tokens`, newRefreshToken)
+            .exec();
 
         const ATOptions = {
-            expires: new Date(
-                Date.now() + config.jwt.ATCookieExpiresIn * 60 * 60 * 1000
-            ),
+            expires: new Date(Date.now() + config.jwt.ATCookieExpiresIn * 60 * 60 * 1000),
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production' ? true : false
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'Strict',
         };
 
         const RTOptions = {
-            expires: new Date(
-                Date.now() + config.jwt.RTCookieExpiresIn * 24 * 60 * 60 * 1000
-            ),
+            expires: new Date(Date.now() + config.jwt.RTCookieExpiresIn * 24 * 60 * 60 * 1000),
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production' ? true : false,
-            path: '/api/v1/auth/'
+            secure: process.env.NODE_ENV === 'production',
+            path: '/api/v1/auth/',
+            sameSite: 'Strict',
         };
 
         res.cookie('access_token', accessToken, ATOptions);
@@ -262,6 +287,6 @@ export const refreshToken = catchAsync(
 
         res.json({
             status: 'success'
-        })
+        });
     }
 )
