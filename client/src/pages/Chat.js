@@ -223,12 +223,12 @@ const Chat = ({ userStatus }) => {
         }
     }, [chatState.messages.length]);
 
-    useEffect(() => {
+    useEffect(() => {   
         conversationIdRef.current = conversationId;
 
         getConversations();
         getMessages();
-    }, [conversationId]);
+    }, [conversationId, user]);
 
     useEffect(() => {
         if (chatState.messages.length > 0) {

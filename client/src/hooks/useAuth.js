@@ -16,15 +16,15 @@ export const AuthProvider = ({ children }) => {
 
     const refreshTokens = async () => {
         try {
-            console.log("hello");
-            
             await axios.get(AUTH_URL + "/refresh", { withCredentials: true });
             console.log("Token Refreshed");
-            
-            if (!user) {
-                const res = await axiosPrivate.get(USERS_URL + "/me");
-                setUser(res.data.data.doc);
-                localStorage.setItem("user", JSON.stringify(res.data.data.doc));
+
+            const res = await axiosPrivate.get(USERS_URL + "/me");
+            const { user } = res.data.data;
+
+            if (user) {
+                setUser(user);
+                localStorage.setItem("user", JSON.stringify(user));
             }
         } catch (error) {
             console.log("Token Refresh Failed", error);
