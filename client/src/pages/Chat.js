@@ -455,7 +455,7 @@ const Chat = ({ userStatus }) => {
                                     src={`${IMAGES_URL}/${chatState.conversation?.isGroup ? chatState.conversation?.avatar : chatState.receiver?.avatar}`}
                                     alt="avatar"
                                 />
-                                {!chatState.conversation?.isGroup && userStatus?.onlineUsers.includes(chatState.receiver?.id) && (
+                                {!chatState.conversation?.isGroup && userStatus?.onlineUsers.hasOwnProperty(chatState.receiver?.id) && (
                                     <span className="absolute bottom-0 right-0 block size-3 bg-green-500 border-2 border-white rounded-full"></span>
                                 )}
                             </div>
@@ -468,9 +468,10 @@ const Chat = ({ userStatus }) => {
                                             : "Unknown User"
                                 }</span>
                                 <span className="text-sm text-gray-500">
-                                    {userStatus.onlineUsers.includes(chatState.receiver?.id)
-                                        ? "Online"
-                                        : getLastSeenTime(userStatus.lastSeen[chatState.receiver?.id])
+                                    {!chatState.conversation?.isGroup &&
+                                        (userStatus.onlineUsers.hasOwnProperty(chatState.receiver?.id)
+                                            ? "Online"
+                                            : getLastSeenTime(userStatus.lastSeen[chatState.receiver?.id]))
                                     }
                                 </span>
                             </div>
