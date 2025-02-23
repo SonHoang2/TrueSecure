@@ -8,10 +8,8 @@ import ChatRouter from "./pages/ChatRouter";
 import socket from "./utils/socket";
 
 const App = () => {
-    const { refreshTokens } = useAuth();
-
     const [userStatus, setUserStatus] = useState({
-        onlineUsers: [],
+        onlineUsers: {},
         lastSeen: {},
     });
 
@@ -26,9 +24,6 @@ const App = () => {
 
         socket.on("connect_error", (error) => {
             console.error(error.message);
-            if (error.message === "Unauthorized") {
-                refreshTokens();
-            }
         });
 
         return () => {
