@@ -120,7 +120,7 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
             });
 
             if (messagesStatus.status === messageStatus.Sent) {
-                MessageStatus.update({
+                await MessageStatus.update({
                     status: messageStatus.Seen
                 }, {
                     where: {
@@ -137,19 +137,27 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
         }));
     } else {
         messages = await Promise.all(conversation.messages.map(async message => {
-            const messagesStatus = await MessageStatus.findAll({
+            const messagesStatuses = await MessageStatus.findAll({
                 attributes: ['status', 'userId'],
                 where: {
                     messageId: message.id,
-                    status: {
-                        [Op.ne]: messageStatus.Sent
-                    }
                 }
             });
 
+            await MessageStatus.update(
+                { status: messageStatus.Seen },
+                {
+                    where: {
+                        messageId: message.id,
+                        userId: req.user.id,
+                        status: messageStatus.Sent
+                    }
+                }
+            );
+
             return {
                 ...message.toJSON(),
-                statuses: messagesStatus
+                statuses: messagesStatuses
             }
         }));
     }
