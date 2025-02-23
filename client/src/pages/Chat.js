@@ -55,7 +55,7 @@ const Chat = ({ userStatus }) => {
 
             const { convParticipants, messages, title, isGroup, avatar } = res.data.data.conversation;
 
-            const receiver = convParticipants.find(x => x.userId !== user.id)?.user || null;
+            const receiver = convParticipants.find(x => x.userId !== user?.id)?.user || null;
 
             setChatState((prevState) => ({
                 ...prevState,
@@ -77,7 +77,7 @@ const Chat = ({ userStatus }) => {
         try {
             if (chatState.message.trim()) {
                 const messageData = {
-                    senderId: user.id,
+                    senderId: user?.id,
                     conversationId: conversationId,
                     content: chatState.message,
                     status: messageStatus.Sending,
@@ -86,7 +86,7 @@ const Chat = ({ userStatus }) => {
                 if (chatState.conversation.isGroup) {
                     socket.emit("send-group-message", messageData);
                 } else {
-                    messageData.receiverId = chatState.receiver.id;
+                    messageData.receiverId = chatState.receiver?.id;
                     socket.emit("send-private-message", messageData);
                 }
 
@@ -159,62 +159,77 @@ const Chat = ({ userStatus }) => {
     };
 
     const acceptCall = async () => {
-        if (!callState.offer) return;
+        try {
+            if (!callState.offer) return;
 
-        await peer.setRemoteDescription(new RTCSessionDescription(callState.offer));
-        await flushCandidateQueue();  // Flush queued ICE candidates
+            await peer.setRemoteDescription(new RTCSessionDescription(callState.offer));
+            await flushCandidateQueue();  // Flush queued ICE candidates
 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-        localAudio.current.srcObject = stream;
-        stream.getTracks().forEach((track) => peer.addTrack(track, stream));
+            localAudio.current.srcObject = stream;
+            stream.getTracks().forEach((track) => peer.addTrack(track, stream));
 
-        const answer = await peer.createAnswer();
-        await peer.setLocalDescription(answer);
-        socket.emit("answer", { answer, receiverId: callState.sender.id });
+            const answer = await peer.createAnswer();
+            await peer.setLocalDescription(answer);
+            socket.emit("answer", { answer, receiverId: callState.sender.id });
 
-        // Reset incoming call and mark as in a call
-        setCallState({ isCalling: true, isRinging: false, senderId: null, offer: null });
+            // Reset incoming call and mark as in a call
+            setCallState({ isCalling: true, isRinging: false, senderId: null, offer: null });
+        } catch (error) {
+            console.error("Error accepting call:", error);
+        }
     };
 
     const rejectCall = () => {
-        socket.emit("call-rejected", { receiverId: callState.sender.id });
-
-        setCallState({ isRinging: false, senderId: null, offer: null });
+        try {
+            socket.emit("call-rejected", { receiverId: callState.sender.id });
+            setCallState({ isRinging: false, senderId: null, offer: null });
+        } catch (error) {
+            console.error("Error rejecting call:", error);
+        }
     };
 
     const endCall = (shouldNotifyPeer = true) => {
-        if (peer) {
-            peer.close();
+        try {
+            if (peer) {
+                peer.close();
+            }
+
+            peer = new RTCPeerConnection({
+                iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+            });
+
+            // Stop all media tracks
+            if (localAudio.current && localAudio.current.srcObject) {
+                localAudio.current.srcObject.getTracks().forEach(track => track.stop());
+                localAudio.current.srcObject = null;
+            }
+
+            if (shouldNotifyPeer) {
+                socket.emit("call-ended", { receiverId: chatState.receiver.id });
+            }
+
+            setCallState({ isCalling: false, isRinging: false, senderId: null, offer: null });
+        } catch (error) {
+            console.error("Error ending call:", error);
         }
-
-        peer = new RTCPeerConnection({
-            iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-        });
-
-        // Stop all media tracks
-        if (localAudio.current && localAudio.current.srcObject) {
-            localAudio.current.srcObject.getTracks().forEach(track => track.stop());
-            localAudio.current.srcObject = null;
-        }
-
-        if (shouldNotifyPeer) {
-            socket.emit("call-ended", { receiverId: chatState.receiver.id });
-        }
-
-        setCallState({ isCalling: false, isRinging: false, senderId: null, offer: null });
     };
 
     const flushCandidateQueue = async () => {
-        for (const candidate of candidateQueue) {
-            try {
-                await peer.addIceCandidate(new RTCIceCandidate(candidate));
-            } catch (err) {
-                console.error("Error adding flushed ICE candidate:", err);
+        try {
+            for (const candidate of candidateQueue) {
+                try {
+                    await peer.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (err) {
+                    console.error("Error adding flushed ICE candidate:", err);
+                }
             }
+            // Clear the queue
+            candidateQueue = [];
+        } catch (error) {
+            console.error("Error flushing ICE candidate queue:", error);
         }
-        // Clear the queue
-        candidateQueue = [];
     };
 
     useEffect(() => {
@@ -223,12 +238,14 @@ const Chat = ({ userStatus }) => {
         }
     }, [chatState.messages.length]);
 
-    useEffect(() => {   
+    useEffect(() => {
         conversationIdRef.current = conversationId;
 
+        console.log("conversationIdRef.current", conversationIdRef.current);
+        
         getConversations();
         getMessages();
-    }, [conversationId, user]);
+    }, [conversationId]);
 
     useEffect(() => {
         if (chatState.messages.length > 0) {
@@ -410,7 +427,7 @@ const Chat = ({ userStatus }) => {
         if (chatState.conversation.isGroup) {
             return chatState.convParticipants
                 .map(participant => {
-                    if (participant.userId === user.id) {
+                    if (participant.userId === user?.id) {
                         return null;
                     }
 
@@ -421,7 +438,7 @@ const Chat = ({ userStatus }) => {
                         if (user) {
                             return {
                                 userId: participant.userId,
-                                messageId: chatState.messages[i].id,
+                                messageId: chatState.messages[i]?.id,
                                 avatar: participant.user.avatar,
                             };
                         }
@@ -508,7 +525,7 @@ const Chat = ({ userStatus }) => {
                             const { messages, convParticipants, conversation, receiver } = chatState;
                             const { isGroup } = conversation;
 
-                            const isSentByUser = msg.senderId === user.id;
+                            const isSentByUser = msg.senderId === user?.id;
                             const isLastMessage = index === messages.length - 1;
 
                             const otherUser = isGroup ? convParticipants.find(x => x.userId === msg.senderId)?.user : receiver;
@@ -552,11 +569,11 @@ const Chat = ({ userStatus }) => {
                                         {
                                             isGroup ?
                                                 statuses.map(status => (
-                                                    <div key={status.id} className="flex pe-1 items-end">
+                                                    <div key={status?.id} className="flex pe-1 items-end">
                                                         <img className="size-4 rounded-full" src={`${IMAGES_URL}/${status.avatar}`} alt="" />
                                                     </div>
                                                 )) :
-                                                lastSeenStatus.id === msg.id &&
+                                                lastSeenStatus?.id === msg.id &&
                                                 <div className="flex pe-1 items-end">
                                                     <img className="size-4 rounded-full" src={`${IMAGES_URL}/${avatar}`} alt="" />
                                                 </div>
