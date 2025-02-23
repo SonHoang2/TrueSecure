@@ -43,8 +43,7 @@ export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId }) =
                         ? lastMessage.senderId === user.id
                             ? `You: ${lastMessage.content}`
                             : lastMessage.content
-                        : "No message yet";
-
+                        : "No message yet";       
                     return (
                         <div
                             key={conv.conversationId}
@@ -57,7 +56,7 @@ export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId }) =
                                     src={`${IMAGES_URL}/${isGroup ? conversation?.avatar : otherUser?.avatar}`}
                                     alt={displayName}
                                 />
-                                {!isGroup && userStatus?.onlineUsers.includes(otherUser?.id) && (
+                                {!isGroup && userStatus?.onlineUsers.hasOwnProperty(otherUser?.id) && (
                                     <span className="absolute bottom-0 right-0 block size-3 bg-green-500 border-2 border-white rounded-full"></span>
                                 )}
                             </div>
