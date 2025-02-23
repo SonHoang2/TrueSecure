@@ -32,7 +32,7 @@ export const initSocket = (server) => {
         ]);
 
         io.emit('online-users', {
-            onlineUsers: Object.keys(onlineUsers),
+            onlineUsers: onlineUsers,
             lastSeen: lastSeen
         });
 
@@ -195,9 +195,10 @@ export const initSocket = (server) => {
         socket.on("disconnect", catchAsyncSocket(async () => {
             console.log("A user disconnected");
             await Promise.all([
-                client.hDel('onlineUsers', socket.user.id),
-                client.hSet('lastSeen', socket.user.id, new Date().toISOString())
+                client.hDel('onlineUsers', socket.user.id.toString()),
+                client.hSet('lastSeen', socket.user.id.toString(), new Date().toISOString())
             ]);
+            
         }));
     }));
 
