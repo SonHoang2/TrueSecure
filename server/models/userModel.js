@@ -51,6 +51,9 @@ const User = sequelize.define('user', {
         type: DataTypes.BOOLEAN,
         defaultValue: true
     },
+    publicKey: {
+        type: DataTypes.STRING,
+    }
 },
     {
         timestamps: false,
