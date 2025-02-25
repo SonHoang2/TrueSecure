@@ -93,9 +93,6 @@ export const deleteUser = catchAsync(async (req, res, next) => {
         return next(new AppError('No user found with that ID', 404));
     }
 
-    console.log("user:", user);
-
-
     await user.update({ active: false });
 
     res.status(200).json({
@@ -105,3 +102,35 @@ export const deleteUser = catchAsync(async (req, res, next) => {
         }
     });
 });
+
+export const createPublicKey = catchAsync(
+    async (req, res) => {
+        const { publicKey } = req.body;
+        const { id } = req.user;
+
+        await User.update({ publicKey }, { where: { id } });
+
+        res.status(200).json({
+            status: 'success'
+        });
+    }
+)
+
+export const getPublicKey = catchAsync(
+    async (req, res) => {
+        const { id } = req.params;
+
+        const user = await User.findOne({ where: { id }, attributes: ['publicKey'] });
+
+        if (!user) {
+            return next(new AppError('No user found with that ID', 404));
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                publicKey: user.publicKey
+            }
+        });
+    }
+)
