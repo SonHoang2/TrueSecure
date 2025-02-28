@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import socket from "../utils/socket";
-import { CONVERSATIONS_URL, IMAGES_URL, messageStatus } from "../config/config";
+import { CONVERSATIONS_URL, IMAGES_URL, messageStatus, USERS_URL } from "../config/config";
 import { useAuth } from "../hooks/useAuth";
 import ChatLeftPanel from "../component/ChatLeftPanel";
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
+import * as cryptoUtils from "../utils/cryptoUtils"
 
 let peer = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -24,6 +25,11 @@ const Chat = ({ userStatus }) => {
             isGroup: false,
             avatar: "",
         },
+    });
+
+    const [userKeys, setUserKeys] = useState({
+        publicKey: null,
+        privateKey: null,
     });
 
     const [callState, setCallState] = useState({
@@ -232,6 +238,27 @@ const Chat = ({ userStatus }) => {
         }
     };
 
+    const getUserKey = async () => {
+        try {
+            const res = await axiosPrivate.get(USERS_URL + `/${chatState.receiver?.id}/public-key`);
+            const { publicKey: exportedPublicKey } = res.data.data;
+
+            let privateKey = userKeys.privateKey;
+            if (!privateKey) {
+                const exportedPrivateKey = localStorage.getItem("privateKey");
+                privateKey = await cryptoUtils.importPrivateKey(exportedPrivateKey);
+            }
+
+            const publicKey = await cryptoUtils.importPublicKey(exportedPublicKey);
+            console.log(publicKey, privateKey);
+
+            setUserKeys({ publicKey, privateKey });
+        }
+        catch (error) {
+            console.error("Error getting public key:", error);
+        }
+    };
+
     useEffect(() => {
         if (chatState.receiver) {
             scrollToBottom()
@@ -241,11 +268,15 @@ const Chat = ({ userStatus }) => {
     useEffect(() => {
         conversationIdRef.current = conversationId;
 
-        console.log("conversationIdRef.current", conversationIdRef.current);
-        
         getConversations();
         getMessages();
     }, [conversationId]);
+
+    useEffect(() => {
+        if (chatState.receiver) {
+            getUserKey();
+        }
+    }, [chatState.receiver]);
 
     useEffect(() => {
         if (chatState.messages.length > 0) {
@@ -422,6 +453,29 @@ const Chat = ({ userStatus }) => {
         }
     }, [chatState.receiver, callState.isCalling]);
 
+    useEffect(() => {
+        const initKey = async () => {
+            try {
+                const { privateKey, publicKey } = await cryptoUtils.generateECDHKeys();
+
+                const exportedPublicKey = await cryptoUtils.exportPublicKey(publicKey);
+
+                await cryptoUtils.storePrivateKey(privateKey);
+
+                await axiosPrivate.post(USERS_URL + "/public-key", {
+                    publicKey: exportedPublicKey,
+                });
+            } catch (error) {
+                console.error("Error initializing key:", error);
+            }
+        };
+
+        const exportedPrivateKey = localStorage.getItem("privateKey");
+
+        if (!exportedPrivateKey) {
+            initKey();
+        }
+    }, [])
 
     const lastSeenStatus = useMemo(() => {
         if (chatState.conversation.isGroup) {
