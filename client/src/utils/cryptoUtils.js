@@ -126,24 +126,17 @@ export async function importPublicKey(base64Key) {
     );
 }
 
-export async function exportAndStorePrivateKey(privateKey) {
-    // Export the private key in JWK format (or PKCS8 if preferred)
+export async function storePrivateKey(privateKey) {
+    // Export the private key in JWK format
     const exportedKey = await window.crypto.subtle.exportKey("jwk", privateKey);
 
     // Convert the exported key to a string and store it in localStorage
     localStorage.setItem("privateKey", JSON.stringify(exportedKey));
-    console.log("Private key stored in localStorage.");
 }
 
-export async function retrieveAndImportPrivateKey() {
-    // Retrieve the private key from localStorage
-    const exportedKeyString = localStorage.getItem("privateKey");
-    if (!exportedKeyString) {
-        throw new Error("No private key found in localStorage.");
-    }
-
+export async function importPrivateKey(jwkString) {
     // Parse the exported key
-    const exportedKey = JSON.parse(exportedKeyString);
+    const exportedKey = JSON.parse(jwkString);
 
     // Import the private key
     const privateKey = await window.crypto.subtle.importKey(
@@ -154,7 +147,7 @@ export async function retrieveAndImportPrivateKey() {
             namedCurve: "P-256",
         },
         true, // Key is exportable
-        ["deriveKey", "deriveBits"] // Key usages
+        ["deriveKey"] // Key usages
     );
 
     return privateKey;
