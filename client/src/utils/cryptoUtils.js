@@ -126,17 +126,36 @@ export async function importPublicKey(base64Key) {
     );
 }
 
-export async function storePrivateKey(privateKey) {
-    // Export the private key in JWK format
+export async function storePrivateKey(privateKey, userId) {
+    if (!userId) {
+        console.error('User ID is required to store private key');
+        return;
+    }
+
+    const storageKey = `privateKey_${userId}`;
+
     const exportedKey = await window.crypto.subtle.exportKey("jwk", privateKey);
 
-    // Convert the exported key to a string and store it in localStorage
-    localStorage.setItem("privateKey", JSON.stringify(exportedKey));
+    localStorage.setItem(storageKey, JSON.stringify(exportedKey));
 }
 
-export async function importPrivateKey(jwkString) {
+export function hasPrivateKey(userId) {
+    const storageKey = `privateKey_${userId}`;
+    const keyData = localStorage.getItem(storageKey);
+
+    return keyData;
+}
+
+export async function importPrivateKey(userId) {
+    if (!userId) {
+        console.error('User ID is required to store private key');
+        return;
+    }
+ 
+    const keyData = hasPrivateKey(userId);
+
     // Parse the exported key
-    const exportedKey = JSON.parse(jwkString);
+    const exportedKey = JSON.parse(keyData);
 
     // Import the private key
     const privateKey = await window.crypto.subtle.importKey(
