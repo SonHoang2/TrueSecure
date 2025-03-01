@@ -10,12 +10,7 @@ import { MessageList } from "../component/MessageList";
 import { ChatHeader } from "../component/ChatHeader";
 import { IncomingCallModal } from "../component/IncomingCallModal";
 import OutgoingCallModal from "../component/OutgoingCallModal";
-
-let peer = new RTCPeerConnection({
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-});
-
-let candidateQueue = [];
+import { useWebRTC } from "../hooks/useWebRTC";
 
 const Chat = ({ userStatus }) => {
     const [chatState, setChatState] = useState({
@@ -36,28 +31,29 @@ const Chat = ({ userStatus }) => {
         privateKey: null,
     });
 
-    const [callState, setCallState] = useState({
-        isCalling: false, // Outgoing call
-        isRinging: false, // Incoming call
-        sender: null,
-        offer: null,
-    });
-
     const conversationId = Number(useParams()?.conversationId);
 
     const messageSoundRef = useRef(new Audio("/sound/notification-sound.m4a"));
     const conversationIdRef = useRef(conversationId);
-    const messagesEndRef = useRef(null)
 
     const { user } = useAuth();
-    const localAudio = useRef(null);
-    const remoteAudio = useRef(null);
 
     const axiosPrivate = useAxiosPrivate();
 
-    const scrollToBottom = () => {
-        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    const {
+        callState,
+        startCall,
+        acceptCall,
+        rejectCall,
+        endCall,
+        localAudio,
+        remoteAudio,
+    } = useWebRTC({
+        receiverId: chatState.receiver?.id,
+        messageSoundRef,
+        socket,
+        user,
+    });
 
     const getMessages = async () => {
         try {
@@ -169,107 +165,7 @@ const Chat = ({ userStatus }) => {
         }
     }
 
-    const startCall = async () => {
-        try {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                console.error("getUserMedia is not supported in this browser.");
-                return;
-            }
 
-            // Get audio stream before creating offer
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-            localAudio.current.srcObject = stream; // Play local audio
-
-            // Add tracks to peer connection
-            stream.getTracks().forEach((track) => peer.addTrack(track, stream));
-
-            // Create and send WebRTC offer
-            const offer = await peer.createOffer();
-            await peer.setLocalDescription(offer);
-
-            socket.emit("offer", { offer, receiverId: chatState.receiver.id, sender: user });
-
-            // Update call state
-            setCallState(prev => ({ ...prev, isCalling: true }));
-        } catch (error) {
-            console.error("Error starting call:", error);
-        }
-    };
-
-    const acceptCall = async () => {
-        try {
-            if (!callState.offer) return;
-
-            await peer.setRemoteDescription(new RTCSessionDescription(callState.offer));
-            await flushCandidateQueue();  // Flush queued ICE candidates
-
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-            localAudio.current.srcObject = stream;
-            stream.getTracks().forEach((track) => peer.addTrack(track, stream));
-
-            const answer = await peer.createAnswer();
-            await peer.setLocalDescription(answer);
-            socket.emit("answer", { answer, receiverId: callState.sender.id });
-
-            // Reset incoming call and mark as in a call
-            setCallState({ isCalling: true, isRinging: false, senderId: null, offer: null });
-        } catch (error) {
-            console.error("Error accepting call:", error);
-        }
-    };
-
-    const rejectCall = () => {
-        try {
-            socket.emit("call-rejected", { receiverId: callState.sender.id });
-            setCallState({ isRinging: false, senderId: null, offer: null });
-        } catch (error) {
-            console.error("Error rejecting call:", error);
-        }
-    };
-
-    const endCall = (shouldNotifyPeer = true) => {
-        try {
-            if (peer) {
-                peer.close();
-            }
-
-            peer = new RTCPeerConnection({
-                iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-            });
-
-            // Stop all media tracks
-            if (localAudio.current && localAudio.current.srcObject) {
-                localAudio.current.srcObject.getTracks().forEach(track => track.stop());
-                localAudio.current.srcObject = null;
-            }
-
-            if (shouldNotifyPeer) {
-                socket.emit("call-ended", { receiverId: chatState.receiver.id });
-            }
-
-            setCallState({ isCalling: false, isRinging: false, senderId: null, offer: null });
-        } catch (error) {
-            console.error("Error ending call:", error);
-        }
-    };
-
-    const flushCandidateQueue = async () => {
-        try {
-            for (const candidate of candidateQueue) {
-                try {
-                    await peer.addIceCandidate(new RTCIceCandidate(candidate));
-                } catch (err) {
-                    console.error("Error adding flushed ICE candidate:", err);
-                }
-            }
-            // Clear the queue
-            candidateQueue = [];
-        } catch (error) {
-            console.error("Error flushing ICE candidate queue:", error);
-        }
-    };
 
     const getPublicKey = async () => {
         try {
@@ -306,11 +202,7 @@ const Chat = ({ userStatus }) => {
         }
     };
 
-    useEffect(() => {
-        if (chatState.receiver) {
-            scrollToBottom()
-        }
-    }, [chatState.messages.length]);
+
 
     useEffect(() => {
         conversationIdRef.current = conversationId;
@@ -455,76 +347,6 @@ const Chat = ({ userStatus }) => {
         }
     }, [chatState.messages.length]);
 
-    useEffect(() => {
-        if (chatState.receiver) {
-            // Handle incoming audio stream
-            peer.ontrack = (event) => {
-                if (remoteAudio.current) {
-                    remoteAudio.current.srcObject = event.streams[0];
-                    remoteAudio.current.play().catch((err) => {
-                        console.error("Remote audio playback error:", err);
-                    });
-                } else {
-                    console.error("remoteAudio reference is null!");
-                }
-            };
-
-            // Receive WebRTC Offer
-            socket.on("offer", async ({ offer, sender }) => {
-                await peer.setRemoteDescription(new RTCSessionDescription(offer)); // Process immediately
-                await flushCandidateQueue(); // Flush ICE candidates
-
-                setCallState((prevState) => ({
-                    ...prevState,
-                    isRinging: true,
-                    sender: sender,
-                    offer: offer,
-                }));
-            });
-
-            // Receive WebRTC Answer
-            socket.on("answer", async ({ answer }) => {
-                await peer.setRemoteDescription(new RTCSessionDescription(answer));
-            });
-
-            // Send ICE candidates to the peer
-            peer.onicecandidate = (event) => {
-                if (event.candidate) {
-                    socket.emit("ice-candidate", { candidate: event.candidate, receiverId: chatState.receiver.id });
-                }
-            };
-
-            // Receive ICE Candidates
-            socket.on("ice-candidate", async ({ candidate }) => {
-                // Check if remote description is set
-                if (peer.remoteDescription && peer.remoteDescription.type) {
-                    try {
-                        await peer.addIceCandidate(new RTCIceCandidate(candidate));
-                    } catch (err) {
-                        console.error("Error adding ICE candidate:", err);
-                    }
-                } else {
-                    // Queue the candidate if remote description is not set
-                    candidateQueue.push(candidate);
-                }
-            });
-
-            socket.on("call-rejected", () => {
-                setCallState({ isRinging: false, senderId: null, offer: null });
-            });
-
-            socket.on("call-ended", () => {
-                endCall(false);
-            });
-
-            return () => {
-                socket.off("offer");
-                socket.off("answer");
-                socket.off("ice-candidate");
-                socket.off("call-rejected");
-            }
-        }
-    }, [chatState.receiver, callState.isCalling]);
 
     useEffect(() => {
         const initKey = async () => {
@@ -601,7 +423,6 @@ const Chat = ({ userStatus }) => {
                         userId={user?.id}
                         conversation={chatState.conversation}
                         lastSeenStatus={lastSeenStatus}
-                        messagesEndRef={messagesEndRef}
                         receiver={chatState.receiver}
                         convParticipants={chatState.convParticipants}
                     />
