@@ -25,6 +25,12 @@ const Message = sequelize.define('message', {
         type: DataTypes.ENUM(messageType.Text, messageType.Image, messageType.File),
         defaultValue: messageType.Text
     },
+    iv: {
+        type: DataTypes.STRING,
+    },
+    ephemeralPublicKey: {
+        type: DataTypes.STRING,
+    }
 },
     {
         timestamps: true,
