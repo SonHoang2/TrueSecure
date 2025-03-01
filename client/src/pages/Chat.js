@@ -7,6 +7,7 @@ import ChatLeftPanel from "../component/ChatLeftPanel";
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
 import * as cryptoUtils from "../utils/cryptoUtils"
 import { MessageList } from "../component/MessageList";
+import { ChatHeader } from "../component/ChatHeader";
 
 let peer = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -165,20 +166,6 @@ const Chat = ({ userStatus }) => {
             console.error(error);
         }
     }
-
-    const getLastSeenTime = (timestamp) => {
-        if (!timestamp) return "";
-
-        const now = new Date();
-        const lastSeen = new Date(timestamp);
-
-        const diffInSeconds = Math.floor((now - lastSeen) / 1000);
-        if (diffInSeconds < 60) return `last seen ${diffInSeconds} sec ago`;
-        if (diffInSeconds < 3600) return `last seen ${Math.floor(diffInSeconds / 60)} min ago`;
-        if (diffInSeconds < 86400) return `last seen ${Math.floor(diffInSeconds / 3600)} hours ago`;
-        if (diffInSeconds < 604800) return `last seen ${Math.floor(diffInSeconds / 86400)} days ago`;
-        return `last seen ${Math.floor(diffInSeconds / 604800)} weeks ago`;
-    };
 
     const startCall = async () => {
         try {
@@ -601,62 +588,12 @@ const Chat = ({ userStatus }) => {
             <ChatLeftPanel chatState={chatState} user={user} userStatus={userStatus} conversationId={conversationId} />
             {
                 <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
-                    <div className="flex justify-between p-3 shadow-md">
-                        <div className="flex">
-                            <div className="relative flex items-center">
-                                <img
-                                    className="inline-block size-10 rounded-full ring-0"
-                                    src={`${IMAGES_URL}/${chatState.conversation?.isGroup ? chatState.conversation?.avatar : chatState.receiver?.avatar}`}
-                                    alt="avatar"
-                                />
-                                {!chatState.conversation?.isGroup && userStatus?.onlineUsers.hasOwnProperty(chatState.receiver?.id) && (
-                                    <span className="absolute bottom-0 right-0 block size-3 bg-green-500 border-2 border-white rounded-full"></span>
-                                )}
-                            </div>
-                            <div className="flex flex-col ms-2">
-                                <span className="text-base font-bold">{
-                                    chatState.conversation?.isGroup
-                                        ? chatState.conversation?.title
-                                        : chatState.receiver
-                                            ? `${chatState.receiver.firstName} ${chatState.receiver.lastName}`
-                                            : "Unknown User"
-                                }</span>
-                                <span className="text-sm text-gray-500">
-                                    {!chatState.conversation?.isGroup &&
-                                        (userStatus.onlineUsers.hasOwnProperty(chatState.receiver?.id)
-                                            ? "Online"
-                                            : getLastSeenTime(userStatus.lastSeen[chatState.receiver?.id]))
-                                    }
-                                </span>
-                            </div>
-                        </div>
-                        <div className="flex items-center">
-                            {
-                                !chatState.conversation?.isGroup && (
-                                    <button
-                                        className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
-                                        onClick={startCall}
-                                    >
-                                        <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                            call
-                                        </span>
-                                    </button>)
-                            }
-                            {
-                                !chatState.conversation?.isGroup && (
-                                    <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                                        <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                            videocam
-                                        </span>
-                                    </button>)
-                            }
-                            <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                                <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                    more_horiz
-                                </span>
-                            </button>
-                        </div>
-                    </div>
+                    <ChatHeader
+                        conversation={chatState.conversation}
+                        userStatus={userStatus}
+                        receiver={chatState.receiver}
+                        startCall={startCall}
+                    />
                     <MessageList 
                         messages={chatState.messages}
                         userId={user?.id}
