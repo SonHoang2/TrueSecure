@@ -1,8 +1,20 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { IMAGES_URL } from '../config/config';
 import { messageStatus } from '../config/config';
 
-export const MessageList = ({ messages, userId, conversation, lastSeenStatus, messagesEndRef, receiver, convParticipants }) => {
+export const MessageList = ({ messages, userId, conversation, lastSeenStatus, receiver, convParticipants }) => {
+    const messagesEndRef = useRef(null)
+
+    const scrollToBottom = () => {
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+
+    useEffect(() => {
+        if (receiver) {
+            scrollToBottom()
+        }
+    }, [messages.length]);
+
     return (
         <div className="flex-grow overflow-y-auto flex flex-col pb-4 pt-2">
             {messages.map((msg, index) => {
