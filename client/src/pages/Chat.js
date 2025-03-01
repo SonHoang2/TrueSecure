@@ -6,6 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 import ChatLeftPanel from "../component/ChatLeftPanel";
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
 import * as cryptoUtils from "../utils/cryptoUtils"
+import { MessageList } from "../component/MessageList";
 
 let peer = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -50,7 +51,7 @@ const Chat = ({ userStatus }) => {
     const remoteAudio = useRef(null);
 
     const axiosPrivate = useAxiosPrivate();
-    
+
     const scrollToBottom = () => {
         messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
@@ -214,7 +215,7 @@ const Chat = ({ userStatus }) => {
             await peer.setRemoteDescription(new RTCSessionDescription(callState.offer));
             await flushCandidateQueue();  // Flush queued ICE candidates
 
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
 
             localAudio.current.srcObject = stream;
             stream.getTracks().forEach((track) => peer.addTrack(track, stream));
@@ -356,21 +357,21 @@ const Chat = ({ userStatus }) => {
                                 ephemeralPublicKey: data.ephemeralPublicKey
                             }
                         );
-    
+
                         console.log("Decrypted message:", decryptedMessage);
-    
+
                         const message = {
                             ...data,
                             content: decryptedMessage,
                             iv: null,
                             ephemeralPublicKey: null,
                         }
-    
+
                         setChatState((prevState) => ({
                             ...prevState,
                             messages: [...prevState.messages, message],
                         }));
-    
+
                         socket.emit("private-message-seen", {
                             senderId: data.senderId,
                             messageId: data.messageId,
@@ -656,70 +657,15 @@ const Chat = ({ userStatus }) => {
                             </button>
                         </div>
                     </div>
-                    <div className="flex-grow overflow-y-auto flex flex-col pb-4 pt-2">
-                        {chatState.messages.map((msg, index) => {
-                            const { messages, convParticipants, conversation, receiver } = chatState;
-                            const { isGroup } = conversation;
-
-                            const isSentByUser = msg.senderId === user?.id;
-                            const isLastMessage = index === messages.length - 1;
-
-                            const otherUser = isGroup ? convParticipants.find(x => x.userId === msg.senderId)?.user : receiver;
-
-                            const avatar = otherUser?.avatar;
-
-                            const statuses = isGroup ? lastSeenStatus.filter(item => item.messageId === msg.id) : [];
-
-                            return (
-                                <div key={index} className="flex flex-col">
-                                    {
-                                        !isSentByUser && isGroup &&
-                                        (<div className="ps-14">
-                                            <p className="text-xs text-gray-500">{otherUser?.firstName + " " + otherUser?.lastName}</p>
-                                        </div>)
-                                    }
-                                    <div className={`flex w-full px-2 py-1 ${isSentByUser ? "justify-end" : "justify-start"}`}>
-                                        <div className="flex max-w-md items-end">
-                                            {!isSentByUser && (
-                                                <div className="flex-none pe-2 items-end">
-                                                    <img className="size-8 rounded-full" src={`${IMAGES_URL}/${avatar}`} alt="" />
-                                                </div>
-                                            )}
-                                            <div className="flex-grow flex flex-col">
-                                                <p className={`rounded-3xl px-3 py-2 break-all text-s
-                                                        ${isSentByUser ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white" : "bg-gray-100 text-black"}`}>
-                                                    {msg.content}
-                                                </p>
-                                                <div className="flex justify-end">
-                                                    {
-                                                        isLastMessage && isSentByUser && msg?.status !== messageStatus.Seen &&
-                                                        <p className="text-xs pe-4 text-gray-600 first-letter:uppercase">
-                                                            {msg?.status}
-                                                        </p>
-                                                    }
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-end w-full pe-3">
-                                        {
-                                            isGroup ?
-                                                statuses.map(status => (
-                                                    <div key={status?.id} className="flex pe-1 items-end">
-                                                        <img className="size-4 rounded-full" src={`${IMAGES_URL}/${status.avatar}`} alt="" />
-                                                    </div>
-                                                )) :
-                                                lastSeenStatus?.id === msg.id &&
-                                                <div className="flex pe-1 items-end">
-                                                    <img className="size-4 rounded-full" src={`${IMAGES_URL}/${avatar}`} alt="" />
-                                                </div>
-                                        }
-                                    </div>
-                                </div>
-                            )
-                        })}
-                        <div ref={messagesEndRef} />
-                    </div>
+                    <MessageList 
+                        messages={chatState.messages}
+                        userId={user?.id}
+                        conversation={chatState.conversation}
+                        lastSeenStatus={lastSeenStatus}
+                        messagesEndRef={messagesEndRef}
+                        receiver={chatState.receiver}
+                        convParticipants={chatState.convParticipants}
+                    />
                     <div className="flex p-1 items-center mb-2">
                         <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
                             <span className="material-symbols-outlined text-blue-500 text-2xl">
