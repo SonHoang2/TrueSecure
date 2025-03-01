@@ -38,7 +38,7 @@ export const getUser = catchAsync(async (req, res, next) => {
 });
 
 export const getMe = catchAsync(async (req, res, next) => {
-    
+
     req.params.id = req.user.id;
     next();
 });
@@ -111,16 +111,16 @@ export const createPublicKey = catchAsync(
         await User.update({ publicKey }, { where: { id } });
 
         res.status(200).json({
-            status: 'success'
+            status: 'success',
         });
     }
 )
 
 export const getPublicKey = catchAsync(
     async (req, res) => {
-        const { id } = req.params;
+        const { userId } = req.params;
 
-        const user = await User.findOne({ where: { id }, attributes: ['publicKey'] });
+        const user = await User.findOne({ where: { id: userId }, attributes: ['publicKey'] });
 
         if (!user) {
             return next(new AppError('No user found with that ID', 404));
