@@ -8,6 +8,8 @@ import useAxiosPrivate from "../hooks/useAxiosPrivate";
 import * as cryptoUtils from "../utils/cryptoUtils"
 import { MessageList } from "../component/MessageList";
 import { ChatHeader } from "../component/ChatHeader";
+import { IncomingCallModal } from "../component/IncomingCallModal";
+import OutgoingCallModal from "../component/OutgoingCallModal";
 
 let peer = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -202,7 +204,7 @@ const Chat = ({ userStatus }) => {
             await peer.setRemoteDescription(new RTCSessionDescription(callState.offer));
             await flushCandidateQueue();  // Flush queued ICE candidates
 
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
             localAudio.current.srcObject = stream;
             stream.getTracks().forEach((track) => peer.addTrack(track, stream));
@@ -594,7 +596,7 @@ const Chat = ({ userStatus }) => {
                         receiver={chatState.receiver}
                         startCall={startCall}
                     />
-                    <MessageList 
+                    <MessageList
                         messages={chatState.messages}
                         userId={user?.id}
                         conversation={chatState.conversation}
@@ -645,70 +647,19 @@ const Chat = ({ userStatus }) => {
             <audio ref={remoteAudio} autoPlay />
             {
                 callState.isRinging && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-md">
-                        <div className="relative bg-white p-6 rounded-2xl shadow-xl w-80 text-center animate-fade-in">
-                            <button
-                                className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 transition"
-                                onClick={rejectCall}
-                            >
-                                <span className="material-symbols-outlined text-lg">close</span>
-                            </button>
-
-                            <h2 className="text-gray-800 text-xl font-semibold">Incoming Call</h2>
-
-                            <div className="mt-4 flex justify-center">
-                                <img
-                                    className="size-16 rounded-full shadow-md border-2 border-gray-300"
-                                    src={`${IMAGES_URL}/${callState.sender.avatar}`}
-                                    alt="Caller Avatar"
-                                />
-                            </div>
-
-                            <h1 className="text-gray-700 text-lg font-medium mt-2">
-                                {callState.sender.firstName} {callState.sender.lastName} is calling you
-                            </h1>
-
-                            <div className="mt-6 flex justify-center gap-4">
-                                <button
-                                    onClick={rejectCall}
-                                    className="flex items-center gap-2 bg-red-500 px-5 py-2 rounded-full text-white font-medium shadow-md hover:bg-red-600 transition-transform transform hover:scale-110 active:scale-95"
-                                >
-                                    <span className="material-symbols-outlined text-lg">close</span>
-                                    Reject
-                                </button>
-
-                                <button
-                                    onClick={acceptCall}
-                                    className="flex items-center gap-2 bg-green-500 px-5 py-2 rounded-full text-white font-medium shadow-md hover:bg-green-600 transition-transform transform hover:scale-110 active:scale-95"
-                                >
-                                    <span className="material-symbols-outlined text-lg">call</span>
-                                    Accept
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <IncomingCallModal
+                        onReject={rejectCall}
+                        onAccept={acceptCall}
+                        sender={callState.sender}
+                    />
                 )
             }
             {
                 callState.isCalling && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-                        <div className="relative bg-white p-6 rounded-2xl shadow-xl w-80 text-center animate-fade-in">
-                            <button
-                                className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 transition"
-                                onClick={endCall}
-                            >
-                                <span className="material-symbols-outlined text-lg">close</span>
-                            </button>
-                            <div className="my-4 flex justify-center">
-                                <img
-                                    className="size-16 rounded-full shadow-md border-2 border-gray-300"
-                                    src={`${IMAGES_URL}/${chatState.receiver.avatar}`}
-                                    alt="Caller Avatar"
-                                />
-                            </div>
-                            <h2 className="text-gray-800 text-xl font-semibold">Calling ...</h2>
-                        </div>
-                    </div>
+                    <OutgoingCallModal
+                        onEndCall={endCall}
+                        receiver={chatState.receiver}
+                    />
                 )
             }
         </div >
