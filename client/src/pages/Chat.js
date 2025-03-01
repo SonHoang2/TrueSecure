@@ -50,7 +50,7 @@ const Chat = ({ userStatus }) => {
     const remoteAudio = useRef(null);
 
     const axiosPrivate = useAxiosPrivate();
-
+    
     const scrollToBottom = () => {
         messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
@@ -111,6 +111,11 @@ const Chat = ({ userStatus }) => {
     const sendMessage = async () => {
         try {
             if (chatState.message.trim()) {
+                if (!userKeys.publicKey) {
+                    console.error("Public key is not available!");
+                    return;
+                }
+
                 const { content, iv, ephemeralPublicKey } = await cryptoUtils.encryptMessage(userKeys.publicKey, chatState.message)
 
                 const messageData = {
@@ -128,7 +133,7 @@ const Chat = ({ userStatus }) => {
                 };
 
                 if (chatState.conversation.isGroup) {
-                    socket.emit("send-group-message", encryptedMessage);
+                    // socket.emit("send-group-message", encryptedMessage);
                 } else {
                     encryptedMessage.receiverId = chatState.receiver?.id;
                     socket.emit("send-private-message", encryptedMessage);
@@ -281,6 +286,12 @@ const Chat = ({ userStatus }) => {
             const res = await axiosPrivate.get(USERS_URL + `/${chatState.receiver?.id}/public-key`);
             const { publicKey: exportedPublicKey } = res.data.data;
 
+            if (!exportedPublicKey) {
+                console.error("Public key not found!");
+                setUserKeys(prev => ({ ...prev, publicKey: null }));
+                return;
+            }
+
             const publicKey = await cryptoUtils.importPublicKey(exportedPublicKey);
 
             setUserKeys(prev => ({ ...prev, publicKey }));
@@ -294,10 +305,7 @@ const Chat = ({ userStatus }) => {
         try {
             let privateKey = userKeys.privateKey;
             if (!privateKey) {
-                const exportedPrivateKey = localStorage.getItem("privateKey");
-                if (exportedPrivateKey) {
-                    privateKey = await cryptoUtils.importPrivateKey(exportedPrivateKey);
-                }
+                privateKey = await cryptoUtils.importPrivateKey(user.id);
             }
             setUserKeys(prev => ({ ...prev, privateKey }));
 
@@ -321,10 +329,10 @@ const Chat = ({ userStatus }) => {
     }, [conversationId]);
 
     useEffect(() => {
-        if (localStorage.getItem("privateKey")) {
+        if (cryptoUtils.hasPrivateKey(user.id)) {
             getMessages();
         }
-    }, [conversationId, localStorage.getItem("privateKey")]);
+    }, [conversationId, cryptoUtils.hasPrivateKey(user.id)]);
 
     useEffect(() => {
         if (chatState.receiver) {
@@ -335,39 +343,43 @@ const Chat = ({ userStatus }) => {
     useEffect(() => {
         if (chatState.messages.length > 0) {
             socket.on("new-private-message", async (data) => {
-                messageSoundRef.current.play().catch((error) =>
-                    console.error("Audio play error:", error)
-                );
-
-                if (data.conversationId === conversationIdRef.current) {
-                    const decryptedMessage = await cryptoUtils.decryptMessage(userKeys.privateKey,
-                        {
-                            content: data.content,
-                            iv: data.iv,
-                            ephemeralPublicKey: data.ephemeralPublicKey
-                        }
+                try {
+                    messageSoundRef.current.play().catch((error) =>
+                        console.error("Audio play error:", error)
                     );
 
-                    console.log("Decrypted message:", decryptedMessage);
-
-                    const message = {
-                        ...data,
-                        content: decryptedMessage,
-                        iv: null,
-                        ephemeralPublicKey: null,
+                    if (data.conversationId === conversationIdRef.current) {
+                        const decryptedMessage = await cryptoUtils.decryptMessage(userKeys.privateKey,
+                            {
+                                content: data.content,
+                                iv: data.iv,
+                                ephemeralPublicKey: data.ephemeralPublicKey
+                            }
+                        );
+    
+                        console.log("Decrypted message:", decryptedMessage);
+    
+                        const message = {
+                            ...data,
+                            content: decryptedMessage,
+                            iv: null,
+                            ephemeralPublicKey: null,
+                        }
+    
+                        setChatState((prevState) => ({
+                            ...prevState,
+                            messages: [...prevState.messages, message],
+                        }));
+    
+                        socket.emit("private-message-seen", {
+                            senderId: data.senderId,
+                            messageId: data.messageId,
+                            conversationId: data.conversationId,
+                            messageStatusId: data.messageStatusId,
+                        })
                     }
-
-                    setChatState((prevState) => ({
-                        ...prevState,
-                        messages: [...prevState.messages, message],
-                    }));
-
-                    socket.emit("private-message-seen", {
-                        senderId: data.senderId,
-                        messageId: data.messageId,
-                        conversationId: data.conversationId,
-                        messageStatusId: data.messageStatusId,
-                    })
+                } catch (error) {
+                    console.error(error);
                 }
             });
 
@@ -531,7 +543,7 @@ const Chat = ({ userStatus }) => {
 
                 const exportedPublicKey = await cryptoUtils.exportPublicKey(publicKey);
 
-                await cryptoUtils.storePrivateKey(privateKey);
+                await cryptoUtils.storePrivateKey(privateKey, user.id);
 
                 await axiosPrivate.post(USERS_URL + "/public-key", {
                     publicKey: exportedPublicKey,
@@ -542,7 +554,7 @@ const Chat = ({ userStatus }) => {
         };
 
 
-        if (!localStorage.getItem("privateKey")) {
+        if (!cryptoUtils.hasPrivateKey(user.id)) {
             initKey();
         }
     }, [])
