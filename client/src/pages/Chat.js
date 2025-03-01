@@ -63,9 +63,38 @@ const Chat = ({ userStatus }) => {
 
             const receiver = convParticipants.find(x => x.userId !== user?.id)?.user || null;
 
+            const privateKey = await getPrivateKey();
+
+            // Create an array of promises for decrypting messages
+            const decryptionPromises = messages.map((message) => {
+                if (message.senderId !== user?.id) {
+                    // Return the decryption promise directly (without await)
+                    return cryptoUtils.decryptMessage(privateKey, {
+                        content: message.content,
+                        iv: message.iv,
+                        ephemeralPublicKey: message.ephemeralPublicKey
+                    }).then((content) => {
+                        console.log("Decrypted content:", content);
+                        message.content = content; // Update the message content
+                        return message; // Return the updated message
+                    }).catch((error) => {
+                        console.error("Failed to decrypt message:", error);
+                        return message; // Return the original message in case of an error
+                    });
+                } else {
+                    // If the message doesn't need decryption, return it as-is
+                    return Promise.resolve(message);
+                }
+            });
+
+            // Wait for all decryption promises to resolve
+            const decryptedMessages = await Promise.all(decryptionPromises);
+            console.log("Decrypted messages:", decryptedMessages);
+
+
             setChatState((prevState) => ({
                 ...prevState,
-                messages: messages,
+                messages: decryptedMessages,
                 receiver: receiver,
                 conversation: {
                     title: title,
@@ -98,9 +127,6 @@ const Chat = ({ userStatus }) => {
                     ephemeralPublicKey: ephemeralPublicKey,
                 };
 
-                console.log("Encrypted message:", encryptedMessage);
-                
-                
                 if (chatState.conversation.isGroup) {
                     socket.emit("send-group-message", encryptedMessage);
                 } else {
@@ -250,11 +276,22 @@ const Chat = ({ userStatus }) => {
         }
     };
 
-    const getUserKey = async () => {
+    const getPublicKey = async () => {
         try {
             const res = await axiosPrivate.get(USERS_URL + `/${chatState.receiver?.id}/public-key`);
             const { publicKey: exportedPublicKey } = res.data.data;
-            
+
+            const publicKey = await cryptoUtils.importPublicKey(exportedPublicKey);
+
+            setUserKeys(prev => ({ ...prev, publicKey }));
+        }
+        catch (error) {
+            console.error("Error getting public key:", error);
+        }
+    };
+
+    const getPrivateKey = async () => {
+        try {
             let privateKey = userKeys.privateKey;
             if (!privateKey) {
                 const exportedPrivateKey = localStorage.getItem("privateKey");
@@ -262,13 +299,12 @@ const Chat = ({ userStatus }) => {
                     privateKey = await cryptoUtils.importPrivateKey(exportedPrivateKey);
                 }
             }
+            setUserKeys(prev => ({ ...prev, privateKey }));
 
-            const publicKey = await cryptoUtils.importPublicKey(exportedPublicKey);
-            
-            setUserKeys({ publicKey, privateKey });
+            return privateKey;
         }
         catch (error) {
-            console.error("Error getting public key:", error);
+            console.error("Error getting private key:", error);
         }
     };
 
@@ -282,12 +318,17 @@ const Chat = ({ userStatus }) => {
         conversationIdRef.current = conversationId;
 
         getConversations();
-        getMessages();
     }, [conversationId]);
 
     useEffect(() => {
+        if (localStorage.getItem("privateKey")) {
+            getMessages();
+        }
+    }, [conversationId, localStorage.getItem("privateKey")]);
+
+    useEffect(() => {
         if (chatState.receiver) {
-            getUserKey();
+            getPublicKey();
         }
     }, [chatState.receiver]);
 
@@ -299,7 +340,7 @@ const Chat = ({ userStatus }) => {
                 );
 
                 if (data.conversationId === conversationIdRef.current) {
-                    const decryptedMessage = await cryptoUtils.decryptMessage(userKeys.privateKey, 
+                    const decryptedMessage = await cryptoUtils.decryptMessage(userKeys.privateKey,
                         {
                             content: data.content,
                             iv: data.iv,
@@ -308,7 +349,7 @@ const Chat = ({ userStatus }) => {
                     );
 
                     console.log("Decrypted message:", decryptedMessage);
-                    
+
                     const message = {
                         ...data,
                         content: decryptedMessage,
@@ -500,9 +541,8 @@ const Chat = ({ userStatus }) => {
             }
         };
 
-        const exportedPrivateKey = localStorage.getItem("privateKey");
 
-        if (!exportedPrivateKey) {
+        if (!localStorage.getItem("privateKey")) {
             initKey();
         }
     }, [])
