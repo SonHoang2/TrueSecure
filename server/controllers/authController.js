@@ -134,6 +134,7 @@ const createSendToken = async (user, statusCode, res) => {
 
     // remove password from output
     user.password = undefined;
+    user.publicKey = undefined;
 
     res.status(statusCode).json({
         status: 'success',
