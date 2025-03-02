@@ -1,55 +1,47 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import socket from "../utils/socket";
-import { CONVERSATIONS_URL, IMAGES_URL, messageStatus, USERS_URL } from "../config/config";
+import { IMAGES_URL } from "../config/config";
 import { useAuth } from "../hooks/useAuth";
 import ChatLeftPanel from "../component/ChatLeftPanel";
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
-import * as cryptoUtils from "../utils/cryptoUtils"
 import { MessageList } from "../component/MessageList";
 import { ChatHeader } from "../component/ChatHeader";
 import { IncomingCallModal } from "../component/IncomingCallModal";
 import OutgoingCallModal from "../component/OutgoingCallModal";
 import { useWebRTC } from "../hooks/useWebRTC";
 import { useChatMessages } from "../hooks/useChatMessages";
+import { useEncryption } from "../hooks/useEncryption";
 
 const Chat = ({ userStatus }) => {
-    const [userKeys, setUserKeys] = useState({
-        publicKey: null,
-        privateKey: null,
-    });
-
     const conversationId = Number(useParams()?.conversationId);
 
     const { user } = useAuth();
 
     const axiosPrivate = useAxiosPrivate();
 
-    const getPrivateKey = async () => {
-        try {
-            let privateKey = userKeys.privateKey;
-            if (!privateKey) {
-                privateKey = await cryptoUtils.importPrivateKey(user.id);
-            }
-            setUserKeys(prev => ({ ...prev, privateKey }));
-
-            return privateKey;
-        }
-        catch (error) {
-            console.error("Error getting private key:", error);
-        }
-    };
+    const {
+        userKeys,
+        setUserKeys,
+        getPrivateKey,
+        getPublicKey,
+    } = useEncryption({
+        userId: user?.id,
+        axiosPrivate,
+    });
 
     const {
         sendMessage,
         chatState,
         setChatState,
+        lastSeenStatus
     } = useChatMessages ({
         conversationId,
         userKeys,
         userId: user?.id,
         socket,
         getPrivateKey,
+        axiosPrivate,
     })
 
     const {
@@ -66,85 +58,11 @@ const Chat = ({ userStatus }) => {
         user,
     });
 
-    // console.log("chatState", chatState);
-    
-
-    const getPublicKey = async () => {
-        try {
-            const res = await axiosPrivate.get(USERS_URL + `/${chatState.receiver?.id}/public-key`);
-            const { publicKey: exportedPublicKey } = res.data.data;
-
-            if (!exportedPublicKey) {
-                console.error("Public key not found!");
-                setUserKeys(prev => ({ ...prev, publicKey: null }));
-                return;
-            }
-
-            const publicKey = await cryptoUtils.importPublicKey(exportedPublicKey);
-
-            setUserKeys(prev => ({ ...prev, publicKey }));
-        }
-        catch (error) {
-            console.error("Error getting public key:", error);
-        }
-    };
-
     useEffect(() => {
         if (chatState.receiver) {
-            getPublicKey();
+            getPublicKey(chatState.receiver?.id);
         }
     }, [chatState.receiver]);
-
-    useEffect(() => {
-        const initKey = async () => {
-            try {
-                const { privateKey, publicKey } = await cryptoUtils.generateECDHKeys();
-
-                const exportedPublicKey = await cryptoUtils.exportPublicKey(publicKey);
-
-                await cryptoUtils.storePrivateKey(privateKey, user.id);
-
-                await axiosPrivate.post(USERS_URL + "/public-key", {
-                    publicKey: exportedPublicKey,
-                });
-            } catch (error) {
-                console.error("Error initializing key:", error);
-            }
-        };
-
-
-        if (!cryptoUtils.hasPrivateKey(user.id)) {
-            initKey();
-        }
-    }, [])
-
-    const lastSeenStatus = useMemo(() => {
-        if (chatState.conversation.isGroup) {
-            return chatState.convParticipants
-                .map(participant => {
-                    if (participant.userId === user?.id) {
-                        return null;
-                    }
-
-                    for (let i = chatState.messages.length - 1; i >= 0; i--) {
-                        const user = chatState.messages[i].statuses?.find(
-                            status => status.userId === participant.userId && status.status === messageStatus.Seen
-                        );
-                        if (user) {
-                            return {
-                                userId: participant.userId,
-                                messageId: chatState.messages[i]?.id,
-                                avatar: participant.user.avatar,
-                            };
-                        }
-                    }
-                    return null;
-                })
-                .filter(Boolean);
-        }
-
-        return chatState.messages.findLast(message => message.status === messageStatus.Seen);
-    }, [chatState.convParticipants, chatState.messages]);
 
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
