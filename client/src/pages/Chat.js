@@ -9,6 +9,7 @@ import { MessageList } from "../component/MessageList";
 import { ChatHeader } from "../component/ChatHeader";
 import { IncomingCallModal } from "../component/IncomingCallModal";
 import OutgoingCallModal from "../component/OutgoingCallModal";
+import InCallModal from "../component/InCallModal";
 import { useWebRTC } from "../hooks/useWebRTC";
 import { useChatMessages } from "../hooks/useChatMessages";
 import { useEncryption } from "../hooks/useEncryption";
@@ -65,9 +66,6 @@ const Chat = ({ userStatus }) => {
             getPublicKey(chatState.receiver?.id);
         }
     }, [chatState.receiver]);
-
-    console.log(callState.isVideoCall);
-    
 
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
@@ -151,21 +149,17 @@ const Chat = ({ userStatus }) => {
                     />
                 )}
 
-                <div>
-                    {callState.isVideoCall ? (
-                        <video ref={localVideo} autoPlay muted />
-                    ) : (
-                        <audio ref={localAudio} autoPlay muted />
-                    )}
-
-                    {callState.isVideoCall ? (
-                        <video ref={remoteVideo} autoPlay />
-                    ) : (
-                        <audio ref={remoteAudio} autoPlay />
-                    )}
-                </div>
-                {/* {callState.isConnected && (
-                )} */}
+                {callState.isConnected && (
+                    <InCallModal
+                        onEndCall={endCall}
+                        receiver={chatState.receiver}
+                        isVideoCall={callState.isVideoCall}
+                        localVideo={localVideo}
+                        localAudio={localAudio}
+                        remoteVideo={remoteVideo}
+                        remoteAudio={remoteAudio}
+                    />
+                )} 
             </div>
         </div >
     );
