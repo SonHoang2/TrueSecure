@@ -4,28 +4,37 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
     const [callState, setCallState] = useState({
         isCalling: false,
         isRinging: false,
+        isConnected: false,
+        isVideoCall: false,
         sender: null,
         offer: null
     });
 
+    const localVideo = useRef(null);
+    const remoteVideo = useRef(null);
     const localAudio = useRef(null);
     const remoteAudio = useRef(null);
     const peer = useRef(null);
-
     const candidateQueue = useRef([]);
 
-    const startCall = async () => {
+    const startCall = async (isVideo = false) => {
         try {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 console.error("getUserMedia is not supported in this browser.");
                 return;
             }
 
-            // Get audio stream before creating offer
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-            localAudio.current.srcObject = stream; // Play local audio
+            const constraints = { audio: true, video: isVideo };
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
             
+            if (isVideo && localVideo.current) {
+                localVideo.current.srcObject = stream;
+                localVideo.current.muted = true; // Mute local video to avoid feedback
+            } else if (localAudio.current) {
+                localAudio.current.srcObject = stream;
+                localAudio.current.muted = true; // Mute local audio to avoid feedback
+            }
+
             // Add tracks to peer connection
             stream.getTracks().forEach((track) => peer.current.addTrack(track, stream));
 
@@ -33,10 +42,18 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
             const offer = await peer.current.createOffer();
             await peer.current.setLocalDescription(offer);
 
-            socket.emit("offer", { offer, receiverId, sender: user });
+            socket.emit("offer", {
+                offer,
+                receiverId,
+                sender: user,
+                isVideo
+            });
 
-            // Update call state
-            setCallState(prev => ({ ...prev, isCalling: true }));
+            setCallState(prev => ({
+                ...prev,
+                isCalling: true,
+                isVideoCall: isVideo
+            }));
         } catch (error) {
             console.error("Error starting call:", error);
         }
@@ -46,158 +63,242 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
         try {
             if (!callState.offer) return;
 
-            await peer.current.setRemoteDescription(new RTCSessionDescription(callState.offer));
-            await flushCandidateQueue();  // Flush queued ICE candidates
+            await peer.current.setRemoteDescription(
+                new RTCSessionDescription(callState.offer)
+            );
+            await flushCandidateQueue();
 
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Get local media
+            const constraints = {
+                audio: true,
+                video: callState.isVideoCall
+            };
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
-            localAudio.current.srcObject = stream;
-            stream.getTracks().forEach((track) => peer.current.addTrack(track, stream));
+            // Display local stream
+            if (callState.isVideoCall && localVideo.current) {
+                localVideo.current.srcObject = stream;
+                localVideo.current.muted = true;
+            } else if (localAudio.current) {
+                localAudio.current.srcObject = stream;
+                localAudio.current.muted = true;
+            }
 
+            // Add tracks to connection
+            stream.getTracks().forEach(track => peer.current.addTrack(track, stream));
+
+            // Create and send answer
             const answer = await peer.current.createAnswer();
             await peer.current.setLocalDescription(answer);
-            socket.emit("answer", { answer, receiverId: callState.sender.id });
 
-            // Reset incoming call and mark as in a call
-            setCallState({ isCalling: true, isRinging: false, senderId: null, offer: null });
+            socket.emit("answer", {
+                answer,
+                receiverId: callState.sender.id,
+            });
+
+            setCallState(prev => ({
+                ...prev,
+                isConnected: true,
+                sender: null,
+                isRinging: false,
+                offer: null
+            }));
         } catch (error) {
             console.error("Error accepting call:", error);
         }
     };
 
     const rejectCall = () => {
-        try {
-            socket.emit("call-rejected", { receiverId: callState.sender.id });
-            setCallState({ isRinging: false, senderId: null, offer: null });
-        } catch (error) {
-            console.error("Error rejecting call:", error);
-        }
+        socket.emit("call-rejected", { receiverId: callState.sender.id });
+        setCallState(prev => ({
+            ...prev,
+            isRinging: false,
+            sender: null,
+            offer: null
+        }));
     };
 
     const endCall = (shouldNotifyPeer = true) => {
         try {
+            // Close peer connection
             if (peer.current) {
                 peer.current.close();
+                peer.current = null;
             }
 
             peer.current = new RTCPeerConnection({
-                iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+                iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
             });
 
             // Stop all media tracks
-            if (localAudio.current && localAudio.current.srcObject) {
-                localAudio.current.srcObject.getTracks().forEach(track => track.stop());
-                localAudio.current.srcObject = null;
-            }
+            [localVideo.current, localAudio.current, remoteVideo.current, remoteAudio.current].forEach(ref => {
+                if (ref && ref.srcObject) {
+                    ref.srcObject.getTracks().forEach(track => track.stop());
+                    ref.srcObject = null;
+                }
+            });
 
+            // Notify peer if needed
             if (shouldNotifyPeer) {
                 socket.emit("call-ended", { receiverId });
             }
 
-            setCallState({ isCalling: false, isRinging: false, senderId: null, offer: null });
+            setCallState({
+                isConnected: false,
+                isRinging: false,
+                isVideoCall: false,
+                sender: null,
+                offer: null
+            });
         } catch (error) {
             console.error("Error ending call:", error);
         }
     };
 
     const flushCandidateQueue = async () => {
-        try {
-            for (const candidate of candidateQueue.current) {
-                try {
-                    await peer.current.addIceCandidate(new RTCIceCandidate(candidate));
-                } catch (err) {
-                    console.error("Error adding flushed ICE candidate:", err);
-                }
+        while (candidateQueue.current.length > 0) {
+            const candidate = candidateQueue.current.shift();
+            try {
+                await peer.current.addIceCandidate(
+                    new RTCIceCandidate(candidate)
+                );
+            } catch (error) {
+                console.error("Error adding ICE candidate:", error);
             }
-            // Clear the queue
-            candidateQueue.current = [];
-        } catch (error) {
-            console.error("Error flushing ICE candidate queue:", error);
         }
     };
 
+    // Initialize peer connection
     useEffect(() => {
         peer.current = new RTCPeerConnection({
-            iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
         });
+
+        // ICE Candidate handling
+        peer.current.onicecandidate = ({ candidate }) => {
+            if (candidate) {
+                socket.emit("ice-candidate", {
+                    candidate,
+                    receiverId
+                });
+            }
+        };
+
+        // Track remote streams
+        peer.current.ontrack = (event) => {
+            const stream = event.streams[0];
+            if (callState.isVideoCall && remoteVideo.current) {
+                remoteVideo.current.srcObject = stream;
+                remoteVideo.current.play().catch(error =>
+                    console.error("Error playing remote video:", error)
+                );
+            } else if (remoteAudio.current) {
+                remoteAudio.current.srcObject = stream;
+                remoteAudio.current.play().catch(error =>
+                    console.error("Error playing remote audio:", error)
+                );
+            }
+        };
 
         return () => {
             if (peer.current) {
                 peer.current.close();
             }
         };
-    }, []);
+    }, [callState.isVideoCall]);
 
+    // Socket event listeners
     useEffect(() => {
-        if (receiverId) {
-            // Handle incoming audio stream
-            peer.current.ontrack = (event) => {
-                if (remoteAudio.current) {
-                    remoteAudio.current.srcObject = event.streams[0];
-                    remoteAudio.current.play().catch((err) => {
-                        console.error("Remote audio playback error:", err);
-                    });
-                } else {
-                    console.error("remoteAudio reference is null!");
-                }
-            };
+        if (!receiverId) return;
 
-            // Receive WebRTC Offer
-            socket.on("offer", async ({ offer, sender }) => {
-                await peer.current.setRemoteDescription(new RTCSessionDescription(offer)); // Process immediately
-                await flushCandidateQueue(); // Flush ICE candidates
+        // Handle incoming call
+        socket.on("offer", async ({ offer, sender, isVideo }) => {
+            try {
+                await peer.current.setRemoteDescription(
+                    new RTCSessionDescription(offer)
+                );
+                await flushCandidateQueue();
 
-                setCallState((prevState) => ({
-                    ...prevState,
+                setCallState(prev => ({
+                    ...prev,
                     isRinging: true,
-                    sender: sender,
-                    offer: offer,
+                    sender,
+                    offer,
+                    isVideoCall: isVideo
                 }));
-            });
+            } catch (error) {
+                console.error("Error handling offer:", error);
+            }
+        });
 
-            // Receive WebRTC Answer
-            socket.on("answer", async ({ answer }) => {
-                await peer.current.setRemoteDescription(new RTCSessionDescription(answer));
-            });
+        // Handle answer
+        socket.on("answer", async ({ answer }) => {
+            try {
+                await peer.current.setRemoteDescription(
+                    new RTCSessionDescription(answer)
+                );
 
-            // Send ICE candidates to the peer
-            peer.current.onicecandidate = (event) => {
-                if (event.candidate) {
-                    socket.emit("ice-candidate", { candidate: event.candidate, receiverId });
-                }
-            };
+                setCallState(prev => ({
+                    ...prev,
+                    isConnected: true,
+                    sender: null,
+                    isCalling: false,
+                    offer: null
+                }));
+            } catch (error) {
+                console.error("Error handling answer:", error);
+            }
+        });
 
-            // Receive ICE Candidates
-            socket.on("ice-candidate", async ({ candidate }) => {
-                // Check if remote description is set
-                if (peer.current.remoteDescription && peer.current.remoteDescription.type) {
-                    try {
-                        await peer.current.addIceCandidate(new RTCIceCandidate(candidate));
-                    } catch (err) {
-                        console.error("Error adding ICE candidate:", err);
-                    }
+        // Handle ICE candidates
+        socket.on("ice-candidate", async ({ candidate }) => {
+            try {
+                if (peer.current.remoteDescription) {
+                    await peer.current.addIceCandidate(
+                        new RTCIceCandidate(candidate)
+                    );
                 } else {
-                    // Queue the candidate if remote description is not set
                     candidateQueue.current.push(candidate);
                 }
-            });
-
-            socket.on("call-rejected", () => {
-                setCallState({ isRinging: false, senderId: null, offer: null });
-            });
-
-            socket.on("call-ended", () => {
-                endCall(false);
-            });
-
-            return () => {
-                socket.off("offer");
-                socket.off("answer");
-                socket.off("ice-candidate");
-                socket.off("call-rejected");
+            } catch (error) {
+                console.error("Error adding ICE candidate:", error);
             }
-        }
-    }, [receiverId, callState.isCalling]);
+        });
 
-    return { callState, startCall, acceptCall, rejectCall, endCall, localAudio, remoteAudio };
+        // Handle call rejection
+        socket.on("call-rejected", () => {
+            setCallState(prev => ({
+                ...prev,
+                isRinging: false,
+                sender: null,
+                offer: null
+            }));
+            endCall(false);
+        });
+
+        // Handle call termination
+        socket.on("call-ended", () => {
+            endCall(false);
+        });
+
+        return () => {
+            socket.off("offer");
+            socket.off("answer");
+            socket.off("ice-candidate");
+            socket.off("call-rejected");
+            socket.off("call-ended");
+        };
+    }, [receiverId, callState.isConnected]);
+
+    return {
+        callState,
+        startCall,
+        acceptCall,
+        rejectCall,
+        endCall,
+        localVideo,
+        remoteVideo,
+        localAudio,
+        remoteAudio
+    };
 };

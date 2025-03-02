@@ -41,7 +41,11 @@ export const initSocket = (server) => {
         // Handle offer
         socket.on("offer", catchAsyncSocket(async (data) => {
             const receiverSocketId = await client.hGet("onlineUsers", data.receiverId.toString());
-            io.to(receiverSocketId).emit("offer", { offer: data.offer, sender: data.sender });
+            io.to(receiverSocketId).emit("offer", { 
+                offer: data.offer,
+                sender: data.sender,
+                isVideo: data.isVideo 
+            });
         }));
 
         // Handle answer

@@ -35,7 +35,7 @@ const Chat = ({ userStatus }) => {
         chatState,
         setChatState,
         lastSeenStatus
-    } = useChatMessages ({
+    } = useChatMessages({
         conversationId,
         userKeys,
         userId: user?.id,
@@ -50,8 +50,10 @@ const Chat = ({ userStatus }) => {
         acceptCall,
         rejectCall,
         endCall,
+        localVideo,
+        remoteVideo,
         localAudio,
-        remoteAudio,
+        remoteAudio
     } = useWebRTC({
         receiverId: chatState.receiver?.id,
         socket,
@@ -63,6 +65,9 @@ const Chat = ({ userStatus }) => {
             getPublicKey(chatState.receiver?.id);
         }
     }, [chatState.receiver]);
+
+    console.log(callState.isVideoCall);
+    
 
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
@@ -129,25 +134,39 @@ const Chat = ({ userStatus }) => {
                     </div>
                 </div>
             }
-            <audio ref={localAudio} autoPlay muted />
-            <audio ref={remoteAudio} autoPlay />
-            {
-                callState.isRinging && (
+
+            <div>
+                {callState.isRinging && (
                     <IncomingCallModal
                         onReject={rejectCall}
                         onAccept={acceptCall}
                         sender={callState.sender}
                     />
-                )
-            }
-            {
-                callState.isCalling && (
+                )}
+                {callState.isCalling && (
                     <OutgoingCallModal
                         onEndCall={endCall}
                         receiver={chatState.receiver}
+                        isVideoCall={callState.isVideoCall}
                     />
-                )
-            }
+                )}
+
+                <div>
+                    {callState.isVideoCall ? (
+                        <video ref={localVideo} autoPlay muted />
+                    ) : (
+                        <audio ref={localAudio} autoPlay muted />
+                    )}
+
+                    {callState.isVideoCall ? (
+                        <video ref={remoteVideo} autoPlay />
+                    ) : (
+                        <audio ref={remoteAudio} autoPlay />
+                    )}
+                </div>
+                {/* {callState.isConnected && (
+                )} */}
+            </div>
         </div >
     );
 };
