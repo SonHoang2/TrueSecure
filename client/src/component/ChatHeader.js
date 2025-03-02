@@ -51,7 +51,7 @@ export const ChatHeader = ({ conversation, userStatus, receiver, startCall }) =>
                     !conversation?.isGroup && (
                         <button
                             className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
-                            onClick={startCall}
+                            onClick={() => startCall()}
                         >
                             <span className="material-symbols-outlined text-blue-500 text-2xl">
                                 call
@@ -60,7 +60,10 @@ export const ChatHeader = ({ conversation, userStatus, receiver, startCall }) =>
                 }
                 {
                     !conversation?.isGroup && (
-                        <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
+                        <button
+                            className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
+                            onClick={() => startCall(true)}
+                        >
                             <span className="material-symbols-outlined text-blue-500 text-2xl">
                                 videocam
                             </span>
