@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import * as cryptoUtils from '../utils/cryptoUtils';
-import useAxiosPrivate from './useAxiosPrivate';
 import { CONVERSATIONS_URL, messageStatus } from '../config/config';
 
-export const useChatMessages = ({ conversationId, userKeys, userId, socket, getPrivateKey }) => {
+export const useChatMessages = ({ conversationId, userKeys, userId, socket, getPrivateKey, axiosPrivate }) => {
     const [chatState, setChatState] = useState({
         message: "",
         messages: [],
@@ -20,8 +19,6 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
     const messageSoundRef = useRef(new Audio("/sound/notification-sound.m4a"));
     const conversationIdRef = useRef(conversationId);
 
-    const axiosPrivate = useAxiosPrivate();
-
     const getMessages = async () => {
         try {
             const res = await axiosPrivate.get(CONVERSATIONS_URL + `/${conversationId}/messages`)
@@ -32,32 +29,23 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
 
             const privateKey = await getPrivateKey();
 
-            // Create an array of promises for decrypting messages
-            const decryptionPromises = messages.map((message) => {
+            const decryptedMessages = await Promise.all(messages.map(async (message) => {
                 if (message.senderId !== userId) {
-                    // Return the decryption promise directly (without await)
-                    return cryptoUtils.decryptMessage(privateKey, {
-                        content: message.content,
-                        iv: message.iv,
-                        ephemeralPublicKey: message.ephemeralPublicKey
-                    }).then((content) => {
-                        console.log("Decrypted content:", content);
-                        message.content = content; // Update the message content
-                        return message; // Return the updated message
-                    }).catch((error) => {
+                    try {
+                        const content = await cryptoUtils.decryptMessage(privateKey, {
+                            content: message.content,
+                            iv: message.iv,
+                            ephemeralPublicKey: message.ephemeralPublicKey
+                        });
+                        
+                        return { ...message, content }; // Return a new object with updated content
+                    } catch (error) {
                         console.error("Failed to decrypt message:", error);
                         return message; // Return the original message in case of an error
-                    });
-                } else {
-                    // If the message doesn't need decryption, return it as-is
-                    return Promise.resolve(message);
+                    }
                 }
-            });
-
-            // Wait for all decryption promises to resolve
-            const decryptedMessages = await Promise.all(decryptionPromises);
-            console.log("Decrypted messages:", decryptedMessages);
-
+                return message;
+            }));
 
             setChatState((prevState) => ({
                 ...prevState,
@@ -131,14 +119,37 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
         }
     }
 
-    console.log("chatState:", chatState);
-    
+    const lastSeenStatus = useMemo(() => {
+        if (chatState.conversation.isGroup) {
+            return chatState.convParticipants
+                .map(participant => {
+                    if (participant.userId === userId) {
+                        return null;
+                    }
+
+                    for (let i = chatState.messages.length - 1; i >= 0; i--) {
+                        const user = chatState.messages[i].statuses?.find(
+                            status => status.userId === participant.userId && status.status === messageStatus.Seen
+                        );
+                        if (user) {
+                            return {
+                                userId: participant.userId,
+                                messageId: chatState.messages[i]?.id,
+                                avatar: participant.user.avatar,
+                            };
+                        }
+                    }
+                    return null;
+                })
+                .filter(Boolean);
+        }
+
+        return chatState.messages.findLast(message => message.status === messageStatus.Seen);
+    }, [chatState.convParticipants, chatState.messages]);
+
+
 
     useEffect(() => {
-        console.log(userId);
-        
-        console.log(cryptoUtils.hasPrivateKey(userId));
-        
         if (cryptoUtils.hasPrivateKey(userId)) {
             getMessages();
         }
@@ -275,5 +286,5 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
         getConversations();
     }, [conversationId]);
 
-    return { chatState, setChatState, sendMessage };
+    return { chatState, setChatState, sendMessage, lastSeenStatus };
 };
