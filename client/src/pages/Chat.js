@@ -51,10 +51,8 @@ const Chat = ({ userStatus }) => {
         acceptCall,
         rejectCall,
         endCall,
-        localVideo,
-        remoteVideo,
-        localAudio,
-        remoteAudio
+        localStream,
+        remoteStream
     } = useWebRTC({
         receiverId: chatState.receiver?.id,
         socket,
@@ -145,7 +143,6 @@ const Chat = ({ userStatus }) => {
                     <OutgoingCallModal
                         onEndCall={endCall}
                         receiver={chatState.receiver}
-                        isVideoCall={callState.isVideoCall}
                     />
                 )}
 
@@ -153,13 +150,10 @@ const Chat = ({ userStatus }) => {
                     <InCallModal
                         onEndCall={endCall}
                         receiver={chatState.receiver}
-                        isVideoCall={callState.isVideoCall}
-                        localVideo={localVideo}
-                        localAudio={localAudio}
-                        remoteVideo={remoteVideo}
-                        remoteAudio={remoteAudio}
+                        remoteStream={localStream}
+                        localStream={remoteStream}
                     />
-                )} 
+                )}
             </div>
         </div >
     );
