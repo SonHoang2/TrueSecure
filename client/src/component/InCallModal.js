@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { IMAGES_URL } from '../config/config';
 
 const InCallModal = ({ localStream, remoteStream, onEndCall, isVideoCall, receiver }) => {
     const localRef = useRef();
@@ -16,7 +17,6 @@ const InCallModal = ({ localStream, remoteStream, onEndCall, isVideoCall, receiv
 
     return (
         <div className="w-full h-screen bg-gray-900 fixed top-0 left-0 z-50 flex flex-col items-center justify-center">
-            {/* Close Button */}
             <button
                 onClick={onEndCall}
                 className="absolute top-6 right-6 z-50 p-3 rounded-full bg-red-500 hover:bg-red-600 transition-colors shadow-lg"
@@ -43,10 +43,12 @@ const InCallModal = ({ localStream, remoteStream, onEndCall, isVideoCall, receiv
             ) : (
                 <div className="flex flex-col items-center justify-center h-full space-y-8">
                     <div className="relative">
-                        <div className="w-48 h-48 rounded-full bg-blue-600 flex items-center justify-center">
-                            <span className="text-white text-6xl font-medium">
-                                {receiver?.name?.[0]?.toUpperCase() || 'U'}
-                            </span>
+                        <div className="flex items-center justify-center">
+                            <img
+                                className='w-48 h-48 rounded-full object-cover'
+                                src={`${IMAGES_URL}/${receiver?.avatar}`}
+                                alt=""
+                            />
                         </div>
                         <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-green-500 px-4 py-1 rounded-full flex items-center">
                             <div className="w-2 h-2 rounded-full bg-white mr-2 animate-pulse"></div>
@@ -55,7 +57,7 @@ const InCallModal = ({ localStream, remoteStream, onEndCall, isVideoCall, receiv
                     </div>
 
                     <div className="text-center">
-                        <h2 className="text-3xl font-semibold text-white">{receiver?.name || 'User'}</h2>
+                        <h2 className="text-3xl font-semibold text-white">{receiver?.firstName + " " + receiver?.lastName}</h2>
                         <p className="text-gray-300 mt-2">Audio call</p>
                     </div>
 
