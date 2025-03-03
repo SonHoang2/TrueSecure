@@ -231,7 +231,7 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
                 socket.off("call-rejected");
             }
         }
-    }, [receiverId, callState.isCalling]);
+    }, [receiverId, callState.isConnected]);
 
     return { callState, startCall, acceptCall, rejectCall, endCall, localStream, remoteStream };
 };
