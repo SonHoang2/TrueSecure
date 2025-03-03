@@ -143,6 +143,7 @@ const Chat = ({ userStatus }) => {
                     <OutgoingCallModal
                         onEndCall={endCall}
                         receiver={chatState.receiver}
+                        isVideoCall={callState.isVideoCall}
                     />
                 )}
 
@@ -150,6 +151,7 @@ const Chat = ({ userStatus }) => {
                     <InCallModal
                         onEndCall={endCall}
                         receiver={chatState.receiver}
+                        isVideoCall={callState.isVideoCall}
                         remoteStream={localStream}
                         localStream={remoteStream}
                     />
