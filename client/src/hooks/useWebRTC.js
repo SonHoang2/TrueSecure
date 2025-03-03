@@ -5,6 +5,7 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
         isCalling: false,
         isRinging: false,
         isConnected: false,
+        isVideoCall: false,
         sender: null,
         offer: null
     });
@@ -15,7 +16,7 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
 
     const candidateQueue = useRef([]);
 
-    const startCall = async () => {
+    const startCall = async (isVideo = false) => {
         try {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 console.error("getUserMedia is not supported in this browser.");
@@ -23,7 +24,7 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
             }
 
             // Get audio stream before creating offer
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: isVideo });
 
             setLocalStream(stream);
 
@@ -34,10 +35,13 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
             const offer = await peer.current.createOffer();
             await peer.current.setLocalDescription(offer);
 
-            socket.emit("offer", { offer, receiverId, sender: user });
+            socket.emit("offer", { offer, receiverId, sender: user, isVideo });
 
-            // Update call state
-            setCallState(prev => ({ ...prev, isCalling: true }));
+            setCallState(prev => ({
+                ...prev,
+                isCalling: true,
+                isVideoCall: isVideo
+            }));
         } catch (error) {
             console.error("Error starting call:", error);
         }
@@ -50,7 +54,7 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
             await peer.current.setRemoteDescription(new RTCSessionDescription(callState.offer));
             await flushCandidateQueue();  // Flush queued ICE candidates
 
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callState.isVideoCall });
 
             setLocalStream(stream);
             stream.getTracks().forEach((track) => peer.current.addTrack(track, stream));
@@ -75,7 +79,12 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
     const rejectCall = () => {
         try {
             socket.emit("call-rejected", { receiverId: callState.sender.id });
-            setCallState({ isRinging: false, sender: null, offer: null });
+            setCallState(prev => ({
+                ...prev,
+                isRinging: false,
+                sender: null,
+                offer: null
+            }));
         } catch (error) {
             console.error("Error rejecting call:", error);
         }
@@ -100,12 +109,14 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
                 socket.emit("call-ended", { receiverId });
             }
 
-            setCallState({
+            setCallState(prev => ({
+                ...prev,
                 isConnected: false,
                 isRinging: false,
+                isVideoCall: false,
                 sender: null,
                 offer: null
-            });
+            }));
         } catch (error) {
             console.error("Error ending call:", error);
         }
@@ -151,23 +162,21 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
             };
 
             // Receive WebRTC Offer
-            socket.on("offer", async ({ offer, sender }) => {
+            socket.on("offer", async ({ offer, sender, isVideo }) => {
                 await peer.current.setRemoteDescription(new RTCSessionDescription(offer)); // Process immediately
                 await flushCandidateQueue(); // Flush ICE candidates
 
-                setCallState((prevState) => ({
-                    ...prevState,
+                setCallState(prev => ({
+                    ...prev,
                     isRinging: true,
-                    sender: sender,
-                    offer: offer,
+                    sender,
+                    offer,
+                    isVideoCall: isVideo
                 }));
             });
 
             socket.on("answer", async ({ answer }) => {
                 try {
-                    console.log("Received answer:", answer);
-                    console.log("Current signaling state:", peer.current.signalingState);
-    
                     await peer.current.setRemoteDescription(
                         new RTCSessionDescription(answer)
                     );
