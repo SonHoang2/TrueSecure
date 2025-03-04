@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import socket from "../utils/socket";
-import { IMAGES_URL } from "../config/config";
 import { useAuth } from "../hooks/useAuth";
 import ChatLeftPanel from "../component/ChatLeftPanel";
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
@@ -13,6 +12,7 @@ import InCallModal from "../component/InCallModal";
 import { useWebRTC } from "../hooks/useWebRTC";
 import { useChatMessages } from "../hooks/useChatMessages";
 import { useEncryption } from "../hooks/useEncryption";
+import SidebarNavigation from "../component/SidebarNavigation";
 
 const Chat = ({ userStatus }) => {
     const conversationId = Number(useParams()?.conversationId);
@@ -59,6 +59,7 @@ const Chat = ({ userStatus }) => {
         user,
     });
 
+
     useEffect(() => {
         if (chatState.receiver) {
             getPublicKey(chatState.receiver?.id);
@@ -67,14 +68,7 @@ const Chat = ({ userStatus }) => {
 
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
-            <div className="rounded mx-4 flex flex-col justify-between">
-                <div className="rounded-lg p-3 flex align-middle bg-neutral-200">
-                    <span className="material-symbols-outlined text-xl">chat_bubble</span>
-                </div>
-                <div className="hover:bg-gray-100 cursor-pointer" onClick={() => { alert("Clicked") }}>
-                    <img className="inline-block size-10 rounded-full " src={`${IMAGES_URL}/${user?.avatar}`} alt="" />
-                </div>
-            </div>
+            <SidebarNavigation />
             <ChatLeftPanel chatState={chatState} user={user} userStatus={userStatus} conversationId={conversationId} />
             {
                 <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
