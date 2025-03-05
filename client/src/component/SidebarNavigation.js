@@ -17,9 +17,9 @@ const SidebarNavigation = () => {
                     <div className="absolute bg-white shadow-md rounded-lg bottom-12 ps-2 pe-5 py-4">
                         <div className="flex w-full items-center">
                             <div className="rounded-full bg-gray-50 flex items-center justify-center w-7 h-7">
-                                <span className="material-symbols-outlined text-base text-neutral-900">logout</span>
+                                <span className="material-symbols-outlined text-base text-red-500">logout</span>
                             </div>
-                            <button onClick={() => logout()} className="whitespace-nowrap text-base ps-3 font-semibold">Log out</button>
+                            <button onClick={() => logout()} className="whitespace-nowrap text-base ps-3 font-semibold text-red-500">Log out</button>
                         </div>
                     </div>
                 )}
