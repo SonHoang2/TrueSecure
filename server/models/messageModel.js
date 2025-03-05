@@ -1,6 +1,6 @@
 import sequelize from '../db.js';
 import { DataTypes } from 'sequelize';
-import { messageType } from '../shareVariable.js';
+import { MESSAGE_TYPE } from '../shareVariable.js';
 
 const Message = sequelize.define('message', {
     id: {
@@ -22,8 +22,8 @@ const Message = sequelize.define('message', {
         allowNull: false
     },
     messageType: {
-        type: DataTypes.ENUM(messageType.Text, messageType.Image, messageType.File),
-        defaultValue: messageType.Text
+        type: DataTypes.ENUM(MESSAGE_TYPE.Text, MESSAGE_TYPE.Image, MESSAGE_TYPE.File),
+        defaultValue: MESSAGE_TYPE.Text
     },
     iv: {
         type: DataTypes.STRING,

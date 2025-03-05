@@ -4,7 +4,7 @@ import config from "./config/config.js";
 import ConvParticipant from "./models/convParticipantModel.js";
 import Message from "./models/messageModel.js";
 import MessageStatus from "./models/messageStatusModel.js";
-import { messageStatus } from "./shareVariable.js"
+import { MESSAGE_STATUS } from "./shareVariable.js"
 import { Op } from "sequelize";
 import { client } from "./redisClient.js";
 import catchAsyncSocket from "./utils/catchAsyncSocket.js";
@@ -86,7 +86,7 @@ export const initSocket = (server) => {
             const status = await MessageStatus.create({
                 messageId: message.id,
                 userId: data.receiverId,
-                status: messageStatus.Sent
+                status: MESSAGE_STATUS.SENT
             });
 
             io.to(receiverSocketId).emit('new-private-message', {
@@ -97,7 +97,7 @@ export const initSocket = (server) => {
 
             io.to(senderSocketId).emit('private-message-status-update', {
                 messageId: message.id,
-                status: messageStatus.Sent
+                status: MESSAGE_STATUS.SENT
             });
         }));
 
@@ -107,7 +107,7 @@ export const initSocket = (server) => {
             const { messageId } = data;
 
             MessageStatus.update(
-                { status: messageStatus.Seen },
+                { status: MESSAGE_STATUS.SEEN },
                 {
                     where: {
                         id: data.messageStatusId
@@ -117,7 +117,7 @@ export const initSocket = (server) => {
 
             io.to(senderSocketId).emit("private-message-status-update", {
                 messageId: messageId,
-                status: messageStatus.Seen
+                status: MESSAGE_STATUS.SEEN
             });
         }));
 
@@ -141,7 +141,7 @@ export const initSocket = (server) => {
                     return await MessageStatus.create({
                         messageId: message.id,
                         userId: participant.userId,
-                        status: messageStatus.Sent
+                        status: MESSAGE_STATUS.SENT
                     });
                 })
             );
@@ -175,7 +175,7 @@ export const initSocket = (server) => {
             const status = await MessageStatus.findByPk(data.messageStatusId);
             if (!status) return;
 
-            await status.update({ status: messageStatus.Seen });
+            await status.update({ status: MESSAGE_STATUS.SEEN });
 
             const message = await Message.findByPk(status.messageId);
 

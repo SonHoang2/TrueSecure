@@ -3,7 +3,7 @@ import ConvParticipant from "../models/convParticipantModel.js"
 import Message from "../models/messageModel.js";
 import MessageStatus from "../models/messageStatusModel.js";
 import User from "../models/userModel.js";
-import { messageStatus } from "../shareVariable.js";
+import { MESSAGE_STATUS } from "../shareVariable.js";
 import AppError from "../utils/AppError.js";
 import catchAsync from "../utils/catchAsync.js";
 import { Op, Sequelize } from "sequelize";
@@ -119,9 +119,9 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
                 }
             });
 
-            if (messagesStatus.status === messageStatus.Sent) {
+            if (messagesStatus.status === MESSAGE_STATUS.SENT) {
                 await MessageStatus.update({
-                    status: messageStatus.Seen
+                    status: MESSAGE_STATUS.SEEN
                 }, {
                     where: {
                         messageId: message.id,
@@ -145,12 +145,12 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
             });
 
             await MessageStatus.update(
-                { status: messageStatus.Seen },
+                { status: MESSAGE_STATUS.SEEN },
                 {
                     where: {
                         messageId: message.id,
                         userId: req.user.id,
-                        status: messageStatus.Sent
+                        status: MESSAGE_STATUS.SENT
                     }
                 }
             );

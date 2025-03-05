@@ -1,6 +1,6 @@
 import sequelize from '../db.js';
 import { DataTypes } from 'sequelize';
-import { roleName } from '../shareVariable.js';
+import { ROLE_NAME } from '../shareVariable.js';
 
 const ConvParticipant = sequelize.define('convParticipant', {
     id: {
@@ -18,8 +18,8 @@ const ConvParticipant = sequelize.define('convParticipant', {
         allowNull: false
     },
     role: {
-        type: DataTypes.ENUM(roleName.Admin, roleName.User),
-        defaultValue: roleName.User
+        type: DataTypes.ENUM(ROLE_NAME.ADMIN, ROLE_NAME.USER),
+        defaultValue: ROLE_NAME.USER
     }
 },
     {
