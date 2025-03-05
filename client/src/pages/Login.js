@@ -1,6 +1,7 @@
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { ROUTES } from "../config/config";
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -26,7 +27,7 @@ export default function Login() {
             style={{
                 backgroundImage: `url('/img/background.png')`,
                 backgroundSize: 'cover',
-                backgroundPosition: 'center', 
+                backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
             }}
         >
@@ -71,7 +72,7 @@ export default function Login() {
                         />
                     </div>
                 </form>
-                <div className="text-center text-gray-600 mb-4">
+                {/* <div className="text-center text-gray-600 mb-4">
                     <p>Or login with a social account</p>
                 </div>
                 <div className="flex flex-col my-3">
@@ -82,6 +83,11 @@ export default function Login() {
                         <img src="/img/google-icon.png" alt="google" className="w-6 h-6" />
                         <span className="ml-3">Sign in with Google</span>
                     </div>
+                </div> */}
+                <div className="text-center text-gray-600">
+                    <p>Don't have an account?
+                        <Link to={ROUTES.REGISTER} className="text-blue-500 hover:underline">Register</Link>
+                    </p>
                 </div>
             </div>
         </div>
