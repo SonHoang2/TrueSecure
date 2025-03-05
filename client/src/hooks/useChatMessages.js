@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import * as cryptoUtils from '../utils/cryptoUtils';
-import { CONVERSATIONS_URL, messageStatus } from '../config/config';
+import { CONVERSATIONS_URL, MESSAGE_STATUS } from '../config/config';
 
 export const useChatMessages = ({ conversationId, userKeys, userId, socket, getPrivateKey, axiosPrivate }) => {
     const [chatState, setChatState] = useState({
@@ -77,7 +77,7 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
                     senderId: userId,
                     conversationId: conversationId,
                     content: chatState.message,
-                    status: messageStatus.Sending,
+                    status: MESSAGE_STATUS.SENDING,
                 };
 
                 const encryptedMessage = {
@@ -129,7 +129,7 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
 
                     for (let i = chatState.messages.length - 1; i >= 0; i--) {
                         const user = chatState.messages[i].statuses?.find(
-                            status => status.userId === participant.userId && status.status === messageStatus.Seen
+                            status => status.userId === participant.userId && status.status === MESSAGE_STATUS.SEEN
                         );
                         if (user) {
                             return {
@@ -144,7 +144,7 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
                 .filter(Boolean);
         }
 
-        return chatState.messages.findLast(message => message.status === messageStatus.Seen);
+        return chatState.messages.findLast(message => message.status === MESSAGE_STATUS.SEEN);
     }, [chatState.convParticipants, chatState.messages]);
 
 
@@ -201,7 +201,7 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
             socket.on("private-message-status-update", (data) => {
                 setChatState((prevState) => {
                     const messageIndex = prevState.messages.findLastIndex((msg) => {
-                        if (msg.status === messageStatus.Sending) return true;
+                        if (msg.status === MESSAGE_STATUS.SENDING) return true;
                         return msg.id === data.messageId;
                     });
 
@@ -245,13 +245,13 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
                 setChatState((prevState) => {
                     const updatedMessages = [...prevState.messages];
                     const messageIndex = updatedMessages.findLastIndex(
-                        (msg) => msg.status === messageStatus.Sending || msg.id === messageId
+                        (msg) => msg.status === MESSAGE_STATUS.SENDING || msg.id === messageId
                     );
 
                     if (messageIndex === -1) return prevState;
                     const message = updatedMessages[messageIndex];
 
-                    if (status === messageStatus.Seen) {
+                    if (status === MESSAGE_STATUS.SEEN) {
                         message.statuses = message.statuses || [];
                         message.status = null;
 

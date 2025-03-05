@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { CONVERSATIONS_URL, IMAGES_URL } from "../config/config";
+import { CONVERSATIONS_URL } from "../config/config";
 import { useAuth } from "../hooks/useAuth";
 import { ChatLeftPanel } from "../component/ChatLeftPanel";
 import useAxiosPrivate from "../hooks/useAxiosPrivate";

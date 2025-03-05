@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { IMAGES_URL } from '../config/config';
-import { messageStatus } from '../config/config';
+import { MESSAGE_STATUS } from '../config/config';
 
 export const MessageList = ({ messages, userId, conversation, lastSeenStatus, receiver, convParticipants }) => {
     const messagesEndRef = useRef(null)
@@ -51,7 +51,7 @@ export const MessageList = ({ messages, userId, conversation, lastSeenStatus, re
                                     </p>
                                     <div className="flex justify-end">
                                         {
-                                            isLastMessage && isSentByUser && msg?.status !== messageStatus.Seen &&
+                                            isLastMessage && isSentByUser && msg?.status !== MESSAGE_STATUS.SEEN &&
                                             <p className="text-xs pe-4 text-gray-600 first-letter:uppercase">
                                                 {msg?.status}
                                             </p>
