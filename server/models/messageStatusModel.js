@@ -1,6 +1,6 @@
 import sequelize from '../db.js';
 import { DataTypes } from 'sequelize';
-import { messageStatus } from '../shareVariable.js';
+import { MESSAGE_STATUS } from '../shareVariable.js';
 
 const MessageStatus = sequelize.define('messageStatus', {
     id: {
@@ -18,8 +18,8 @@ const MessageStatus = sequelize.define('messageStatus', {
         allowNull: false
     },
     status: {
-        type: DataTypes.ENUM(messageStatus.Sent, messageStatus.Delivered, messageStatus.Seen),
-        defaultValue: messageStatus.Sent
+        type: DataTypes.ENUM(MESSAGE_STATUS.SENT, MESSAGE_STATUS.DELIVERED, MESSAGE_STATUS.SEEN),
+        defaultValue: MESSAGE_STATUS.SENT
     },
 },
     {

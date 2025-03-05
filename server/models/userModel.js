@@ -2,7 +2,6 @@ import sequelize from '../db.js';
 import { DataTypes } from 'sequelize';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { roleName } from '../shareVariable.js';
 import AppError from '../utils/AppError.js';
 
 const User = sequelize.define('user', {

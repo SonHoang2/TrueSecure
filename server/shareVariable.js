@@ -4,19 +4,19 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 export const __dirname = dirname(__filename);
 
-export const roleName = Object.freeze({
-    User: 'user',
-    Admin: 'admin',
-})
+export const ROLE_NAME = Object.freeze({
+    USER: 'user',
+    ADMIN: 'admin',
+});
 
-export const messageType = Object.freeze({
-    Text: 'text',
-    Image: 'image',
-    File: 'file'
-})
+export const MESSAGE_TYPE = Object.freeze({
+    TEXT: 'text',
+    IMAGE: 'image',
+    FILE: 'file',
+});
 
-export const messageStatus = Object.freeze({
-    Sent: 'sent',
-    Delivered: 'delivered',
-    Seen: 'seen'
-})
+export const MESSAGE_STATUS = Object.freeze({
+    SENT: 'sent',
+    DELIVERED: 'delivered',
+    SEEN: 'seen',
+});
