@@ -1,33 +1,50 @@
-import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { Link } from "react-router-dom";
 import { Eye, EyeOff } from "react-feather";
 import { ROUTES } from "../config/config";
 
 export default function Signup() {
-    const [firstName, setFirstName] = useState("");
-    const [lastName, setLastName] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [passwordConfirm, setPasswordConfirm] = useState("");
+    const [formData, setFormData] = useState({
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+        passwordConfirm: "",
+    });
     const [error, setError] = useState("");
     const [showPassword, setShowPassword] = useState({
         password: false,
         passwordConfirm: false,
     });
-    const navigate = useNavigate();
-    const { user, signup } = useAuth();
+    const { signup } = useAuth();
+
+    const handleChange = (e) => {
+        const { id, value } = e.target;
+        setFormData((prev) => ({ ...prev, [id]: value }));
+    };
 
     const handleSubmit = async (e) => {
+        e.preventDefault();
         try {
-            e.preventDefault();
-            await signup({ firstName, lastName, email, password, passwordConfirm });
+            await signup(formData);
         } catch (err) {
             setError(err.message);
-            console.log(err);
+            console.error(err);
         }
     };
+
+    const togglePasswordVisibility = (field) => {
+        setShowPassword((prev) => ({ ...prev, [field]: !prev[field] }));
+    };
+
+    const inputFields = [
+        { id: "firstName", label: "First name", type: "text", placeholder: "John" },
+        { id: "lastName", label: "Last name", type: "text", placeholder: "Doe" },
+        { id: "email", label: "Email address", type: "email", placeholder: "you@example.com" },
+        { id: "password", label: "Password", type: showPassword.password ? "text" : "password", placeholder: "••••••••" },
+        { id: "passwordConfirm", label: "Confirm password", type: showPassword.passwordConfirm ? "text" : "password", placeholder: "••••••••" },
+    ];
 
     return (
         <div
@@ -47,108 +64,36 @@ export default function Signup() {
                     {error && (
                         <div className="text-red-600 font-bold mb-4">{error}. Try again.</div>
                     )}
-                    <div className="flex flex-col mb-4">
-                        <label className="font-semibold text-gray-700" htmlFor="name">
-                            First name
-                        </label>
-                        <input
-                            className="form-input py-2 px-4 border rounded-md bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            id="name"
-                            type="text"
-                            placeholder="John"
-                            onChange={(e) => setFirstName(e.target.value)}
-                            autoComplete="on"
-                            required
-                        />
-                    </div>
-                    <div className="flex flex-col mb-4">
-                        <label className="font-semibold text-gray-700" htmlFor="name">
-                            Last name
-                        </label>
-                        <input
-                            className="form-input py-2 px-4 border rounded-md bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            id="name"
-                            type="text"
-                            placeholder="Doe"
-                            onChange={(e) => setLastName(e.target.value)}
-                            autoComplete="on"
-                            required
-                        />
-                    </div>
-                    <div className="flex flex-col mb-4">
-                        <label className="font-semibold text-gray-700" htmlFor="email">
-                            Email address
-                        </label>
-                        <input
-                            className="form-input py-2 px-4 border rounded-md bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            id="email"
-                            type="email"
-                            placeholder="you@example.com"
-                            onChange={(e) => setEmail(e.target.value)}
-                            autoComplete="on"
-                            required
-                        />
-                    </div>
-                    <div className="flex flex-col mb-4 relative">
-                        <label className="font-semibold text-gray-700" htmlFor="password">
-                            Password
-                        </label>
-                        <input
-                            className="form-input py-2 px-4 border rounded-md bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10"
-                            id="password"
-                            type={showPassword.password ? "text" : "password"}
-                            placeholder="••••••••"
-                            onChange={(e) => setPassword(e.target.value)}
-                            autoComplete="on"
-                            required
-                        />
-                        <button
-                            type="button"
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 mt-6"
-                            onClick={() => setShowPassword(prev => {
-                                return { ...prev, password: !prev.password };
-                            })}
-                        >
-                            {showPassword.password ?
-                                (
-                                    <Eye className="h-5 w-5 text-gray-500" />
-                                ) :
-                                (
-                                    <EyeOff className="h-5 w-5 text-gray-500" />
-                                )
-                            }
-                        </button>
-                    </div>
-                    <div className="flex flex-col mb-6 relative">
-                        <label className="font-semibold text-gray-700" htmlFor="passwordConfirm">
-                            Confirm password
-                        </label>
-                        <input
-                            className="form-input py-2 px-4 border rounded-md bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10"
-                            id="passwordConfirm"
-                            type={showPassword.passwordConfirm ? "text" : "password"}
-                            placeholder="••••••••"
-                            onChange={(e) => setPasswordConfirm(e.target.value)}
-                            autoComplete="on"
-                            required
-                        />
-                        <button
-                            type="button"
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 mt-6"
-                            onClick={() => setShowPassword(prev => {
-                                return { ...prev, passwordConfirm: !prev.passwordConfirm };
-                            })}
-                        >
-                            {showPassword.passwordConfirm ?
-                                (
-                                    <Eye className="h-5 w-5 text-gray-500" />
-                                ) :
-                                (
-                                    <EyeOff className="h-5 w-5 text-gray-500" />
-                                )
-                            }
-                        </button>
-                    </div>
+                    {inputFields.map((field) => (
+                        <div key={field.id} className="flex flex-col mb-4 relative">
+                            <label className="font-semibold text-gray-700" htmlFor={field.id}>
+                                {field.label}
+                            </label>
+                            <input
+                                className="form-input py-2 px-4 border rounded-md bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10"
+                                id={field.id}
+                                type={field.type}
+                                placeholder={field.placeholder}
+                                value={formData[field.id]}
+                                onChange={handleChange}
+                                autoComplete="on"
+                                required
+                            />
+                            {(field.id === "password" || field.id === "passwordConfirm") && (
+                                <button
+                                    type="button"
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 mt-6"
+                                    onClick={() => togglePasswordVisibility(field.id)}
+                                >
+                                    {showPassword[field.id] ? (
+                                        <Eye className="h-5 w-5 text-gray-500" />
+                                    ) : (
+                                        <EyeOff className="h-5 w-5 text-gray-500" />
+                                    )}
+                                </button>
+                            )}
+                        </div>
+                    ))}
                     <div className="flex justify-center mb-4">
                         <input
                             type="submit"
