@@ -33,6 +33,17 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
+    const signup = async ({ email, password, passwordConfirm, firstName, lastName }) => {
+        const res = await axiosPrivate.post(
+            AUTH_URL + "/signup",
+            { email, password, firstName, lastName, passwordConfirm },
+        );
+
+        setUser(res.data.data.user);
+        localStorage.setItem("user", JSON.stringify(res.data.data.user));
+        navigate("/");
+    }
+
     const login = async ({ email, password }) => {
         const res = await axiosPrivate.post(
             AUTH_URL + "/login",
@@ -75,6 +86,7 @@ export const AuthProvider = ({ children }) => {
         () => ({
             user,
             login,
+            signup,
             logout,
             getGoogleCode,
             sendGoogleCode,
