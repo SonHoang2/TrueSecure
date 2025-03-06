@@ -1,20 +1,26 @@
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { ROUTES } from "../config/config";
+import { Eye, EyeOff } from "react-feather";
 
 export default function Login() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    const [formData, setFormData] = useState({
+        email: "",
+        password: "",
+    });
     const [error, setError] = useState("");
-    const location = useLocation();
-    const navigate = useNavigate();
-    const { user, login, getGoogleCode } = useAuth();
+    const [showPassword, setShowPassword] = useState({
+        password: false,
+        passwordConfirm: false,
+    });
+    
+    const { login } = useAuth();
 
     const handleSubmit = async (event) => {
         try {
             event.preventDefault();
-            await login({ email, password });
+            await login(formData);
         } catch (err) {
             setError(err.message);
             console.log(err);
@@ -44,22 +50,44 @@ export default function Login() {
                             id="email"
                             type="email"
                             placeholder="you@example.com"
-                            onChange={e => setEmail(e.target.value)}
+                            onChange={e => setFormData(prev => {
+                                return { ...prev, email: e.target.value };
+                            })}
                             autoComplete="on"
                             required
                         />
                     </div>
-                    <div className="flex flex-col mb-4">
-                        <label className="font-semibold text-gray-700" htmlFor="password">Password</label>
+                    <div className="flex flex-col mb-4 relative">
+                        <label className="font-semibold text-gray-700" htmlFor="password">
+                            Password
+                        </label>
                         <input
-                            className="form-input py-2 px-4 border rounded-md bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="form-input py-2 px-4 border rounded-md bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10"
                             id="password"
-                            type="password"
+                            type={showPassword.password ? "text" : "password"}
                             placeholder="••••••••"
-                            onChange={e => setPassword(e.target.value)}
+                            onChange={(e) => setFormData(
+                                prev => ({ ...prev, password: e.target.value })
+                            )}
                             autoComplete="on"
                             required
                         />
+                        <button
+                            type="button"
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 mt-6"
+                            onClick={() => setShowPassword(prev => {
+                                return { ...prev, password: !prev.password };
+                            })}
+                        >
+                            {showPassword.password ?
+                                (
+                                    <Eye className="h-5 w-5 text-gray-500" />
+                                ) :
+                                (
+                                    <EyeOff className="h-5 w-5 text-gray-500" />
+                                )
+                            }
+                        </button>
                     </div>
                     <div className="flex justify-end mb-4">
                         <Link to='/user/forgotPassword' className="text-sm text-blue-500 hover:underline">Forgot password?</Link>
@@ -86,7 +114,7 @@ export default function Login() {
                 </div> */}
                 <div className="text-center text-gray-600">
                     <p>Don't have an account?
-                        <Link to={ROUTES.REGISTER} className="text-blue-500 hover:underline">Register</Link>
+                        <Link to={ROUTES.SIGN_UP} className="text-blue-500 hover:underline ps-1">Signup</Link>
                     </p>
                 </div>
             </div>
