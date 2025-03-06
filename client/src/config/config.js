@@ -13,6 +13,6 @@ export const MESSAGE_STATUS = Object.freeze({
 });
 
 export const ROUTES = Object.freeze({
-    REGISTER: "/auth/register",
+    SIGN_UP: "/auth/signup",
     LOGIN: "/auth/login",
 })
