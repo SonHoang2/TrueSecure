@@ -2,6 +2,7 @@ import User from '../models/userModel.js';
 import catchAsync from '../utils/catchAsync.js';
 import AppError from '../utils/AppError.js';
 import { query } from '../utils/filter.js';
+import { Op } from 'sequelize';
 
 export const getAllUsers = catchAsync(async (req, res, next) => {
     const { page, limit, sort, fields } = query(req);
@@ -134,3 +135,41 @@ export const getPublicKey = catchAsync(
         });
     }
 )
+
+
+export const searchUsers = catchAsync(async (req, res, next) => {
+    const { name } = req.query;
+
+    const users = await User.findAll({
+        where: {
+            [Op.or]: [
+                {
+                    firstName: {
+                        [Op.like]: `%${name}%`
+                    }
+                },
+                {
+                    lastName: {
+                        [Op.like]: `%${name}%`
+                    }
+                },
+                {
+                    [Op.and]: [
+                        { firstName: { [Op.like]: `%${name.split(' ')[0]}%` } },
+                        { lastName: { [Op.like]: `%${name.split(' ')[1]}%` } }
+                    ]
+                }
+            ],
+            id: {
+                [Op.ne]: req.user.id
+            }
+        }
+    });
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            users
+        }
+    });
+});

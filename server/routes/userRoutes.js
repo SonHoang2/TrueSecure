@@ -14,6 +14,8 @@ router.post('/public-key', userController.createPublicKey)
 
 router.get('/:userId/public-key', userController.getPublicKey)
 
+router.get('/search', userController.searchUsers);
+
 router.use(authController.restrictTo('admin'));
 
 router.route('/')
