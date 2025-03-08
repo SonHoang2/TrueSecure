@@ -1,11 +1,14 @@
-import { IMAGES_URL } from "../config/config";
+import { IMAGES_URL, USERS_URL } from "../config/config";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CreateGroupChat from "./CreateGroupChat";
 import CreatePrivateChat from "./CreatePrivateChat";
-import { Edit, X } from "react-feather"
+import { Edit, X, Search } from "react-feather"
+import useAxiosPrivate from "../hooks/useAxiosPrivate";
 
-export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId }) => {
+export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId, setChatState }) => {
+    const [filteredUsers, setFilteredUsers] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const [createChat, setCreateChat] = useState({
         createGroupChat: false,
         createPrivateChat: false,
@@ -13,15 +16,22 @@ export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId }) =
 
     const [isCreateChatModalOpen, setCreateChatModalOpen] = useState(false);
 
-    const users = [
-        { id: 1, firstName: "John", lastName: "Doe" },
-        { id: 2, firstName: "Jane", lastName: "Doe" },
-        { id: 3, firstName: "Alice", lastName: "Smith" },
-        { id: 4, firstName: "Bob", lastName: "Smith" },
-        { id: 5, firstName: "Charlie", lastName: "Brown" },
-    ]
+    const axiosPrivate = useAxiosPrivate();
 
+    const searchUsers = async (searchTerm, setUsers) => {
+        try {
+            const res = await axiosPrivate.get(USERS_URL + `/search?name=${searchTerm}`);
+
+            setUsers(res.data.data.users);
+        } catch (error) {
+            console.log(error);
+        }
+    };
     const navigate = useNavigate();
+
+    useEffect(() => {
+        searchUsers(searchTerm);
+    }, [searchTerm]);
 
     return (
         <div className="rounded-lg p-2 bg-white me-4 w-3/12">
@@ -75,10 +85,12 @@ export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId }) =
                             type="text"
                             className="flex-grow bg-neutral-100 ps-10 py-2 rounded-3xl focus:outline-none caret-blue-500 w-full"
                             placeholder="Search"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                         />
-                        <span className="material-symbols-outlined absolute text-gray-400 text-xl h-full ms-3 flex items-center">
-                            search
-                        </span>
+                        <div className="absolute text-gray-400 text-xl h-full ms-3 flex items-center">
+                            <Search size={20} />
+                        </div>
                     </div>
                     <div className="flex flex-col">
                         {chatState.conversations.map((conv) => {
@@ -134,14 +146,16 @@ export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId }) =
                 createChat.createGroupChat &&
                 <CreateGroupChat
                     setCreateChat={setCreateChat}
-                    users={users}
+                    onSearch={searchUsers}
+                    setChatState={setChatState}
                 />
             }
             {
                 createChat.createPrivateChat &&
                 <CreatePrivateChat
                     setCreateChat={setCreateChat}
-                    users={users}
+                    onSearch={searchUsers}
+                    setChatState={setChatState}
                 />
             }
         </div>
