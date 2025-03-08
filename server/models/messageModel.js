@@ -22,8 +22,8 @@ const Message = sequelize.define('message', {
         allowNull: false
     },
     messageType: {
-        type: DataTypes.ENUM(MESSAGE_TYPE.Text, MESSAGE_TYPE.Image, MESSAGE_TYPE.File),
-        defaultValue: MESSAGE_TYPE.Text
+        type: DataTypes.ENUM(MESSAGE_TYPE.TEXT, MESSAGE_TYPE.IMAGE, MESSAGE_TYPE.FILE),
+        defaultValue: MESSAGE_TYPE.TEXT
     },
     iv: {
         type: DataTypes.STRING,
