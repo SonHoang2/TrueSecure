@@ -3,13 +3,16 @@ import ConvParticipant from "../models/convParticipantModel.js"
 import Message from "../models/messageModel.js";
 import MessageStatus from "../models/messageStatusModel.js";
 import User from "../models/userModel.js";
-import { MESSAGE_STATUS } from "../shareVariable.js";
+import { MESSAGE_STATUS, ROLE_NAME } from "../shareVariable.js";
 import AppError from "../utils/AppError.js";
 import catchAsync from "../utils/catchAsync.js";
 import { Op, Sequelize } from "sequelize";
 
 export const createConversation = catchAsync(async (req, res, next) => {
     const { users, avatar, title } = req.body;
+
+    // add the current user to the list of users
+    users.push(req.user.id);
 
     const existUsers = await User.findAll({
         where: {
@@ -61,13 +64,14 @@ export const createConversation = catchAsync(async (req, res, next) => {
         conversation = await Conversation.create({
             isGroup: users.length > 2,
             title: users.length > 2 ? req.body.title : null,
-            avatar: users.length > 2 ? avatar ?? "group-avatar-default.png" : null
+            avatar: users.length > 2 ? (avatar?.trim() || "group-avatar-default.png") : null
         });
 
         for (let userId of users) {
             await ConvParticipant.create({
                 userId,
-                conversationId: conversation.id
+                conversationId: conversation.id,
+                role: userId === req.user.id ? ROLE_NAME.ADMIN : ROLE_NAME.USER
             });
         }
     }
