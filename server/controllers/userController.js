@@ -118,7 +118,7 @@ export const createPublicKey = catchAsync(
 )
 
 export const getPublicKey = catchAsync(
-    async (req, res) => {
+    async (req, res, next) => {
         const { userId } = req.params;
 
         const user = await User.findOne({ where: { id: userId }, attributes: ['publicKey'] });
