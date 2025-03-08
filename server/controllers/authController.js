@@ -14,7 +14,7 @@ export const protect = catchAsync(async (req, res, next) => {
 
     if (!accessToken) {
         return next(
-            new AppError('You are not logged in! Please log in to get access', 401)
+            new AppError('accessToken expired', 401)
         );
     }
     // verification token
