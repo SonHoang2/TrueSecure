@@ -219,3 +219,25 @@ export const getUserConversations = catchAsync(async (req, res, next) => {
         }
     });
 })
+
+
+export const createGroupKey = catchAsync(async (req, res, next) => {
+    const { groupKey, userId, conversationId } = req.body;
+
+    await ConvParticipant.update(
+        { groupKey },
+        {
+            where: {
+                userId,
+                conversationId
+            }
+        }
+    )
+
+    res.status(201).json({
+        status: 'success',
+        data: {
+            groupKey
+        }
+    });
+})

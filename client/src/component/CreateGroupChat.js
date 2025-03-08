@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, X, ArrowRight } from "react-feather";
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
-import { CONVERSATIONS_URL, IMAGES_URL } from "../config/config";
+import { CONVERSATIONS_URL, IMAGES_URL, USERS_URL } from "../config/config";
 import debounce from "../utils/debounce";
+import * as cryptoUtils from "../utils/cryptoUtils";
 
-export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState }) => {
+export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState, user }) => {
     const [filteredUsers, setFilteredUsers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isNewGroupChat, setNewGroupChat] = useState(null);
@@ -39,36 +40,61 @@ export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState }) => {
         ));
     };
 
+    const handleCrypto = async (conversationId) => {
+        try {
+            const aesKey = await cryptoUtils.generateAesKey();
+
+            for (const user of formData.groupMembers) {
+                const res = await axiosPrivate.get(USERS_URL + `/${user.id}/public-key`);
+
+                const recipientPublicKey = await cryptoUtils.importPublicKey(res.data.data.publicKey);
+                const senderPrivateKey = await cryptoUtils.importPrivateKey(user.id);
+
+                const encryptedAesKey = await cryptoUtils.encryptAESKeys({ recipientPublicKey, senderPrivateKey, message: aesKey });
+
+                await axiosPrivate.post(CONVERSATIONS_URL + `/groups/key`, {
+                    groupKey: encryptedAesKey,
+                    conversationId: conversationId,
+                    userId: user.id,
+                });
+            }
+
+        } catch (error) {
+            console.error(error);
+        }
+
+    };
+
     const handleSubmit = async (e) => {
         try {
             e.preventDefault();
 
-            if (formData.groupName === '') {
+            if (!formData.groupName.trim()) {
                 alert('Group name is required');
                 return;
             }
 
-            await axiosPrivate.post(CONVERSATIONS_URL, {
+            const { data: { data: { conversation } } } = await axiosPrivate.post(CONVERSATIONS_URL, {
                 title: formData.groupName,
                 users: formData.groupMembers.map(user => user.id),
                 avatar: formData.avatar,
             });
 
-            const res = await axiosPrivate.get(CONVERSATIONS_URL + '/me')
+            handleCrypto(conversation.id);
 
-            const { conversations } = res.data.data;
+            const { data: { data: { conversations } } } = await axiosPrivate.get(`${CONVERSATIONS_URL}/me`);
 
-            setChatState((prevState) => ({
+            setChatState(prevState => ({
                 ...prevState,
-                conversations: conversations
+                conversations,
             }));
 
             setNewGroupChat(false);
             setCreateChat(prev => ({ ...prev, createGroupChat: false }));
         } catch (error) {
-            console.error(error);
+            console.error('Error in handleSubmit:', error);
         }
-    }
+    };
 
     useEffect(() => {
         const debouncedSearch = debounce(onSearch, 500);

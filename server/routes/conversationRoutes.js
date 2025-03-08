@@ -15,5 +15,6 @@ router.route('/me')
 router.route('/:id/messages')
     .get(conversationController.getConversationMessages);
 
+router.post('/groups/key', conversationController.createGroupKey);
 
 export default router;
