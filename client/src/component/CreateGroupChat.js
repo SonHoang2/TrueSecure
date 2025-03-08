@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, X, ArrowRight } from "react-feather";
+import useAxiosPrivate from "../hooks/useAxiosPrivate";
+import { CONVERSATIONS_URL, IMAGES_URL } from "../config/config";
+import debounce from "../utils/debounce";
 
-export const CreateGroupChat = ({ users, setCreateChat }) => {
+export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState }) => {
+    const [filteredUsers, setFilteredUsers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isNewGroupChat, setNewGroupChat] = useState(null);
     const [formData, setFormData] = useState({
@@ -10,42 +14,71 @@ export const CreateGroupChat = ({ users, setCreateChat }) => {
         avatar: '',
     });
 
+    const axiosPrivate = useAxiosPrivate();
+
     const handleSearch = (e) => {
-        setSearchTerm(e.target.value);
+        setSearchTerm(e.target.value)
     };
 
     const handleAddUser = (user) => {
         if (!formData.groupMembers.find(u => u.id === user.id)) {
             setFormData(prev => ({
-                ...prev, 
-                groupMembers: [ ...prev.groupMembers, user]
+                ...prev,
+                groupMembers: [...prev.groupMembers, user]
             }));
         }
         setSearchTerm('');
     };
 
     const handleRemoveUser = (userId) => {
-        setFormData(prev => prev.groupMembers.filter(user => user.id !== userId));
+        setFormData(prev => (
+            {
+                ...prev,
+                groupMembers: prev.groupMembers.filter(user => user.id !== userId)
+            }
+        ));
     };
 
-    const filteredUsers = users.filter(user =>
-        `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const handleSubmit = async (e) => {
+        try {
+            e.preventDefault();
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+            if (formData.groupName === '') {
+                alert('Group name is required');
+                return;
+            }
 
-        if (formData.groupName === '') {
-            alert('Group name is required');
-            return;
+            await axiosPrivate.post(CONVERSATIONS_URL, {
+                title: formData.groupName,
+                users: formData.groupMembers.map(user => user.id),
+                avatar: formData.avatar,
+            });
+
+            const res = await axiosPrivate.get(CONVERSATIONS_URL + '/me')
+
+            const { conversations } = res.data.data;
+
+            setChatState((prevState) => ({
+                ...prevState,
+                conversations: conversations
+            }));
+
+            setNewGroupChat(false);
+            setCreateChat(prev => ({ ...prev, createGroupChat: false }));
+        } catch (error) {
+            console.error(error);
         }
-
-        console.log(formData);
-        
-
-        setNewGroupChat(false);
-        setCreateChat(prev => ({ ...prev, createGroupChat: false }));
     }
+
+    useEffect(() => {
+        const debouncedSearch = debounce(onSearch, 500);
+
+        debouncedSearch(searchTerm, setFilteredUsers);
+
+        return () => {
+            debouncedSearch.cancel();
+        };
+    }, [searchTerm]);
 
     return (
         <div>
@@ -77,7 +110,7 @@ export const CreateGroupChat = ({ users, setCreateChat }) => {
                             <div key={user.id} className="flex items-center gap-2 bg-blue-100 px-2 py-1 rounded-full">
                                 <span className="text-sm">{user.firstName} {user.lastName}</span>
                                 <X
-                                    size={16}
+                                    size={20}
                                     className="text-gray-500 hover:text-gray-700 cursor-pointer"
                                     onClick={() => handleRemoveUser(user.id)}
                                 />
@@ -97,18 +130,22 @@ export const CreateGroupChat = ({ users, setCreateChat }) => {
                             {
                                 filteredUsers.length > 0 ?
                                     filteredUsers.map((user) => (
-                                        <p
+                                        <div
                                             key={user.id}
                                             onClick={() => handleAddUser(user)}
                                             className="py-5 px-3 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
                                         >
-                                            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
-                                                {user.firstName[0]}
+                                            <div>
+                                                <img
+                                                    src={IMAGES_URL + "/" + user.avatar}
+                                                    alt={user.firstName}
+                                                    className="w-10 h-10 rounded-full"
+                                                />
                                             </div>
                                             <div>
                                                 <p className="font-medium">{user.firstName} {user.lastName}</p>
                                             </div>
-                                        </p>
+                                        </div>
                                     )) :
                                     <div className="text-gray-500 text-center">Not found user </div>
                             }
