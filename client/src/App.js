@@ -6,6 +6,7 @@ import ChatRouter from "./pages/ChatRouter";
 import socket from "./utils/socket";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import { useAuth } from "./hooks/useAuth";
 
 const App = () => {
     const [userStatus, setUserStatus] = useState({
@@ -13,7 +14,13 @@ const App = () => {
         lastSeen: {},
     });
 
+    const { user } = useAuth();
+
     useEffect(() => {
+        if (!user) {
+            return;
+        }
+
         if (!socket.connected) {
             socket.connect();
         }
@@ -30,7 +37,7 @@ const App = () => {
             socket.off("connect_error");
             socket.off("online-users");
         };
-    }, []);
+    }, [user]);
 
     return (
         <Routes>
