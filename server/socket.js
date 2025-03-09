@@ -126,7 +126,8 @@ export const initSocket = (server) => {
                 conversationId: data.conversationId,
                 senderId: data.senderId,
                 content: data.content,
-                messageType: data.messageType
+                messageType: data.messageType,
+                iv: data.iv,
             });
 
             const participants = await ConvParticipant.findAll({
