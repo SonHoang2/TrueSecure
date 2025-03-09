@@ -19,14 +19,8 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
     const messageSoundRef = useRef(new Audio("/sound/notification-sound.m4a"));
     const conversationIdRef = useRef(conversationId);
 
-    const getMessages = async () => {
+    const decryptedPrivateMessages = async (messages) => {
         try {
-            const res = await axiosPrivate.get(CONVERSATIONS_URL + `/${conversationId}/messages`)
-
-            const { convParticipants, messages, title, isGroup, avatar } = res.data.data.conversation;
-
-            const receiver = convParticipants.find(x => x.userId !== userId)?.user || null;
-
             const privateKey = await getPrivateKey();
 
             const decryptedMessages = await Promise.all(messages.map(async (message) => {
@@ -46,6 +40,54 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
                 }
                 return message;
             }));
+
+            return decryptedMessages;
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const decryptedGroupMessages = async (messages) => {
+        try {
+            const groupkey = await cryptoUtils.importGroupKey({ conversationId, userId });
+
+            console.log({ messages });
+
+            const decryptedMessages = await Promise.all(messages.map(async (message) => {
+                try {
+                    const content = await cryptoUtils.decryptGroupMessage(groupkey, {
+                        content: message.content,
+                        iv: message.iv
+                    });
+
+                    return { ...message, content };
+                } catch (error) {
+                    console.error("Failed to decrypt message:", error);
+                    return message;
+                }
+            }));
+
+            return decryptedMessages;
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const getMessages = async () => {
+        try {
+            const res = await axiosPrivate.get(CONVERSATIONS_URL + `/${conversationId}/messages`)
+
+            const { convParticipants, messages, title, isGroup, avatar } = res.data.data.conversation;
+
+            const receiver = convParticipants.find(x => x.userId !== userId)?.user || null;
+
+            let decryptedMessages;
+
+            if (isGroup) {
+                decryptedMessages = await decryptedGroupMessages(messages);
+            } else {
+                decryptedMessages = await decryptedPrivateMessages(messages);
+            }
 
             setChatState((prevState) => ({
                 ...prevState,
@@ -114,6 +156,9 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
                 iv: iv,
                 receiverId: chatState.receiver?.id,
             };
+
+            console.log({ encryptedMessage });
+            
 
             socket.emit("send-group-message", encryptedMessage);
 
