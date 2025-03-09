@@ -59,6 +59,8 @@ export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState, user })
                 });
             }
 
+            await cryptoUtils.storeGroupKey({ conversationId: conversationId, userId: user.id, groupKey: aesKey });
+
         } catch (error) {
             console.error(error);
         }
