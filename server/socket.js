@@ -166,7 +166,7 @@ export const initSocket = (server) => {
             if (senderSocketId) {
                 io.to(senderSocketId).emit('group-message-status-update', {
                     messageId: message.id,
-                    status: messageStatus.Sent
+                    status: MESSAGE_STATUS.SENT
                 });
             }
         }));
