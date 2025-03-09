@@ -43,6 +43,9 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
                 isVideoCall: isVideo
             }));
         } catch (error) {
+            if (error.name === "NotFoundError") {
+                alert("No camera or microphone found!");
+            }
             console.error("Error starting call:", error);
         }
     };
