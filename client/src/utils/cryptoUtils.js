@@ -1,88 +1,3 @@
-export async function generateECDHKeys() {
-    return await window.crypto.subtle.generateKey(
-        {
-            name: "ECDH",
-            namedCurve: "P-256", // Use P-256 instead of X25519
-        },
-        true, // Key is exportable
-        ["deriveKey"] // Allow key derivation
-    );
-}
-
-export async function encryptMessage(recipientPublicKey, message) {
-    // 1. Generate ephemeral ECDH key pair for this session
-    const ephemeralKeyPair = await window.crypto.subtle.generateKey(
-        { name: "ECDH", namedCurve: "P-256" },
-        true,
-        ["deriveKey"]
-    );
-
-    // 2. Derive shared secret using recipient's public key
-    const sharedSecret = await window.crypto.subtle.deriveKey(
-        {
-            name: "ECDH",
-            public: recipientPublicKey,
-        },
-        ephemeralKeyPair.privateKey,
-        { name: "AES-GCM", length: 256 }, // Derive AES key
-        true,
-        ["encrypt"]
-    );
-
-    // 3. Encrypt the message
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const encryptedContent = await crypto.subtle.encrypt(
-        { name: "AES-GCM", iv },
-        sharedSecret,
-        new TextEncoder().encode(message)
-    );
-
-    // 4. Export ephemeral public key to send to recipient
-    const exportedEphemeralPublicKey = await crypto.subtle.exportKey(
-        "raw",
-        ephemeralKeyPair.publicKey
-    );
-
-    return {
-        content: arrayBufferToBase64(encryptedContent),
-        iv: arrayBufferToBase64(iv.buffer),
-        ephemeralPublicKey: arrayBufferToBase64(exportedEphemeralPublicKey)
-    };
-}
-
-export async function decryptMessage(privateKey, encryptedData) {
-    // 1. Import sender's ephemeral public key
-    const ephemeralPublicKey = await crypto.subtle.importKey(
-        "raw",
-        base64ToArrayBuffer(encryptedData.ephemeralPublicKey),
-        { name: "ECDH", namedCurve: "P-256" },
-        true,
-        []
-    );
-
-    // 2. Derive shared secret using recipient's private key
-    const sharedSecret = await window.crypto.subtle.deriveKey(
-        {
-            name: "ECDH",
-            public: ephemeralPublicKey,
-        },
-        privateKey,
-        { name: "AES-GCM", length: 256 },
-        true,
-        ["decrypt"]
-    );
-
-    // 3. Decrypt the message
-    const decrypted = await crypto.subtle.decrypt(
-        { name: "AES-GCM", iv: base64ToArrayBuffer(encryptedData.iv) },
-        sharedSecret,
-        base64ToArrayBuffer(encryptedData.content)
-    );
-
-    return new TextDecoder().decode(decrypted);
-}
-
-
 // Convert ArrayBuffer to Base64
 function arrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
@@ -139,6 +54,19 @@ export async function storePrivateKey(privateKey, userId) {
     localStorage.setItem(storageKey, JSON.stringify(exportedKey));
 }
 
+export async function storeGroupKey({ conversationId, userId, groupKey }) {
+    if (!userId || !conversationId) {
+        console.error('User ID and conversationId are required to store group key');
+        return;
+    }
+
+    const storageKey = `groupKey_${userId}_${conversationId}`
+
+    const exportedKey = await window.crypto.subtle.exportKey("jwk", groupKey);
+
+    localStorage.setItem(storageKey, JSON.stringify(exportedKey));
+}
+
 export function hasPrivateKey(userId) {
     const storageKey = `privateKey_${userId}`;
     const keyData = localStorage.getItem(storageKey);
@@ -151,7 +79,7 @@ export async function importPrivateKey(userId) {
         console.error('User ID is required to store private key');
         return;
     }
- 
+
     const keyData = hasPrivateKey(userId);
 
     // Parse the exported key
@@ -170,4 +98,178 @@ export async function importPrivateKey(userId) {
     );
 
     return privateKey;
+}
+
+export async function importGroupKey({ conversationId, userId }) {
+    if (!userId || !conversationId) {
+        console.error('User ID and conversationId are required to import group key');
+        return;
+    }
+
+    const storageKey = `groupKey_${userId}_${conversationId}`
+    const keyData = localStorage.getItem(storageKey);
+
+    if (!keyData) {
+        console.error("No key data found for the conversation");
+        return;
+    }
+
+    const exportedKey = JSON.parse(keyData);
+
+    const groupKey = await window.crypto.subtle.importKey(
+        "jwk",
+        exportedKey,
+        {
+            name: "AES-GCM",
+            length: 256,
+        },
+        true,
+        ["encrypt", "decrypt"]
+    );
+
+    return groupKey;
+}
+
+async function deriveSharedKey(privateKey, publicKey) {
+    return await window.crypto.subtle.deriveKey(
+        {
+            name: "ECDH",
+            public: publicKey,
+        },
+        privateKey,
+        { name: "AES-GCM", length: 256 }, // Derive AES key
+        true,
+        ["encrypt", "decrypt"]
+    );
+}
+
+export async function generateECDHKeys() {
+    return await window.crypto.subtle.generateKey(
+        {
+            name: "ECDH",
+            namedCurve: "P-256", // Use P-256 instead of X25519
+        },
+        true, // Key is exportable
+        ["deriveKey"] // Allow key derivation
+    );
+}
+
+export async function generateAesKey() {
+    const key = await crypto.subtle.generateKey(
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt", "decrypt"]
+    );
+    return key;
+};
+
+export async function encryptAESKeys({ recipientPublicKey, senderPrivateKey, message }) {
+    // 1. Derive shared secret using recipient's public key and sender's private key
+    const sharedSecret = await deriveSharedKey(senderPrivateKey, recipientPublicKey);
+
+    // 2. Encrypt the message
+    const iv = crypto.getRandomValues(new Uint8Array(12)); // 12 bytes for AES-GCM
+    const encryptedContent = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        sharedSecret,
+        new TextEncoder().encode(message)
+    );
+
+    // 3. Combine IV and encrypted content into a single Uint8Array
+    const combined = new Uint8Array(iv.length + encryptedContent.byteLength);
+    combined.set(iv, 0); // Add IV at the beginning
+    combined.set(new Uint8Array(encryptedContent), iv.length); // Add encrypted content after IV
+
+    // 4. Encode the combined data as Base64
+    return arrayBufferToBase64(combined.buffer);
+}
+
+export async function decryptAESKeys({ senderPublicKey, recipientPrivateKey, encryptedData }) {
+    // 1. Decode the Base64 string into an ArrayBuffer
+    const combined = base64ToArrayBuffer(encryptedData);
+
+    // 2. Extract the IV (first 12 bytes) and the encrypted content (remaining bytes)
+    const iv = combined.slice(0, 12); // IV is 12 bytes for AES-GCM
+    const encryptedContent = combined.slice(12);
+
+    // 3. Derive shared secret using recipient's private key and sender's public key
+    const sharedSecret = await deriveSharedKey(recipientPrivateKey, senderPublicKey);
+
+    // 4. Decrypt the message
+    const decrypted = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv },
+        sharedSecret,
+        encryptedContent
+    );
+
+    return new TextDecoder().decode(decrypted);
+}
+
+
+async function encryptAES(key, data) {
+    const iv = crypto.getRandomValues(new Uint8Array(12)); // Generate a random IV
+    const encryptedContent = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        key,
+        new TextEncoder().encode(data)
+    );
+
+    return {
+        content: arrayBufferToBase64(encryptedContent),
+        iv: arrayBufferToBase64(iv.buffer)
+    };
+}
+
+async function decryptAES(key, encryptedData) {
+    const decrypted = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: base64ToArrayBuffer(encryptedData.iv) },
+        key,
+        base64ToArrayBuffer(encryptedData.content)
+    );
+
+    return new TextDecoder().decode(decrypted);
+}
+
+export async function encryptPrivateMessage(recipientPublicKey, message) {
+    const ephemeralKeyPair = await window.crypto.subtle.generateKey(
+        { name: "ECDH", namedCurve: "P-256" },
+        true,
+        ["deriveKey"]
+    );
+
+    const sharedSecret = await deriveSharedKey(ephemeralKeyPair.privateKey, recipientPublicKey);
+
+    const encryptedData = await encryptAES(sharedSecret, message);
+
+    const exportedEphemeralPublicKey = await crypto.subtle.exportKey(
+        "raw",
+        ephemeralKeyPair.publicKey
+    );
+
+    return {
+        ...encryptedData, // Includes content and iv
+        ephemeralPublicKey: arrayBufferToBase64(exportedEphemeralPublicKey)
+    };
+}
+
+export async function decryptPrivateMessage(privateKey, encryptedData) {
+    const ephemeralPublicKey = await crypto.subtle.importKey(
+        "raw",
+        base64ToArrayBuffer(encryptedData.ephemeralPublicKey),
+        { name: "ECDH", namedCurve: "P-256" },
+        true,
+        []
+    );
+
+    const sharedSecret = await deriveSharedKey(privateKey, ephemeralPublicKey);
+
+    return await decryptAES(sharedSecret, encryptedData);
+}
+
+export async function encryptGroupMessage(groupKey, message) {
+    return await encryptAES(groupKey, message);
+}
+
+export async function decryptGroupMessage(groupKey, encryptedData) {
+    return await decryptAES(groupKey, encryptedData);
 }
