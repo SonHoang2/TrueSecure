@@ -163,7 +163,8 @@ export const searchUsers = catchAsync(async (req, res, next) => {
             id: {
                 [Op.ne]: req.user.id
             }
-        }
+        },
+        attributes: ['id', 'firstName', 'lastName', 'avatar']
     });
 
     res.status(200).json({
