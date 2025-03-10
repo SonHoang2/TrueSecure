@@ -68,10 +68,16 @@ export const createConversation = catchAsync(async (req, res, next) => {
         });
 
         for (let userId of users) {
+            let role = ROLE_NAME.MEMBER;
+
+            if (userId === req.user.id && users.length > 2) {
+                role = ROLE_NAME.ADMIN;
+            }
+
             await ConvParticipant.create({
                 userId,
                 conversationId: conversation.id,
-                role: userId === req.user.id ? ROLE_NAME.ADMIN : ROLE_NAME.USER
+                role: role
             });
         }
     }
