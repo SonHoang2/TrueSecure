@@ -241,3 +241,32 @@ export const createGroupKey = catchAsync(async (req, res, next) => {
         }
     });
 })
+
+export const getConversationKey = catchAsync(async (req, res, next) => {
+    const { conversationId } = req.params;
+
+    if (!conversationId) {
+        return next(new AppError('Conversation ID is required', 400));
+    }
+
+    const userId = req.user.id;
+
+    const conversation = await ConvParticipant.findOne({
+        attributes: ['groupKey'],
+        where: {
+            userId,
+            conversationId
+        }
+    });
+
+    if (!conversation) {
+        return next(new AppError('Conversation not found', 404));
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            groupKey: conversation.groupKey
+        }
+    });
+})
