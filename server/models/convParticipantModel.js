@@ -18,8 +18,8 @@ const ConvParticipant = sequelize.define('convParticipant', {
         allowNull: false
     },
     role: {
-        type: DataTypes.ENUM(ROLE_NAME.ADMIN, ROLE_NAME.USER),
-        defaultValue: ROLE_NAME.USER
+        type: DataTypes.ENUM(ROLE_NAME.ADMIN, ROLE_NAME.MEMBER),
+        defaultValue: ROLE_NAME.MEMBER
     },
     groupKey: {
         type: DataTypes.STRING,
