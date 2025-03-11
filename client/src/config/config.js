@@ -15,4 +15,10 @@ export const MESSAGE_STATUS = Object.freeze({
 export const ROUTES = Object.freeze({
     SIGN_UP: "/auth/signup",
     LOGIN: "/auth/login",
+    CHAT: "/chat",
 })
+
+export const ROLE = Object.freeze({
+    ADMIN: 'admin',
+    MEMBER: 'member'
+});

@@ -7,6 +7,7 @@ export const __dirname = dirname(__filename);
 export const ROLE_NAME = Object.freeze({
     USER: 'user',
     ADMIN: 'admin',
+    MEMBER: 'member',
 });
 
 export const MESSAGE_TYPE = Object.freeze({
