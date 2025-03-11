@@ -20,6 +20,10 @@ export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId, set
 
     const searchUsers = async (searchTerm, setUsers) => {
         try {
+            if (!searchTerm) {
+                return;
+            }
+
             const res = await axiosPrivate.get(USERS_URL + `/search?name=${searchTerm}`);
 
             setUsers(res.data.data.users);
@@ -28,10 +32,6 @@ export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId, set
         }
     };
     const navigate = useNavigate();
-
-    useEffect(() => {
-        searchUsers(searchTerm);
-    }, [searchTerm]);
 
     return (
         <div className="rounded-lg p-2 bg-white me-4 w-3/12">
@@ -148,6 +148,7 @@ export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId, set
                     setCreateChat={setCreateChat}
                     onSearch={searchUsers}
                     setChatState={setChatState}
+                    user={user}
                 />
             }
             {
