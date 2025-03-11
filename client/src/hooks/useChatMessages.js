@@ -2,16 +2,19 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import * as cryptoUtils from '../utils/cryptoUtils';
 import { CONVERSATIONS_URL, MESSAGE_STATUS } from '../config/config';
 
-export const useChatMessages = ({ conversationId, userKeys, userId, socket, getPrivateKey, axiosPrivate }) => {
+export const useChatMessages = ({
+    conversationId, userKeys, userId, socket, axiosPrivate, getGroupKey,
+}) => {
     const [chatState, setChatState] = useState({
         message: "",
         messages: [],
+        encryptedMessages: [],
         receiver: null,
         convParticipants: [],
         conversations: [],
         conversation: {
             title: "",
-            isGroup: false,
+            isGroup: null,
             avatar: "",
         },
     });
@@ -21,7 +24,7 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
 
     const decryptedPrivateMessages = async (messages) => {
         try {
-            const privateKey = await getPrivateKey();
+            const privateKey = userKeys.privateKey;
 
             const decryptedMessages = await Promise.all(messages.map(async (message) => {
                 if (message.senderId !== userId) {
@@ -49,9 +52,12 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
 
     const decryptedGroupMessages = async (messages) => {
         try {
-            const groupkey = await cryptoUtils.importGroupKey({ conversationId, userId });
+            const groupkey = await getGroupKey(conversationId);
 
-            console.log({ messages });
+            if (!groupkey) {
+                console.error("Group key is not available!");
+                return
+            }
 
             const decryptedMessages = await Promise.all(messages.map(async (message) => {
                 try {
@@ -73,6 +79,30 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
         }
     };
 
+    const decryptedMessages = async (messages) => {
+        try {
+            let decryptedMessages;
+
+            if (chatState.conversation.isGroup) {
+                decryptedMessages = await decryptedGroupMessages(messages);
+            } else {
+                decryptedMessages = await decryptedPrivateMessages(messages);
+            }
+
+            if (!decryptedMessages) {
+                console.error("Failed to decrypt messages!");
+                return;
+            }
+
+            setChatState((prevState) => ({
+                ...prevState,
+                messages: decryptedMessages,
+            }));
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
     const getMessages = async () => {
         try {
             const res = await axiosPrivate.get(CONVERSATIONS_URL + `/${conversationId}/messages`)
@@ -81,17 +111,9 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
 
             const receiver = convParticipants.find(x => x.userId !== userId)?.user || null;
 
-            let decryptedMessages;
-
-            if (isGroup) {
-                decryptedMessages = await decryptedGroupMessages(messages);
-            } else {
-                decryptedMessages = await decryptedPrivateMessages(messages);
-            }
-
             setChatState((prevState) => ({
                 ...prevState,
-                messages: decryptedMessages,
+                encryptedMessages: messages,
                 receiver: receiver,
                 conversation: {
                     title: title,
@@ -139,7 +161,12 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
 
     const sendGroupMessage = async () => {
         try {
-            const groupkey = await cryptoUtils.importGroupKey({ conversationId, userId });
+            const groupkey = await getGroupKey(conversationId);
+
+            if (!groupkey) {
+                console.error("Group key is not available!");
+                return;
+            }
 
             const { content, iv } = await cryptoUtils.encryptGroupMessage(groupkey, chatState.message);
 
@@ -158,7 +185,7 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
             };
 
             console.log({ encryptedMessage });
-            
+
 
             socket.emit("send-group-message", encryptedMessage);
 
@@ -180,6 +207,11 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
                 messageData = await sendGroupMessage();
             } else {
                 messageData = await sendPrivateMessage();
+            }
+
+            if (!messageData) {
+                console.error("Failed to send message!");
+                return;
             }
 
             setChatState((prevState) => ({
@@ -207,6 +239,8 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
     }
 
     const lastSeenStatus = useMemo(() => {
+        if (!chatState.messages) return null;
+
         if (chatState.conversation.isGroup) {
             return chatState.convParticipants
                 .map(participant => {
@@ -215,7 +249,7 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
                     }
 
                     for (let i = chatState.messages.length - 1; i >= 0; i--) {
-                        const user = chatState.messages[i].statuses?.find(
+                        const user = chatState.messages[i]?.statuses?.find(
                             status => status.userId === participant.userId && status.status === MESSAGE_STATUS.SEEN
                         );
                         if (user) {
@@ -236,10 +270,8 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
 
 
     useEffect(() => {
-        if (cryptoUtils.hasPrivateKey(userId)) {
-            getMessages();
-        }
-    }, [conversationId, cryptoUtils.hasPrivateKey(userId)]);
+        getMessages();
+    }, [conversationId]);
 
     useEffect(() => {
         socket.on("new-private-message", async (data) => {
@@ -358,13 +390,19 @@ export const useChatMessages = ({ conversationId, userKeys, userId, socket, getP
             socket.off("group-message-status-update");
             socket.off("new-group-message");
         };
-    }, [chatState.messages.length]);
+    }, [chatState.messages?.length]);
 
     useEffect(() => {
         conversationIdRef.current = conversationId;
 
         getConversations();
     }, [conversationId]);
+
+    useEffect(() => {
+        if (userKeys.privateKey && userKeys.publicKey && chatState.encryptedMessages.length > 0) {
+            decryptedMessages(chatState.encryptedMessages);
+        }
+    }, [userKeys.privateKey, userKeys.publicKey, chatState.encryptedMessages.length]);
 
     return { chatState, setChatState, sendMessage, lastSeenStatus };
 };
