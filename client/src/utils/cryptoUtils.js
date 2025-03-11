@@ -54,6 +54,35 @@ export async function storePrivateKey(privateKey, userId) {
     localStorage.setItem(storageKey, JSON.stringify(exportedKey));
 }
 
+export async function exportAESKey(key) {
+    try {
+        const exportedKey = await window.crypto.subtle.exportKey("raw", key);
+        const exportedKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(exportedKey)));
+        return exportedKeyBase64;
+    } catch (error) {
+        console.error("Error exporting key:", error);
+    }
+}
+
+export async function importAESKey(base64Key) {
+    try {
+        const keyData = Uint8Array.from(atob(base64Key), c => c.charCodeAt(0));
+
+        console.log("keyData: ", keyData);
+        
+        const key = await window.crypto.subtle.importKey(
+            "raw", 
+            keyData, 
+            { name: "AES-GCM" },
+            true, 
+            ["encrypt", "decrypt"]
+        );
+        return key;
+    } catch (error) {
+        console.error("Error importing key:", error);
+    }
+}
+
 export async function storeGroupKey({ conversationId, userId, groupKey }) {
     if (!userId || !conversationId) {
         console.error('User ID and conversationId are required to store group key');
@@ -81,6 +110,11 @@ export async function importPrivateKey(userId) {
     }
 
     const keyData = hasPrivateKey(userId);
+
+    if (!keyData) {
+        console.error("No key data found for the user");
+        return;
+    }
 
     // Parse the exported key
     const exportedKey = JSON.parse(keyData);
