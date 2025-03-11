@@ -24,8 +24,10 @@ const Chat = ({ userStatus }) => {
     const {
         userKeys,
         setUserKeys,
+        getGroupKey,
         getPrivateKey,
-        getPublicKey,
+        getAdminPublicKey,
+        getUserPublicKey,
     } = useEncryption({
         userId: user?.id,
         axiosPrivate,
@@ -43,6 +45,7 @@ const Chat = ({ userStatus }) => {
         socket,
         getPrivateKey,
         axiosPrivate,
+        getGroupKey,
     })
 
     const {
@@ -59,17 +62,45 @@ const Chat = ({ userStatus }) => {
         user,
     });
 
-
     useEffect(() => {
-        if (chatState.receiver) {
-            getPublicKey(chatState.receiver?.id);
+        if (chatState.conversation.isGroup === null) {
+            return;
         }
-    }, [chatState.receiver]);
+
+        const init = async () => {
+            const privateKey = await getPrivateKey();
+            let publicKey;
+
+
+            if (chatState.conversation.isGroup) {
+                publicKey = await getAdminPublicKey(chatState.convParticipants);
+            } else {
+                publicKey = await getUserPublicKey(chatState.receiver?.id);
+            }
+
+            if (!publicKey || !privateKey) {
+                return;
+            }
+
+            setUserKeys({
+                publicKey,
+                privateKey,
+            });
+        }
+
+        init();
+    }, [chatState.receiver, chatState.conversation.isGroup]);
+
 
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
             <SidebarNavigation />
-            <ChatLeftPanel chatState={chatState} user={user} userStatus={userStatus} conversationId={conversationId} />
+            <ChatLeftPanel
+                chatState={chatState}
+                user={user} userStatus={userStatus}
+                conversationId={conversationId}
+                setChatState={setChatState}
+            />
             {
                 <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
                     <ChatHeader
