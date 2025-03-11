@@ -48,7 +48,9 @@ export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState, user })
 
             const recipientPublicKey = await cryptoUtils.importPublicKey(res.data.data.publicKey);
             const senderPrivateKey = await cryptoUtils.importPrivateKey(user.id);
-            const encryptedAesKey = await cryptoUtils.encryptAESKeys({ recipientPublicKey, senderPrivateKey, message: aesKey });
+
+            const exportedAESKey = await cryptoUtils.exportAESKey(aesKey);
+            const encryptedAesKey = await cryptoUtils.encryptAESKeys({ recipientPublicKey, senderPrivateKey, message: exportedAESKey });
 
             await axiosPrivate.post(CONVERSATIONS_URL + `/key`, {
                 groupKey: encryptedAesKey,
@@ -58,7 +60,6 @@ export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState, user })
         }
 
         await cryptoUtils.storeGroupKey({ conversationId: conversationId, userId: user.id, groupKey: aesKey });
-
     };
 
     const handleSubmit = async (e) => {
