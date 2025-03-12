@@ -344,7 +344,7 @@ export const useChatMessages = ({
             if (data.conversationId === conversationIdRef.current) {
                 setChatState((prevState) => ({
                     ...prevState,
-                    messages: [...prevState.messages, data],
+                    encryptedMessages: [...prevState.encryptedMessages, data],
                 }));
 
                 socket.emit("group-message-seen", {

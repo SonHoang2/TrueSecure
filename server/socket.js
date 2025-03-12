@@ -188,7 +188,7 @@ export const initSocket = (server) => {
             const updateData = {
                 messageId: message.id,
                 userId: status.userId,
-                status: messageStatus.Seen
+                status: MESSAGE_STATUS.SEEN
             };
 
             participants.forEach(async participant => {
