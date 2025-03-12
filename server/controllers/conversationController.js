@@ -97,6 +97,7 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
         include: [
             {
                 model: ConvParticipant,
+                attributes: ['id', 'role', 'userId', 'conversationId'],
                 include: {
                     model: User,
                     attributes: ['id', 'avatar', 'firstName', 'lastName']
@@ -212,6 +213,7 @@ export const getUserConversations = catchAsync(async (req, res, next) => {
                         attributes: ['id', 'content', 'createdAt', 'senderId', 'messageType'],
                         limit: 1,
                         order: [['createdAt', 'DESC']],
+                        separate: true, 
                     }
                 ]
             }
@@ -258,7 +260,7 @@ export const getConversationKey = catchAsync(async (req, res, next) => {
     const userId = req.user.id;
 
     const conversation = await ConvParticipant.findOne({
-        attributes: ['groupKey'],
+        attributes: ['groupKey', 'id'],
         where: {
             userId,
             conversationId
