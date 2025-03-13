@@ -114,6 +114,7 @@ export const useChatMessages = ({
             setChatState((prevState) => ({
                 ...prevState,
                 encryptedMessages: messages,
+                messages: [],
                 receiver: receiver,
                 conversation: {
                     title: title,
