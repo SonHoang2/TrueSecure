@@ -4,6 +4,7 @@ import { useAuth } from "../hooks/useAuth";
 import { ChatLeftPanel } from "../component/ChatLeftPanel";
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
 import SidebarNavigation from "../component/SidebarNavigation";
+import { useEncryption } from "../hooks/useEncryption";
 
 const ChatRouter = ({ userStatus }) => {
     const [chatState, setChatState] = useState({
@@ -15,6 +16,13 @@ const ChatRouter = ({ userStatus }) => {
     const { user } = useAuth();
 
     const axiosPrivate = useAxiosPrivate();
+
+    const {
+        userKeys,
+    } = useEncryption({
+        userId: user?.id,
+        axiosPrivate,
+    });
 
     const getConversations = async () => {
         try {
@@ -37,7 +45,11 @@ const ChatRouter = ({ userStatus }) => {
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
             <SidebarNavigation />
-            <ChatLeftPanel chatState={chatState} user={user} userStatus={userStatus} />
+            <ChatLeftPanel
+                chatState={chatState}
+                user={user} userStatus={userStatus}
+                setChatState={setChatState}
+            />
         </div>
     );
 };
