@@ -94,7 +94,7 @@ export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState, user })
     };
 
     useEffect(() => {
-        const debouncedSearch = debounce(onSearch, 500);
+        const debouncedSearch = debounce(onSearch, 300);
 
         debouncedSearch(searchTerm, setFilteredUsers);
 
