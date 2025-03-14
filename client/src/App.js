@@ -57,6 +57,10 @@ const App = () => {
                     element={<Login />}
                 />
                 <Route
+                    path='google'
+                    element={<Login />}
+                />
+                <Route
                     path="signup"
                     element={<Signup />}
                 />
