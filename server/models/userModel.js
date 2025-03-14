@@ -75,9 +75,11 @@ User.associate = (models) => {
 
 const passwordValidation = (password) => {
     const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,20}$/;
+    console.log(regex.test(password), password);
+    
     if (!regex.test(password)) {
         throw new AppError(
-            "Password must be 12-20 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+            "Password must be 12-20 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character @$!%*?&"
         );
     }
 }

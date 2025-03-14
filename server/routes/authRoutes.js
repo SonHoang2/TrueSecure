@@ -5,6 +5,7 @@ const router = Router();
 
 router.post('/signup', authController.signup);
 router.post('/login', authController.login);
+router.post('/login/google', authController.GoogleLogin);
 
 router.use(authController.protect);
 

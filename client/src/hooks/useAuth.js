@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AUTH_URL, CLIENT_URL, USERS_URL } from "../config/config";
+import { AUTH_URL, CLIENT_URL, USERS_URL, GOOGLE_CLIENT_ID } from "../config/config";
 import queryString from "query-string";
 import axios, { axiosPrivate } from "../api/axios";
 
@@ -64,12 +64,13 @@ export const AuthProvider = ({ children }) => {
 
     const getGoogleCode = async () => {
         const queryParams = queryString.stringify({
-            client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+            client_id: GOOGLE_CLIENT_ID,
             scope: "email profile",
             redirect_uri: CLIENT_URL + "/auth/google",
             display: "popup",
             response_type: "code",
         });
+
         const url = `https://accounts.google.com/o/oauth2/v2/auth?${queryParams}`;
 
         window.location.href = url;
@@ -77,8 +78,10 @@ export const AuthProvider = ({ children }) => {
 
     const sendGoogleCode = async (code) => {
         const URL = AUTH_URL + `/login/google`;
-        const res = await axios.post(URL, { code, redirectUri: CLIENT_URL + "/auth/google" });
+        const res = await axiosPrivate.post(URL, { code, redirectUri: CLIENT_URL + "/auth/google" });
+
         setUser(res.data.data.user);
+        localStorage.setItem("user", JSON.stringify(res.data.data.user));
         navigate("/");
     }
 

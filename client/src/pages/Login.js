@@ -1,8 +1,9 @@
-import { Link } from "react-router-dom";
-import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { ROUTES } from "../config/config";
 import { Eye, EyeOff } from "react-feather";
+import queryString from "query-string";
 
 export default function Login() {
     const [formData, setFormData] = useState({
@@ -14,8 +15,23 @@ export default function Login() {
         password: false,
         passwordConfirm: false,
     });
-    
-    const { login } = useAuth();
+
+    const location = useLocation();
+
+    const { login, getGoogleCode, sendGoogleCode } = useAuth();
+
+    const handleAuthRedirect = async () => {
+        try {
+            const { code } = queryString.parse(location.search);
+            
+            if (location.pathname === "/auth/google") {
+                await sendGoogleCode(code);
+            }
+        } catch (error) {
+            console.error('Error fetching auth data:', error);
+        }
+    };
+
 
     const handleSubmit = async (event) => {
         try {
@@ -26,6 +42,11 @@ export default function Login() {
             console.log(err);
         }
     };
+
+    useEffect(() => {
+        console.log(location.pathname);
+        handleAuthRedirect();
+    }, [location.pathname]);
 
     return (
         <div
@@ -100,18 +121,21 @@ export default function Login() {
                         />
                     </div>
                 </form>
-                {/* <div className="text-center text-gray-600 mb-4">
+                <div className="text-center text-gray-600">
                     <p>Or login with a social account</p>
                 </div>
-                <div className="flex flex-col my-3">
+                <div className="flex justify-center mt-2 mb-10">
                     <div
-                        className="btn border shadow-sm flex items-center w-full mb-3 py-2 px-4 rounded-md cursor-pointer hover:bg-gray-200"
+                        className="btn border border-gray-300 shadow-sm flex justify-center items-center w-10 h-10 p-1 rounded-full cursor-pointer transition-all duration-200 hover:bg-gray-50 hover:shadow-md hover:border-gray-400"
                         onClick={getGoogleCode}
                     >
-                        <img src="/img/google-icon.png" alt="google" className="w-6 h-6" />
-                        <span className="ml-3">Sign in with Google</span>
+                        <img
+                            src="/img/google_logo.svg"
+                            alt="Google sign-in"
+                            className="w-6 h-6 transition-transform duration-200 hover:scale-105"
+                        />
                     </div>
-                </div> */}
+                </div>
                 <div className="text-center text-gray-600">
                     <p>Don't have an account?
                         <Link to={ROUTES.SIGN_UP} className="text-blue-500 hover:underline ps-1">Signup</Link>

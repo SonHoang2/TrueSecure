@@ -4,6 +4,7 @@ import AppError from "../utils/AppError.js";
 import jwt from 'jsonwebtoken';
 import config from "../config/config.js";
 import { client } from "../redisClient.js";
+import generateSecurePassword from "../utils/GenerateSecurePassword.js";
 
 export const protect = catchAsync(async (req, res, next) => {
     const { access_token: accessToken, refresh_token: refreshToken } = req.cookies;
@@ -107,7 +108,7 @@ const createSendToken = async (user, statusCode, res) => {
         ),
         httpOnly: true,
         secure: config.env === 'production',
-        sameSite: 'Strict'
+        // sameSite: 'Strict'
     };
 
     const RTOptions = {
@@ -117,7 +118,7 @@ const createSendToken = async (user, statusCode, res) => {
         httpOnly: true,
         secure: config.env === 'production',
         path: '/api/v1/auth/',
-        sameSite: 'Strict',
+        // sameSite: 'Strict',
     };
 
     res.cookie('access_token', accessToken, ATOptions);
@@ -242,7 +243,7 @@ export const refreshToken = catchAsync(
 
                 // Invalidate all tokens for the user
                 const userTokensKey = `user:${decoded.id}:tokens`;
-                const tokens = await client.sMembers(userTokensKey);         
+                const tokens = await client.sMembers(userTokensKey);
                 if (tokens.length > 0) {
                     await client.del(tokens); // Delete all token keys
                     await client.del(userTokensKey); // Delete the user's token set
@@ -291,3 +292,65 @@ export const refreshToken = catchAsync(
         });
     }
 )
+
+export const GoogleLogin = catchAsync(async (req, res, next) => {
+    let { code, redirectUri } = req.body;
+
+    const clientId = config.googleClientId;
+    const clientSecret = config.googleClientSecret;
+    const grantType = 'authorization_code';
+    const url = 'https://oauth2.googleapis.com/token';
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            clientId,
+            clientSecret,
+            redirectUri,
+            code,
+            grantType,
+        }),
+    });
+    const data = await response.json();
+
+    const decodedToken = jwt.decode(data.id_token);
+
+    if (!decodedToken) {
+        return next(
+            new AppError('Invalid token: Token could not be decoded', 400)
+        );
+    }
+
+    const { email, given_name, family_name } = decodedToken;
+
+    // use if i want to get more info about the user
+    // const tokenFromGoogle = data.access_token;
+    // const urlForGettingUserInfo = 'https://www.googleapis.com/oauth2/v2/userinfo';
+
+    // const response1 = await fetch(urlForGettingUserInfo, {
+    //     method: 'GET',
+    //     headers: {
+    //         Authorization: `Bearer ${tokenFromGoogle}`,
+    //     },
+    // });
+
+    // const userData = await response1.json();
+
+    let user = await User.findOne({ where: { email } });
+    if (!user) {
+        const password = generateSecurePassword();
+
+        user = await User.create({
+            email,
+            firstName: given_name,
+            lastName: family_name,
+            password,
+            googleAccount: true,
+        });
+    }
+
+    createSendToken(user, 201, res);
+});

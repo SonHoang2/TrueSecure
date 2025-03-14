@@ -9,6 +9,8 @@ export default {
     port: process.env.PORT,
     sslKey: process.env.SSL_KEY,
     sslCert: process.env.SSL_CERT,
+    googleClientId: process.env.GOOGLE_CLIENT_ID,
+    googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
     database: {
         name: process.env.DB_NAME,
         username: process.env.DB_USERNAME,
