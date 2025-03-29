@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
+    env_file:
+      - ./client/.env
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+      - ./192.168.1.2.pem:/app/192.168.1.2.pem
+      - ./192.168.1.2-key.pem:/app/192.168.1.2-key.pem
+    networks:
+      - chat-network
+    restart: unless-stopped
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./server/.env.docker
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+      - ./192.168.1.2.pem:/app/192.168.1.2.pem
+      - ./192.168.1.2-key.pem:/app/192.168.1.2-key.pem
+    networks:
+      - chat-network
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    env_file:
+      - ./.env.postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - chat-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - chat-network
+    restart: unless-stopped
+
+networks:
+  chat-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
