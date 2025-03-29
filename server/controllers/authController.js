@@ -108,7 +108,7 @@ const createSendToken = async (user, statusCode, res) => {
         ),
         httpOnly: true,
         secure: config.env === 'production',
-        // sameSite: 'Strict'
+        sameSite: 'Strict'
     };
 
     const RTOptions = {
@@ -118,7 +118,7 @@ const createSendToken = async (user, statusCode, res) => {
         httpOnly: true,
         secure: config.env === 'production',
         path: '/api/v1/auth/',
-        // sameSite: 'Strict',
+        sameSite: 'Strict',
     };
 
     res.cookie('access_token', accessToken, ATOptions);
