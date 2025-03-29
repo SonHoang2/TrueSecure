@@ -5,3 +5,5 @@ localhost-key.pem
 
 
 node_modules/
+.env.postgres
+server/.env.docker
