@@ -18,6 +18,10 @@ export default {
         host: process.env.DB_HOST,
         dialect: process.env.DB_DIALECT
     },
+    redis: {
+        host: process.env.REDIS_HOST,
+        port: process.env.REDIS_PORT,
+    },
     jwt: {
         secret: process.env.JWT_SECRET,
         ATExpiresIn : process.env.JWT_AT_EXPIRES_IN,

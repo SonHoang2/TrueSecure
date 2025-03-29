@@ -1,7 +1,12 @@
 import { createClient } from 'redis';
+import config from './config/config.js';
 
-const client = createClient();
+const REDIS_HOST = config.redis.host || 'redis';
+const REDIS_PORT = config.redis.port || 6379;
 
+const client = createClient({
+    url: `redis://${REDIS_HOST}:${REDIS_PORT}`
+});
 client.on('error', (err) => {
     console.error('Redis Client Error:', err);
     process.exit(1);
