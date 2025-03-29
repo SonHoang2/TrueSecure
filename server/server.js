@@ -41,7 +41,7 @@ Object.keys(db).forEach((modelName) => {
 
 await connectRedis();
 
-// sequelize.sync({ force: true })
+await sequelize.sync();
 
 initSocket(server);
 
