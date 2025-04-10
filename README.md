@@ -1,5 +1,7 @@
 # Secure Chat app
 
+[![Language Vietnamese](https://img.shields.io/badge/Read%20in-Tiếng%20Việt-blue?style=flat-square)](./README.vi.md)
+
 ## Overview
 This real-time messaging application enables users to seamlessly connect with friends, family, and colleagues through instant text messaging, group chats, voice calls, and video calls. Designed for fast and secure communication, it ensures a smooth and intuitive user experience.
 
