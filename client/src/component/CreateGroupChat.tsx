@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, X, ArrowRight } from "react-feather";
+import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
+import { MdClose } from "react-icons/md";
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
 import { CONVERSATIONS_URL, IMAGES_URL, USERS_URL } from "../config/config";
 import debounce from "../utils/debounce";
@@ -111,7 +112,7 @@ export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState, user })
                         <button className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
                             onClick={() => setCreateChat(prev => ({ ...prev, createGroupChat: false }))}
                         >
-                            <ArrowLeft size={20} />
+                            <FaArrowLeft size={20} />
                         </button>
                         <h1 className="text-xl font-bold py-3">Add Members</h1>
                         <button
@@ -124,7 +125,7 @@ export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState, user })
                                 setNewGroupChat(true)
                             }}
                         >
-                            <ArrowRight size={20} />
+                            <FaArrowRight size={20} />
                         </button>
                     </div>
 
@@ -132,7 +133,7 @@ export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState, user })
                         {formData.groupMembers.map((user) => (
                             <div key={user.id} className="flex items-center gap-2 bg-blue-100 px-2 py-1 rounded-full">
                                 <span className="text-sm">{user.firstName} {user.lastName}</span>
-                                <X
+                                <MdClose
                                     size={20}
                                     className="text-gray-500 hover:text-gray-700 cursor-pointer"
                                     onClick={() => handleRemoveUser(user.id)}

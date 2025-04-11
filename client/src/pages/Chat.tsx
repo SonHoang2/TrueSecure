@@ -13,6 +13,7 @@ import { useWebRTC } from "../hooks/useWebRTC";
 import { useChatMessages } from "../hooks/useChatMessages";
 import { useEncryption } from "../hooks/useEncryption";
 import SidebarNavigation from "../component/SidebarNavigation";
+import { MdAddCircle, MdImage, MdGifBox, MdThumbUp } from "react-icons/md";
 
 const Chat = ({ userStatus }) => {
     const conversationId = Number(useParams()?.conversationId);
@@ -119,19 +120,13 @@ const Chat = ({ userStatus }) => {
                     />
                     <div className="flex p-1 items-center mb-2">
                         <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                            <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                add_circle
-                            </span>
+                            <MdAddCircle className="text-blue-500 text-2xl" />
                         </button>
                         <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                            <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                imagesmode
-                            </span>
+                            <MdImage className="text-blue-500 text-2xl" />
                         </button>
                         <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                            <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                gif_box
-                            </span>
+                            <MdGifBox className="text-blue-500 text-2xl" />
                         </button>
                         <input
                             type="text"
@@ -148,9 +143,7 @@ const Chat = ({ userStatus }) => {
                         <button
                             className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
                         >
-                            <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                thumb_up
-                            </span>
+                            <MdThumbUp className="text-blue-500 text-2xl" />
                         </button>
                     </div>
                 </div>

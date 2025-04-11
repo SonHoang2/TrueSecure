@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff } from "react-feather";
+import { FaEye } from "react-icons/fa";
+import { IoIosEyeOff } from "react-icons/io";
 import { ROUTES } from "../config/config";
 
 export default function Signup() {
@@ -86,10 +87,12 @@ export default function Signup() {
                                     onClick={() => togglePasswordVisibility(field.id)}
                                 >
                                     {showPassword[field.id] ? (
-                                        <Eye className="h-5 w-5 text-gray-500" />
-                                    ) : (
-                                        <EyeOff className="h-5 w-5 text-gray-500" />
-                                    )}
+                                        <FaEye className="h-5 w-5 text-gray-500" />
+                                    ) :
+                                        (
+                                            <IoIosEyeOff className="h-5 w-5 text-gray-500" />
+                                        )
+                                    }
                                 </button>
                             )}
                         </div>

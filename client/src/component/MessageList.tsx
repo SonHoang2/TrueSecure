@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { IMAGES_URL } from '../config/config';
 import { MESSAGE_STATUS } from '../config/config';
 

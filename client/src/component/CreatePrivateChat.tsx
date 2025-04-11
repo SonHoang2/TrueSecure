@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { CONVERSATIONS_URL, IMAGES_URL } from "../config/config";
-import { Search, ArrowLeft } from "react-feather";
+import { FaArrowLeft, FaSearch } from "react-icons/fa";
 import debounce from "../utils/debounce";
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
 
@@ -56,7 +56,7 @@ export const CreatePrivateChat = ({ users, setCreateChat, onSearch, setChatState
                 <button className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
                     onClick={() => setCreateChat(prev => ({ ...prev, createPrivateChat: false }))}
                 >
-                    <ArrowLeft size={20} />
+                    <FaArrowLeft size={20} />
                 </button>
                 <div className="flex-grow mx-4 relative">
                     <input
@@ -67,7 +67,7 @@ export const CreatePrivateChat = ({ users, setCreateChat, onSearch, setChatState
                         onChange={handleSearch}
                     />
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search size={20} className="text-gray-400" />
+                        <FaSearch size={20} className="text-gray-400" />
                     </div>
                 </div>
             </div>

@@ -1,5 +1,7 @@
 import React from 'react';
 import { IMAGES_URL } from '../config/config';
+import { FaPhoneAlt } from "react-icons/fa";
+import { IoIosVideocam, IoMdMore } from "react-icons/io"; 
 
 export const ChatHeader = ({ conversation, userStatus, receiver, startCall }) => {
     const getLastSeenTime = (timestamp) => {
@@ -50,29 +52,23 @@ export const ChatHeader = ({ conversation, userStatus, receiver, startCall }) =>
                 {
                     !conversation?.isGroup && (
                         <button
-                            className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
+                            className="p-2 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
                             onClick={() => startCall()}
                         >
-                            <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                call
-                            </span>
+                            <FaPhoneAlt className='text-blue-500' size={20}/>
                         </button>)
                 }
                 {
                     !conversation?.isGroup && (
                         <button
-                            className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
+                            className="p-2 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
                             onClick={() => startCall(true)}
                         >
-                            <span className="material-symbols-outlined text-blue-500 text-2xl">
-                                videocam
-                            </span>
+                            <IoIosVideocam className='text-blue-500' size={30}/>
                         </button>)
                 }
                 <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                    <span className="material-symbols-outlined text-blue-500 text-2xl">
-                        more_horiz
-                    </span>
+                    <IoMdMore className='text-blue-500 text-2xl'/>
                 </button>
             </div>
         </div>
