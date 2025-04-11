@@ -130,7 +130,7 @@ export default function Login() {
                         onClick={getGoogleCode}
                     >
                         <img
-                            src="/img/google_logo.svg"
+                            src="/assets/img/google_logo.svg"
                             alt="Google sign-in"
                             className="w-6 h-6 transition-transform duration-200 hover:scale-105"
                         />
