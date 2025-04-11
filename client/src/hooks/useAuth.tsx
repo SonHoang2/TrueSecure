@@ -4,7 +4,17 @@ import { AUTH_URL, CLIENT_URL, USERS_URL, GOOGLE_CLIENT_ID } from "../config/con
 import queryString from "query-string";
 import axios, { axiosPrivate } from "../api/axios";
 
-const AuthContext = createContext();
+interface AuthContextType {
+    user: any; // Replace `any` with a specific type if you know the user structure
+    login: (credentials: { email: string; password: string }) => Promise<void>;
+    signup: (credentials: { email: string; password: string; passwordConfirm: string; firstName: string; lastName: string }) => Promise<void>;
+    logout: () => Promise<void>;
+    getGoogleCode: () => void;
+    sendGoogleCode: (code: string) => Promise<void>;
+    refreshTokens: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(() => {

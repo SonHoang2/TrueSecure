@@ -13,16 +13,14 @@
         "react-dom": "^18.3.1",
         "react-feather": "^2.0.10",
         "react-router-dom": "^7.5.0",
-        "react-scripts": "^5.0.1",
         "socket.io-client": "^4.8.1",
         "web-vitals": "^2.1.4"
     },
     "scripts": {
-        "start": "cross-env HTTPS=true SSL_CRT_FILE=../192.168.1.2.pem SSL_KEY_FILE=../192.168.1.2-key.pem react-scripts start",
-        "docker": "cross-env HTTPS=true SSL_CRT_FILE=/app/192.168.1.2.pem SSL_KEY_FILE=/app/192.168.1.2-key.pem react-scripts start",
-        "build": "react-scripts build",
-        "test": "react-scripts test",
-        "eject": "react-scripts eject"
+        "dev": "cross-env HTTPS=true SSL_CRT_FILE=../192.168.1.2.pem SSL_KEY_FILE=../192.168.1.2-key.pem vite",
+        "docker": "cross-env HTTPS=true SSL_CRT_FILE=/app/192.168.1.2.pem SSL_KEY_FILE=/app/192.168.1.2-key.pem vite",
+        "build": "vite build",
+        "preview": "vite preview"
     },
     "eslintConfig": {
         "extends": [
@@ -52,8 +50,12 @@
     "devDependencies": {
         "@types/react": "^19.1.0",
         "@types/react-dom": "^19.1.2",
+        "@vitejs/plugin-react": "^4.3.4",
+        "autoprefixer": "^10.4.21",
         "cross-env": "^7.0.3",
+        "postcss": "^8.5.3",
         "tailwindcss": "^3.4.17",
-        "typescript": "^4.9.5"
+        "typescript": "^4.9.5",
+        "vite": "^6.2.6"
     }
 }
