@@ -1,5 +1,6 @@
 import React from 'react';
 import { IMAGES_URL } from '../config/config';
+import { MdClose, MdCall } from "react-icons/md";
 
 const OutgoingCallModal = ({ onEndCall, receiver, isVideoCall }) => {
     
@@ -10,7 +11,7 @@ const OutgoingCallModal = ({ onEndCall, receiver, isVideoCall }) => {
                     className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 transition"
                     onClick={onEndCall}
                 >
-                    <span className="material-symbols-outlined text-lg">close</span>
+                    <MdClose className="text-2xl" />
                 </button>
                 <div className="my-4 flex justify-center">
                     <img

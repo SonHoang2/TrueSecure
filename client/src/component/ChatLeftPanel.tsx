@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import CreateGroupChat from "./CreateGroupChat";
 import CreatePrivateChat from "./CreatePrivateChat";
-import { Edit, X, Search } from "react-feather"
+import { FaEdit, FaSearch  } from "react-icons/fa";
+
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
+import { MdClose } from "react-icons/md";
 
 export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId, setChatState }) => {
     const [filteredUsers, setFilteredUsers] = useState([]);
@@ -45,12 +47,12 @@ export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId, set
                                 !isCreateChatModalOpen ?
                                     <button onClick={() => setCreateChatModalOpen(true)}>
                                         <div className="text-stone-800 p-2 bg-gray-100 rounded-full cursor-pointer">
-                                            <Edit size={20} />
+                                            <FaEdit size={20} />
                                         </div>
                                     </button> :
                                     <button onClick={() => setCreateChatModalOpen(false)}>
                                         <div className="text-stone-800 p-2 bg-gray-100 rounded-full cursor-pointer">
-                                            <X size={20} />
+                                            <MdClose size={20} />
                                         </div>
                                     </button>
                             }
@@ -89,7 +91,7 @@ export const ChatLeftPanel = ({ chatState, user, userStatus, conversationId, set
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                         <div className="absolute text-gray-400 text-xl h-full ms-3 flex items-center">
-                            <Search size={20} />
+                            <FaSearch size={20} />
                         </div>
                     </div>
                     <div className="flex flex-col">

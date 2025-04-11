@@ -2,7 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { ROUTES } from "../config/config";
-import { Eye, EyeOff } from "react-feather";
+import { FaEye } from "react-icons/fa";
+import { IoIosEyeOff } from "react-icons/io";
 import queryString from "query-string";
 
 export default function Login() {
@@ -102,10 +103,10 @@ export default function Login() {
                         >
                             {showPassword.password ?
                                 (
-                                    <Eye className="h-5 w-5 text-gray-500" />
+                                    <FaEye className="h-5 w-5 text-gray-500" />
                                 ) :
                                 (
-                                    <EyeOff className="h-5 w-5 text-gray-500" />
+                                    <IoIosEyeOff className="h-5 w-5 text-gray-500" />
                                 )
                             }
                         </button>
