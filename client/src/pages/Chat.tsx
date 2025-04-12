@@ -162,6 +162,7 @@ const Chat = ({ userStatus }) => {
                         onEndCall={endCall}
                         receiver={chatState.receiver}
                         isVideoCall={callState.isVideoCall}
+                        localStream={localStream}
                     />
                 )}
 
@@ -170,8 +171,8 @@ const Chat = ({ userStatus }) => {
                         onEndCall={endCall}
                         receiver={chatState.receiver}
                         isVideoCall={callState.isVideoCall}
-                        remoteStream={localStream}
-                        localStream={remoteStream}
+                        remoteStream={remoteStream}
+                        localStream={localStream}
                     />
                 )}
             </div>
