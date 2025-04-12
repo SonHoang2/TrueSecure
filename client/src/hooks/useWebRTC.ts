@@ -23,13 +23,45 @@ export const useWebRTC = (
     });
 
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+    const localStreamRef = useRef<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const peer = useRef<RTCPeerConnection | null>(null);
 
     const candidateQueue = useRef([]);
 
+    const createPeerConnection = () => {
+        console.log("Creating new peer connection...");
+        
+        if (peer.current) {
+            peer.current.close(); // Close old connection if exists
+        }
+
+        peer.current = new RTCPeerConnection({
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        });
+
+        
+        
+        // Re-attach event listeners
+        peer.current.onicecandidate = (event) => {
+            console.log({ candidate: event.candidate, receiverId });
+            if (event.candidate) {
+                socket.emit("ice-candidate", { candidate: event.candidate, receiverId });
+            }
+        };
+
+        peer.current.ontrack = (event) => {
+            if (event.streams && event.streams[0]) {
+                setRemoteStream(event.streams[0]);
+            }
+        };
+    };
+
+
     const startCall = async (isVideo = false) => {
         try {
+            createPeerConnection();
+
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 console.error("getUserMedia is not supported in this browser.");
                 return;
@@ -42,6 +74,9 @@ export const useWebRTC = (
             });
 
             setLocalStream(stream);
+            localStreamRef.current = stream;
+
+            console.log("Local stream:", stream);
 
             // Add tracks to peer connection
             stream.getTracks().forEach((track) => peer.current.addTrack(track, stream));
@@ -52,11 +87,14 @@ export const useWebRTC = (
 
             socket.emit("offer", { offer, receiverId, sender: user, isVideo });
 
-            setCallState(prev => ({
-                ...prev,
+            setCallState({
                 isCalling: true,
-                isVideoCall: isVideo
-            }));
+                isVideoCall: isVideo,
+                isRinging: false,
+                isConnected: false,
+                sender: null,
+                offer: offer,
+            });
         } catch (error) {
             if (error.name === "NotFoundError") {
                 alert("No camera or microphone found!");
@@ -75,6 +113,8 @@ export const useWebRTC = (
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callState.isVideoCall });
 
             setLocalStream(stream);
+            localStreamRef.current = stream;
+
             stream.getTracks().forEach((track) => peer.current.addTrack(track, stream));
 
             const answer = await peer.current.createAnswer();
@@ -83,11 +123,12 @@ export const useWebRTC = (
 
             // Reset incoming call and mark as in a call
             setCallState(prev => ({
-                ...prev,
+                isCalling: false,
                 isConnected: true,
                 sender: null,
                 isRinging: false,
-                offer: null
+                offer: null,
+                isVideoCall: prev.isVideoCall,
             }));
         } catch (error) {
             console.error("Error accepting call:", error);
@@ -96,13 +137,16 @@ export const useWebRTC = (
 
     const rejectCall = () => {
         try {
-            socket.emit("call-rejected", { receiverId: callState.sender.id });
-            setCallState(prev => ({
-                ...prev,
+            socket.emit("call-rejected", { receiverId: callState.sender.id as string });
+
+            setCallState({
+                isConnected: false,
+                isCalling: false,
                 isRinging: false,
+                isVideoCall: false,
                 sender: null,
                 offer: null
-            }));
+            });
         } catch (error) {
             console.error("Error rejecting call:", error);
         }
@@ -114,12 +158,12 @@ export const useWebRTC = (
                 peer.current.close();
             }
 
-            peer.current = new RTCPeerConnection({
-                iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-            });
+            const stream = localStreamRef.current;
+            console.log("Local stream:", stream);
 
-            if (localStream) {
-                localStream.getTracks().forEach((track) => track.stop());
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                localStreamRef.current = null;
                 setLocalStream(null);
             }
 
@@ -127,15 +171,14 @@ export const useWebRTC = (
                 socket.emit("call-ended", { receiverId });
             }
 
-            setCallState(prev => ({
-                ...prev,
+            setCallState({
                 isConnected: false,
                 isCalling: false,
                 isRinging: false,
                 isVideoCall: false,
                 sender: null,
                 offer: null
-            }));
+            });
         } catch (error) {
             console.error("Error ending call:", error);
         }
@@ -170,28 +213,21 @@ export const useWebRTC = (
     }, []);
 
     useEffect(() => {
-        if (receiverId) {
-            peer.current.ontrack = (event) => {
-                if (event.streams && event.streams[0]) {
-                    setRemoteStream(event.streams[0]); // Update remoteStream state
-
-                } else {
-                    console.error("No remote stream found in event!");
-                }
-            };
-
+        if (receiverId && peer.current) {
             // Receive WebRTC Offer
             socket.on("offer", async ({ offer, sender, isVideo }) => {
+                createPeerConnection();
                 await peer.current.setRemoteDescription(new RTCSessionDescription(offer)); // Process immediately
                 await flushCandidateQueue(); // Flush ICE candidates
 
-                setCallState(prev => ({
-                    ...prev,
+                setCallState({
                     isRinging: true,
                     sender,
                     offer,
-                    isVideoCall: isVideo
-                }));
+                    isVideoCall: isVideo,
+                    isCalling: false,
+                    isConnected: false,
+                });
             });
 
             socket.on("answer", async ({ answer }) => {
@@ -201,24 +237,18 @@ export const useWebRTC = (
                     );
 
                     setCallState(prev => ({
-                        ...prev,
                         isConnected: true,
                         isCalling: false,
                         sender: null,
-                        offer: null
+                        offer: null,
+                        isRinging: false,
+                        isVideoCall: prev.isVideoCall,
                     }));
 
                 } catch (error) {
                     console.error("Error handling answer:", error);
                 }
             });
-
-            // Send ICE candidates to the peer
-            peer.current.onicecandidate = (event) => {
-                if (event.candidate) {
-                    socket.emit("ice-candidate", { candidate: event.candidate, receiverId });
-                }
-            };
 
             // Receive ICE Candidates
             socket.on("ice-candidate", async ({ candidate }) => {
@@ -236,11 +266,19 @@ export const useWebRTC = (
             });
 
             socket.on("call-rejected", () => {
-                setCallState({ isRinging: false, sender: null, offer: null });
+                try {
+                    endCall(false);
+                } catch (error) {
+                    console.error("Error handling call rejection:", error);
+                }
             });
 
             socket.on("call-ended", () => {
-                endCall(false);
+                try {
+                    endCall(false);
+                } catch (error) {
+                    console.error("Error handling call end:", error);
+                }
             });
 
             return () => {
