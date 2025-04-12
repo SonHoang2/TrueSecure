@@ -10,7 +10,21 @@ export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState, user })
     const [filteredUsers, setFilteredUsers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isNewGroupChat, setNewGroupChat] = useState(null);
-    const [formData, setFormData] = useState({
+
+    interface User {
+        id: string;
+        firstName: string;
+        lastName: string;
+        avatar: string;
+    }
+    
+    interface GroupFormData {
+        groupName: string;
+        groupMembers: User[];
+        avatar: string;
+    }
+    
+    const [formData, setFormData] = useState<GroupFormData>({
         groupName: '',
         groupMembers: [],
         avatar: '',
@@ -22,7 +36,10 @@ export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState, user })
         setSearchTerm(e.target.value)
     };
 
-    const handleAddUser = (user) => {
+    // Interface for User object
+
+
+    const handleAddUser = (user: User): void => {
         if (!formData.groupMembers.find(u => u.id === user.id)) {
             setFormData(prev => ({
                 ...prev,
@@ -32,7 +49,7 @@ export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState, user })
         setSearchTerm('');
     };
 
-    const handleRemoveUser = (userId) => {
+    const handleRemoveUser = (userId : string) => {
         setFormData(prev => (
             {
                 ...prev,
@@ -41,26 +58,32 @@ export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState, user })
         ));
     };
 
-    const handleCrypto = async (conversationId) => {
-        const aesKey = await cryptoUtils.generateAesKey();
+    const handleCrypto = async (conversationId: string) => {
+        try {
+            const aesKey = await cryptoUtils.generateAesKey();
 
-        for (const otherUser of formData.groupMembers) {    
-            const res = await axiosPrivate.get(USERS_URL + `/${otherUser.id}/public-key`);
+            for (const otherUser of formData.groupMembers) {
+                const res = await axiosPrivate.get(USERS_URL + `/${otherUser.id}/public-key`);
 
-            const recipientPublicKey = await cryptoUtils.importPublicKey(res.data.data.publicKey);
-            const senderPrivateKey = await cryptoUtils.importPrivateKey(user.id);
+                const recipientPublicKey = await cryptoUtils.importPublicKey(res.data.data.publicKey);
+                const senderPrivateKey = await cryptoUtils.importPrivateKey(user.id);
 
-            const exportedAESKey = await cryptoUtils.exportAESKey(aesKey);
-            const encryptedAesKey = await cryptoUtils.encryptAESKeys({ recipientPublicKey, senderPrivateKey, message: exportedAESKey });
+                const exportedAESKey = await cryptoUtils.exportAESKey(aesKey);
+                const encryptedAesKey = await cryptoUtils.encryptAESKeys({ recipientPublicKey, senderPrivateKey, message: exportedAESKey });
 
-            await axiosPrivate.post(CONVERSATIONS_URL + `/key`, {
-                groupKey: encryptedAesKey,
-                conversationId: conversationId,
-                userId: otherUser.id,
-            });
+                await axiosPrivate.post(CONVERSATIONS_URL + `/key`, {
+                    groupKey: encryptedAesKey,
+                    conversationId: conversationId,
+                    userId: otherUser.id,
+                });
+            }
+
+            await cryptoUtils.storeGroupKey({ conversationId: conversationId, userId: user.id, groupKey: aesKey });
+
+        } catch (error) {
+            console.error('Error in handleCrypto:', error);
+
         }
-
-        await cryptoUtils.storeGroupKey({ conversationId: conversationId, userId: user.id, groupKey: aesKey });
     };
 
     const handleSubmit = async (e) => {
@@ -79,8 +102,10 @@ export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState, user })
             });
 
             await handleCrypto(conversation.id);
+            console.log('Conversations:', conversation);
 
             const { data: { data: { conversations } } } = await axiosPrivate.get(`${CONVERSATIONS_URL}/me`);
+
 
             setChatState(prevState => ({
                 ...prevState,
@@ -181,14 +206,14 @@ export const CreateGroupChat = ({ setCreateChat, onSearch, setChatState, user })
                         <button className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
                             onClick={() => setCreateChat(prev => ({ ...prev, createGroupChat: false }))}
                         >
-                            <ArrowLeft size={20} />
+                            <FaArrowLeft size={20} />
                         </button>
                         <h1 className="text-xl font-bold py-3">New Group</h1>
                         <button
                             className="text-stone-800 p-2 bg-gray-100 rounded-full cursor-pointer"
                             onClick={(e) => handleSubmit(e)}
                         >
-                            <ArrowRight size={20} />
+                            <FaArrowRight size={20} />
                         </button>
                     </div>
                     <input
