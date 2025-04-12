@@ -1,7 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 
-export const useWebRTC = ({ receiverId, socket, user }) => {
-    const [callState, setCallState] = useState({
+export const useWebRTC = (
+    { receiverId, socket, user }:
+        { receiverId: string, socket: any, user: any }
+) => {
+    type CallState = {
+        isCalling: boolean;
+        isRinging: boolean;
+        isConnected: boolean;
+        isVideoCall: boolean;
+        sender: string | null;
+        offer: any | null;
+    };
+
+    const [callState, setCallState] = useState<CallState>({
         isCalling: false,
         isRinging: false,
         isConnected: false,
@@ -10,9 +22,9 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
         offer: null
     });
 
-    const [localStream, setLocalStream] = useState(null);
-    const [remoteStream, setRemoteStream] = useState(null);
-    const peer = useRef(null);
+    const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+    const peer = useRef<RTCPeerConnection | null>(null);
 
     const candidateQueue = useRef([]);
 
@@ -24,7 +36,10 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
             }
 
             // Get audio stream before creating offer
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: isVideo });
+            const stream: MediaStream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: isVideo,
+            });
 
             setLocalStream(stream);
 
@@ -32,8 +47,8 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
             stream.getTracks().forEach((track) => peer.current.addTrack(track, stream));
 
             // Create and send WebRTC offer
-            const offer = await peer.current.createOffer();
-            await peer.current.setLocalDescription(offer);
+            const offer = await peer.current?.createOffer();
+            await peer.current?.setLocalDescription(offer);
 
             socket.emit("offer", { offer, receiverId, sender: user, isVideo });
 
@@ -115,6 +130,7 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
             setCallState(prev => ({
                 ...prev,
                 isConnected: false,
+                isCalling: false,
                 isRinging: false,
                 isVideoCall: false,
                 sender: null,
@@ -183,7 +199,7 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
                     await peer.current.setRemoteDescription(
                         new RTCSessionDescription(answer)
                     );
-    
+
                     setCallState(prev => ({
                         ...prev,
                         isConnected: true,
@@ -191,7 +207,7 @@ export const useWebRTC = ({ receiverId, socket, user }) => {
                         sender: null,
                         offer: null
                     }));
-    
+
                 } catch (error) {
                     console.error("Error handling answer:", error);
                 }
