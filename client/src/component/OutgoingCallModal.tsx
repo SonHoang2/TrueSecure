@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { IMAGES_URL } from '../config/config';
 import { MdClose, MdCall } from "react-icons/md";
 
-const OutgoingCallModal = ({ onEndCall, receiver, isVideoCall }) => {
-    
+const OutgoingCallModal = ({ onEndCall, receiver, isVideoCall, localStream }) => {
+    const localRef = useRef(null);
+
+    useEffect(() => {
+        // Connect the local stream to the video element when available
+        if (localRef.current && localStream) {
+            localRef.current.srcObject = localStream;
+            localRef.current.muted = true;
+        }
+    }, [localStream]);
+
     return (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
             <div className="relative bg-white p-6 rounded-2xl shadow-xl w-80 text-center animate-fade-in">
@@ -13,13 +22,26 @@ const OutgoingCallModal = ({ onEndCall, receiver, isVideoCall }) => {
                 >
                     <MdClose className="text-2xl" />
                 </button>
-                <div className="my-4 flex justify-center">
-                    <img
-                        className="size-16 rounded-full shadow-md border-2 border-gray-300"
-                        src={`${IMAGES_URL}/${receiver?.avatar}`}
-                        alt="Caller Avatar"
-                    />
-                </div>
+
+                {isVideoCall && localStream ? (
+                    <div className="mt-2 mb-4">
+                        <video
+                            ref={localRef}
+                            autoPlay
+                            muted
+                            className="w-full h-40 object-cover rounded-lg"
+                        />
+                    </div>
+                ) : (
+                    <div className="my-4 flex justify-center">
+                        <img
+                            className="size-16 rounded-full shadow-md border-2 border-gray-300"
+                            src={`${IMAGES_URL}/${receiver?.avatar}`}
+                            alt="Caller Avatar"
+                        />
+                    </div>
+                )}
+
                 <h2 className="text-gray-800 text-xl font-semibold">
                     {isVideoCall ? "Video Calling ..." : "Voice Calling ..."}
                 </h2>
