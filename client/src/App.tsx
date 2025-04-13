@@ -36,6 +36,7 @@ const App = () => {
         return () => {
             socket.off("connect_error");
             socket.off("online-users");
+            socket.disconnect();
         };
     }, [user]);
 
