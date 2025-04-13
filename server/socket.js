@@ -15,6 +15,8 @@ export const initSocket = (server) => {
             origin: config.client,
             credentials: true,
         },
+        pingTimeout: 30000, // 30 seconds timeout
+        pingInterval: 10000, // Check connection every 10 seconds
     });
 
     io.use(socketProtect);
@@ -25,26 +27,42 @@ export const initSocket = (server) => {
         // Add user to Redis online users
         await client.hSet('onlineUsers', socket.user.id, socket.id);
 
-        // Get all online users and last seen data
-        const [onlineUsers, lastSeen] = await Promise.all([
+        // Clean up potentially stale connections
+        const allSockets = await io.fetchSockets();
+        const activeSocketIds = new Set(allSockets.map(s => s.id));
+
+        // Get all online users from Redis
+        const onlineUsers = await client.hGetAll('onlineUsers');
+
+        // Remove any users whose socket ID is no longer active
+        for (const [userId, socketId] of Object.entries(onlineUsers)) {
+            if (!activeSocketIds.has(socketId)) {
+                await client.hDel('onlineUsers', userId);
+                await client.hSet('lastSeen', userId, new Date().toISOString());
+                console.log(`Cleaned up stale connection for user ${userId}`);
+            }
+        }
+
+        // Get updated online users and last seen times
+        const [updatedOnlineUsers, lastSeen] = await Promise.all([
             client.hGetAll('onlineUsers'),
             client.hGetAll('lastSeen')
         ]);
 
         io.emit('online-users', {
-            onlineUsers: onlineUsers,
+            onlineUsers: updatedOnlineUsers,
             lastSeen: lastSeen
         });
 
-        console.log("Online users", onlineUsers);
+        console.log("Online users", updatedOnlineUsers);
 
         // Handle offer
         socket.on("offer", catchAsyncSocket(async (data) => {
             const receiverSocketId = await client.hGet("onlineUsers", data.receiverId.toString());
-            io.to(receiverSocketId).emit("offer", { 
+            io.to(receiverSocketId).emit("offer", {
                 offer: data.offer,
                 sender: data.sender,
-                isVideo: data.isVideo 
+                isVideo: data.isVideo
             });
         }));
 
@@ -200,14 +218,60 @@ export const initSocket = (server) => {
         }));
 
         socket.on("disconnect", catchAsyncSocket(async () => {
-            console.log("A user disconnected");
+            console.log("A user disconnected", socket.id);
             await Promise.all([
                 client.hDel('onlineUsers', socket.user.id.toString()),
                 client.hSet('lastSeen', socket.user.id.toString(), new Date().toISOString())
             ]);
+
+            // Broadcast updated online users list after disconnection
+            const [updatedOnlineUsers, lastSeen] = await Promise.all([
+                client.hGetAll('onlineUsers'),
+                client.hGetAll('lastSeen')
+            ]);
             
+            io.emit('online-users', {
+                onlineUsers: updatedOnlineUsers,
+                lastSeen: lastSeen
+            });
         }));
     }));
+
+    // Periodically check for stale connections (every 5 minutes)
+    setInterval(async () => {
+        try {
+            const allSockets = await io.fetchSockets();
+            const activeSocketIds = new Set(allSockets.map(s => s.id));
+            const onlineUsers = await client.hGetAll('onlineUsers');
+            
+            let hasChanges = false;
+            
+            for (const [userId, socketId] of Object.entries(onlineUsers)) {
+                if (!activeSocketIds.has(socketId)) {
+                    await client.hDel('onlineUsers', userId);
+                    await client.hSet('lastSeen', userId, new Date().toISOString());
+                    console.log(`Periodic cleanup: removed stale connection for user ${userId}`);
+                    hasChanges = true;
+                }
+            }
+            
+            // Only broadcast if changes were made
+            if (hasChanges) {
+                // Get updated online users and last seen times
+                const [updatedOnlineUsers, lastSeen] = await Promise.all([
+                    client.hGetAll('onlineUsers'),
+                    client.hGetAll('lastSeen')
+                ]);
+                
+                io.emit('online-users', {
+                    onlineUsers: updatedOnlineUsers,
+                    lastSeen: lastSeen
+                });
+            }
+        } catch (error) {
+            console.error("Error in periodic connection cleanup:", error);
+        }
+    }, 300000); // 5 minutes
 
     return io;
 }
