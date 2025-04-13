@@ -7,20 +7,20 @@ export const AUTH_URL = "/api/v1/auth";
 export const USERS_URL = "/api/v1/users";
 export const CONVERSATIONS_URL = "/api/v1/conversations";
 
-export const MESSAGE_STATUS = Object.freeze({
-    SENDING: 'sending',
-    SENT: 'sent',
-    DELIVERED: 'delivered',
-    SEEN: 'seen'
-});
+export enum MESSAGE_STATUS {
+    SENDING = 'sending',
+    SENT = 'sent',
+    DELIVERED = 'delivered',
+    SEEN = 'seen'
+}
 
-export const ROUTES = Object.freeze({
-    SIGN_UP: "/auth/signup",
-    LOGIN: "/auth/login",
-    CHAT: "/chat",
-})
+export enum ROUTES {
+    SIGN_UP = "/auth/signup",
+    LOGIN = "/auth/login",
+    CHAT = "/chat"
+}
 
-export const ROLE = Object.freeze({
-    ADMIN: 'admin',
-    MEMBER: 'member'
-});
+export enum ROLE {
+    ADMIN = 'admin',
+    MEMBER = 'member'
+}
