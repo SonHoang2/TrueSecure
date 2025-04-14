@@ -1,15 +1,17 @@
-# Secure Chat app
+# TrueSecure
 
 [![Language English](https://img.shields.io/badge/Read%20in-English-blue?style=flat-square)](./README.md)
 
 ## Tổng quan
-Ứng dụng nhắn tin thời gian thực này cho phép người dùng kết nối liền mạch với bạn bè, gia đình và đồng nghiệp thông qua tin nhắn văn bản tức thì, trò chuyện nhóm, cuộc gọi thoại và cuộc gọi video. Được thiết kế để giao tiếp nhanh chóng và an toàn, ứng dụng đảm bảo mang lại trải nghiệm người dùng mượt mà và trực quan.
+Ứng dụng nhắn tin thời gian thực này cho phép người dùng kết nối dễ dàng với bạn bè, gia đình và đồng nghiệp thông qua nhắn tin văn bản tức thời, trò chuyện nhóm, cuộc gọi thoại và video. Được thiết kế để truyền thông nhanh chóng và an toàn, ứng dụng sử dụng Socket.IO cho nhắn tin thời gian thực, WebRTC cho phát trực tiếp media peer-to-peer và mã hóa đầu cuối (E2EE) để bảo vệ quyền riêng tư của người dùng. Hệ thống cũng tích hợp phát hiện deepfake để phân tích luồng video trong thời gian thực, nâng cao bảo mật và sự tin cậy trong quá trình giao tiếp video.
 
 ## Công nghệ
-- Front End: React, HTML, CSS, Tailwindcss, JavaScript
-- Back End: NodeJS, Express
+- Front End: React, HTML, CSS, Tailwindcss, Typescript
+- Back End: NodeJS, Express, Python, Flask
+- Deepfake Detection: OpenCV, PyTorch, Facenet-PyTorch, Grad-CAM
 - Cơ sở dữ liệu: PostgreSQL, Redis, Sequelize
 - Giao tiếp thời gian thực: Socket.io, WebRTC
+- Hàng đợi tin nhắn: RabbitMQ
 
 ## Tính năng
 - **Xác thực người dùng:** Người dùng có thể đăng ký, đăng nhập và đăng xuất an toàn bằng email và mật khẩu hoặc tài khoản mạng xã hội.

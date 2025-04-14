@@ -1,7 +1,7 @@
 {
-    "name": "chat app",
+    "name": "server",
     "version": "0.0.1",
-    "description": "chat app",
+    "description": "server",
     "type": "module",
     "main": "server.js",
     "scripts": {

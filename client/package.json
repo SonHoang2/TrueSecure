@@ -17,8 +17,8 @@
         "web-vitals": "^2.1.4"
     },
     "scripts": {
-        "dev": "cross-env HTTPS=true SSL_CRT_FILE=../192.168.1.2.pem SSL_KEY_FILE=../192.168.1.2-key.pem vite",
-        "docker": "cross-env HTTPS=true SSL_CRT_FILE=/app/192.168.1.2.pem SSL_KEY_FILE=/app/192.168.1.2-key.pem vite",
+        "dev": "cross-env HTTPS=true SSL_CRT_FILE=../localhost.pem SSL_KEY_FILE=../localhost-key.pem vite",
+        "docker": "cross-env HTTPS=true SSL_CRT_FILE=/app/localhost.pem SSL_KEY_FILE=/app/localhost-key.pem vite",
         "build": "vite build",
         "preview": "vite preview"
     },
