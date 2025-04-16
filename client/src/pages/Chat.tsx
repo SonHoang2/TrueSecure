@@ -44,7 +44,6 @@ const Chat = ({ userStatus }) => {
         userKeys,
         userId: user?.id,
         socket,
-        getPrivateKey,
         axiosPrivate,
         getGroupKey,
     })
@@ -72,7 +71,6 @@ const Chat = ({ userStatus }) => {
             const privateKey = await getPrivateKey();
             let publicKey;
 
-
             if (chatState.conversation.isGroup) {
                 publicKey = await getAdminPublicKey(chatState.convParticipants);
             } else {
@@ -91,7 +89,6 @@ const Chat = ({ userStatus }) => {
 
         init();
     }, [chatState.receiver, chatState.conversation.isGroup]);
-
 
     return (
         <div className="py-4 flex bg-neutral-100 h-full">

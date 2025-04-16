@@ -3,7 +3,12 @@ import * as cryptoUtils from '../utils/cryptoUtils';
 import { CONVERSATIONS_URL, USERS_URL, ROLE } from '../config/config';
 
 export const useEncryption = ({ userId, axiosPrivate }) => {
-    const [userKeys, setUserKeys] = useState({
+    type UserKeys = {
+        publicKey: CryptoKey | null;
+        privateKey: CryptoKey | null;
+    };
+
+    const [userKeys, setUserKeys] = useState<UserKeys>({
         publicKey: null,
         privateKey: null,
     });
