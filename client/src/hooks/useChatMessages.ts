@@ -226,14 +226,12 @@ export const useChatMessages = ({
             iv: string;
             ephemeralPublicKey: string;
             createdAt: string;
-            status: string;
+            status: MESSAGE_STATUS;
         }) => {
             try {
                 // messageSoundRef.current.play().catch((error) =>
                 //     console.error("Audio play error:", error)
                 // );                    
-                console.log({ userKeys });
-
                 if (data.conversationId === conversationIdRef.current) {
                     const decryptedMessage = await cryptoUtils.decryptPrivateMessage(userKeys.privateKey,
                         {
@@ -260,7 +258,8 @@ export const useChatMessages = ({
                         senderId: data.senderId,
                         conversationId: data.conversationId,
                         content: decryptedMessage,
-                        createdAt: data.createdAt
+                        createdAt: data.createdAt,
+                        status: data.status,
                     });
 
                     socket.emit("private-message-seen", {
@@ -287,7 +286,8 @@ export const useChatMessages = ({
                         senderId: data.senderId,
                         conversationId: data.conversationId,
                         content: decryptedMessage,
-                        createdAt: data.createdAt
+                        createdAt: data.createdAt,
+                        status: data.status,
                     });
 
                     // socket.emit("private-message-delivered", {
@@ -328,6 +328,7 @@ export const useChatMessages = ({
                     conversationId: updatedMessage.conversationId,
                     content: updatedMessage.content,
                     createdAt: updatedMessage.createdAt,
+                    status: updatedMessage.status,
                 });
 
                 return {
