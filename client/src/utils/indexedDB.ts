@@ -1,3 +1,5 @@
+import { MESSAGE_STATUS } from "../config/config";
+
 const openDatabase = () => {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open('chatAppDB', 1);
@@ -25,13 +27,15 @@ export const storeMessagesInIndexedDB = async (
         senderId,
         conversationId,
         content,
-        createdAt
-    } : {
+        createdAt,
+        status,
+    }: {
         messageId: string;
         senderId: string;
         conversationId: string;
         content: string;
-        createdAt: string
+        createdAt: string;
+        status: MESSAGE_STATUS
     }
 ) => {
     try {
@@ -39,22 +43,31 @@ export const storeMessagesInIndexedDB = async (
             console.error("Invalid message data:", { messageId, senderId, conversationId, content, createdAt });
             return;
         }
-        
+
         const db = await openDatabase();
         const tx = db.transaction('messages', 'readwrite');
         const store = tx.objectStore('messages');
 
-        
-        const messageData = {
+        type MessageData = {
+            id: string;
+            senderId: string;
+            conversationId: string;
+            content: string;
+            createdAt: string;
+            status: MESSAGE_STATUS
+        };
+
+        const messageData : MessageData = {
             id: messageId,
             senderId,
             conversationId,
             content,
-            createdAt
+            createdAt,
+            status
         };
-        
+
         console.log("Storing message in IndexedDB:", messageData);
-        
+
         store.put(messageData);
 
         tx.oncomplete = () => {
