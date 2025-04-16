@@ -11,28 +11,18 @@ import OutgoingCallModal from "../component/OutgoingCallModal";
 import InCallModal from "../component/InCallModal";
 import { useWebRTC } from "../hooks/useWebRTC";
 import { useChatMessages } from "../hooks/useChatMessages";
-import { useEncryption } from "../hooks/useEncryption";
 import SidebarNavigation from "../component/SidebarNavigation";
 import { MdAddCircle, MdImage, MdGifBox, MdThumbUp } from "react-icons/md";
+import { useEncryptionContext } from "../contexts/EncryptionContext";
+import { getAdminPublicKey, getUserPublicKey } from "../services/encryptionService";
 
 const Chat = ({ userStatus }) => {
     const conversationId = Number(useParams()?.conversationId);
 
     const { user } = useAuth();
+    const { userKeys, setUserKeys } = useEncryptionContext(); 
 
     const axiosPrivate = useAxiosPrivate();
-
-    const {
-        userKeys,
-        setUserKeys,
-        getGroupKey,
-        getPrivateKey,
-        getAdminPublicKey,
-        getUserPublicKey,
-    } = useEncryption({
-        userId: user?.id,
-        axiosPrivate,
-    });
 
     const {
         sendMessage,
@@ -41,11 +31,10 @@ const Chat = ({ userStatus }) => {
         lastSeenStatus
     } = useChatMessages({
         conversationId,
-        userKeys,
         userId: user?.id,
         socket,
         axiosPrivate,
-        getGroupKey,
+        userKeys
     })
 
     const {
@@ -68,23 +57,18 @@ const Chat = ({ userStatus }) => {
         }
 
         const init = async () => {
-            const privateKey = await getPrivateKey();
             let publicKey;
 
             if (chatState.conversation.isGroup) {
-                publicKey = await getAdminPublicKey(chatState.convParticipants);
+                publicKey = await getAdminPublicKey(chatState.convParticipants, axiosPrivate);
             } else {
-                publicKey = await getUserPublicKey(chatState.receiver?.id);
+                publicKey = await getUserPublicKey(chatState.receiver?.id, axiosPrivate);
             }
 
-            if (!publicKey || !privateKey) {
-                return;
-            }
-
-            setUserKeys({
-                publicKey,
-                privateKey,
-            });
+            setUserKeys(prevKeys => ({
+                ...prevKeys,
+                publicKey
+            }));
         }
 
         init();
