@@ -96,20 +96,14 @@ export async function storeGroupKey({ conversationId, userId, groupKey }) {
     localStorage.setItem(storageKey, JSON.stringify(exportedKey));
 }
 
-export function hasPrivateKey(userId) {
-    const storageKey = `privateKey_${userId}`;
-    const keyData = localStorage.getItem(storageKey);
-
-    return keyData;
-}
-
 export async function importPrivateKey(userId) {
     if (!userId) {
         console.error('User ID is required to store private key');
         return;
     }
 
-    const keyData = hasPrivateKey(userId);
+    const storageKey = `privateKey_${userId}`;
+    const keyData = localStorage.getItem(storageKey);
 
     if (!keyData) {
         console.error("No key data found for the user");

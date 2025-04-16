@@ -3,9 +3,10 @@ import * as cryptoUtils from '../utils/cryptoUtils';
 import { CONVERSATIONS_URL, MESSAGE_STATUS } from '../config/config';
 import { getMessagesFromIndexedDB, storeMessagesInIndexedDB } from '../utils/indexedDB';
 import { v4 as uuidv4 } from 'uuid';
+import { getGroupKey } from '../services/encryptionService';
 
 export const useChatMessages = ({
-    conversationId, userKeys, userId, socket, axiosPrivate, getGroupKey,
+    conversationId, userId, socket, axiosPrivate, userKeys
 }) => {
     type Conversation = {
         title: string;
@@ -17,7 +18,7 @@ export const useChatMessages = ({
         message: string;
         messages: any[];
         receiver: any | null;
-        convParticipants: any[]; 
+        convParticipants: any[];
         conversations: any[];
         conversation: Conversation;
     };
@@ -48,7 +49,7 @@ export const useChatMessages = ({
 
             const messages = await getMessagesFromIndexedDB(conversationId);
             console.log({ messages });
-            
+
 
             setChatState((prevState) => ({
                 ...prevState,
@@ -72,6 +73,8 @@ export const useChatMessages = ({
                 console.error("Public key is not available!");
                 return;
             }
+
+            console.log({ userKeys });
 
             const { content, iv, ephemeralPublicKey } = await cryptoUtils.encryptPrivateMessage(userKeys.publicKey, chatState.message)
 
@@ -101,7 +104,7 @@ export const useChatMessages = ({
 
     const sendGroupMessage = async () => {
         try {
-            const groupkey = await getGroupKey(conversationId);
+            const groupkey = await getGroupKey(conversationId, axiosPrivate);
 
             if (!groupkey) {
                 console.error("Group key is not available!");
@@ -228,13 +231,9 @@ export const useChatMessages = ({
             try {
                 // messageSoundRef.current.play().catch((error) =>
                 //     console.error("Audio play error:", error)
-                // );
+                // );                    
+                console.log({ userKeys });
 
-                if (!userKeys.privateKey || !userKeys.publicKey) {
-                    console.error("key is not available!");
-                    return;
-                }
-                    
                 if (data.conversationId === conversationIdRef.current) {
                     const decryptedMessage = await cryptoUtils.decryptPrivateMessage(userKeys.privateKey,
                         {
@@ -302,7 +301,7 @@ export const useChatMessages = ({
             }
         });
 
-        socket.on("private-message-status-update", async (data : {
+        socket.on("private-message-status-update", async (data: {
             messageId: string;
             status: MESSAGE_STATUS;
         }) => {

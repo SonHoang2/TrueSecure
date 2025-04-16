@@ -7,6 +7,8 @@ import socket from "./utils/socket";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import { useAuth } from "./hooks/useAuth";
+import useAxiosPrivate from "./hooks/useAxiosPrivate";
+import { EncryptionProvider } from "./contexts/EncryptionContext";
 
 const App = () => {
     const [userStatus, setUserStatus] = useState({
@@ -15,6 +17,8 @@ const App = () => {
     });
 
     const { user } = useAuth();
+
+    const axiosPrivate = useAxiosPrivate();
 
     useEffect(() => {
         if (!user) {
@@ -44,7 +48,11 @@ const App = () => {
         <Routes>
             <Route
                 path="/"
-                element={<ProtectedRoute />}
+                element={
+                    <EncryptionProvider userId={user?.id} axiosPrivate={axiosPrivate}>
+                        <ProtectedRoute />
+                    </EncryptionProvider>
+                }
             >
                 <Route path="" element={<ChatRouter userStatus={userStatus} />} />
                 <Route path="chat" element={<ChatRouter userStatus={userStatus} />} />
