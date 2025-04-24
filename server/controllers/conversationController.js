@@ -90,7 +90,7 @@ export const createConversation = catchAsync(async (req, res, next) => {
     });
 })
 
-export const getConversationMessages = catchAsync(async (req, res, next) => {
+export const getConversation = catchAsync(async (req, res, next) => {
     const conversationId = req.params.id;
 
     const conversation = await Conversation.findByPk(conversationId, {
@@ -103,9 +103,6 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
                     attributes: ['id', 'avatar', 'firstName', 'lastName']
                 }
             },
-            {
-                model: Message,
-            }
         ]
     });
 
@@ -119,68 +116,11 @@ export const getConversationMessages = catchAsync(async (req, res, next) => {
         return next(new AppError('You are not a participant of this conversation', 403));
     }
 
-    let messages = [];
-
-    if (!conversation.isGroup) {
-        messages = await Promise.all(conversation.messages.map(async message => {
-            const messagesStatus = await MessageStatus.findOne({
-                attributes: ['status'],
-                where: {
-                    messageId: message.id
-                }
-            });
-
-            if (messagesStatus.status === MESSAGE_STATUS.SENT) {
-                await MessageStatus.update({
-                    status: MESSAGE_STATUS.SEEN
-                }, {
-                    where: {
-                        messageId: message.id,
-                        userId: req.user.id
-                    }
-                });
-            }
-
-            return {
-                ...message.toJSON(),
-                status: messagesStatus.status
-            }
-        }));
-    } else {
-        messages = await Promise.all(conversation.messages.map(async message => {
-            const messagesStatuses = await MessageStatus.findAll({
-                attributes: ['status', 'userId'],
-                where: {
-                    messageId: message.id,
-                }
-            });
-
-            await MessageStatus.update(
-                { status: MESSAGE_STATUS.SEEN },
-                {
-                    where: {
-                        messageId: message.id,
-                        userId: req.user.id,
-                        status: MESSAGE_STATUS.SENT
-                    }
-                }
-            );
-
-            return {
-                ...message.toJSON(),
-                statuses: messagesStatuses
-            }
-        }));
-    }
-
     res.status(200).json(
         {
             status: 'success',
             data: {
-                conversation: {
-                    ...conversation.toJSON(),
-                    messages
-                }
+                conversation
             }
         }
     );
