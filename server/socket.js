@@ -8,9 +8,13 @@ import { MESSAGE_STATUS } from "./shareVariable.js"
 import { Op } from "sequelize";
 import { client } from "./redisClient.js";
 import catchAsyncSocket from "./utils/catchAsyncSocket.js";
+import { sendOfflineMessage } from "./rabbitMQ/producer.js"
+import { consumeMessages, cancelConsumeMessages } from "./rabbitMQ/consumer.js";
+
+let io;
 
 export const initSocket = (server) => {
-    const io = new Server(server, {
+    io = new Server(server, {
         cors: {
             origin: config.client,
             credentials: true,
@@ -48,6 +52,8 @@ export const initSocket = (server) => {
             client.hGetAll('onlineUsers'),
             client.hGetAll('lastSeen')
         ]);
+
+        await consumeMessages(socket.user.id, socket.id);
 
         io.emit('online-users', {
             onlineUsers: updatedOnlineUsers,
@@ -92,29 +98,16 @@ export const initSocket = (server) => {
             const receiverSocketId = await client.hGet("onlineUsers", data.receiverId.toString());
             const senderSocketId = await client.hGet("onlineUsers", data.senderId.toString());
 
-            const message = await Message.create({
-                conversationId: data.conversationId,
-                senderId: data.senderId,
-                content: data.content,
-                messageType: data.messageType,
-                iv: data.iv,
-                ephemeralPublicKey: data.ephemeralPublicKey
-            });
-
-            const status = await MessageStatus.create({
-                messageId: message.id,
-                userId: data.receiverId,
-                status: MESSAGE_STATUS.SENT
-            });
-
-            io.to(receiverSocketId).emit('new-private-message', {
-                ...data,
-                messageId: message.id,
-                messageStatusId: status.id
-            });
+            if (receiverSocketId) {
+                // If receiver is online, deliver immediately via socket
+                io.to(receiverSocketId).emit('new-private-message', data);
+            } else {
+                // Recipient is offline; publish the message to their dedicated RabbitMQ queue
+                await sendOfflineMessage(data.receiverId, data);
+            }
 
             io.to(senderSocketId).emit('private-message-status-update', {
-                messageId: message.id,
+                messageId: data.messageId,
                 status: MESSAGE_STATUS.SENT
             });
         }));
@@ -123,15 +116,6 @@ export const initSocket = (server) => {
             const senderSocketId = await client.hGet("onlineUsers", data.senderId.toString());
 
             const { messageId } = data;
-
-            MessageStatus.update(
-                { status: MESSAGE_STATUS.SEEN },
-                {
-                    where: {
-                        id: data.messageStatusId
-                    }
-                }
-            );
 
             io.to(senderSocketId).emit("private-message-status-update", {
                 messageId: messageId,
@@ -218,7 +202,8 @@ export const initSocket = (server) => {
         }));
 
         socket.on("disconnect", catchAsyncSocket(async () => {
-            console.log("A user disconnected", socket.id);
+            await cancelConsumeMessages(socket.user.id);
+
             await Promise.all([
                 client.hDel('onlineUsers', socket.user.id.toString()),
                 client.hSet('lastSeen', socket.user.id.toString(), new Date().toISOString())
@@ -229,7 +214,7 @@ export const initSocket = (server) => {
                 client.hGetAll('onlineUsers'),
                 client.hGetAll('lastSeen')
             ]);
-            
+
             io.emit('online-users', {
                 onlineUsers: updatedOnlineUsers,
                 lastSeen: lastSeen
@@ -243,9 +228,9 @@ export const initSocket = (server) => {
             const allSockets = await io.fetchSockets();
             const activeSocketIds = new Set(allSockets.map(s => s.id));
             const onlineUsers = await client.hGetAll('onlineUsers');
-            
+
             let hasChanges = false;
-            
+
             for (const [userId, socketId] of Object.entries(onlineUsers)) {
                 if (!activeSocketIds.has(socketId)) {
                     await client.hDel('onlineUsers', userId);
@@ -254,7 +239,7 @@ export const initSocket = (server) => {
                     hasChanges = true;
                 }
             }
-            
+
             // Only broadcast if changes were made
             if (hasChanges) {
                 // Get updated online users and last seen times
@@ -262,7 +247,7 @@ export const initSocket = (server) => {
                     client.hGetAll('onlineUsers'),
                     client.hGetAll('lastSeen')
                 ]);
-                
+
                 io.emit('online-users', {
                     onlineUsers: updatedOnlineUsers,
                     lastSeen: lastSeen
@@ -275,3 +260,5 @@ export const initSocket = (server) => {
 
     return io;
 }
+
+export { io };
