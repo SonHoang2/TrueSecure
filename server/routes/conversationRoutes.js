@@ -12,8 +12,8 @@ router.route('/')
 router.route('/me')
     .get(conversationController.getUserConversations);
 
-router.route('/:id/messages')
-    .get(conversationController.getConversationMessages);
+router.route('/:id')
+    .get(conversationController.getConversation);
 
 router.post('/key', conversationController.createGroupKey);
 router.get('/:conversationId/key', conversationController.getConversationKey);

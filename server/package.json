@@ -11,6 +11,7 @@
     "author": "sonhoang2",
     "license": "ISC",
     "dependencies": {
+        "amqplib": "^0.10.7",
         "bcryptjs": "^2.4.3",
         "cookie-parser": "^1.4.7",
         "dotenv": "^16.4.7",
