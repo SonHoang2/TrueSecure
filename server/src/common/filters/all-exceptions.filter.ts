@@ -6,6 +6,7 @@ import {
     HttpStatus,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { QueryFailedError, EntityNotFoundError } from 'typeorm';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -20,20 +21,26 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
         let message = exception.message || 'Internal server error';
 
-        // Handle specific errors
-        if (exception.name === 'SequelizeUniqueConstraintError') {
-            if (exception.errors?.[0]?.message === 'email must be unique') {
-                message = 'Email already exists. Please use another email!';
-                status = 400;
+        // Handle TypeORM specific errors
+        if (exception instanceof QueryFailedError) {
+            status = HttpStatus.BAD_REQUEST;
+
+            // Handle unique constraint violations
+            if (exception.driverError?.code === '23505') {
+                // Extract constraint details from the error
+                const detail = exception.driverError.detail;
+                if (detail?.includes('email')) {
+                    message = 'Email already exists. Please use another email!';
+                } else {
+                    message =
+                        'A record with the same unique value already exists.';
+                }
             }
         }
 
-        if (exception.name === 'SequelizeValidationError') {
-            const errors = Object.values(exception.errors).map(
-                (el: any) => el.message,
-            );
-            message = `Invalid input data. ${errors.join('. ')}`;
-            status = 400;
+        if (exception instanceof EntityNotFoundError) {
+            status = HttpStatus.NOT_FOUND;
+            message = 'Requested entity was not found.';
         }
 
         if (exception.name === 'JsonWebTokenError') {
