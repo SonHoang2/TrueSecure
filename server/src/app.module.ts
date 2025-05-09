@@ -1,16 +1,15 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
-import databaseConfig from './config/database.config';
-import redisConfig from './config/redis.config';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import config from './config';
 
 @Module({
     imports: [
         ConfigModule.forRoot({
             isGlobal: true,
-            load: [databaseConfig, redisConfig],
+            load: config,
         }),
         TypeOrmModule.forRootAsync({
             imports: [ConfigModule],

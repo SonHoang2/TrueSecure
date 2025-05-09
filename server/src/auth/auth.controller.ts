@@ -10,15 +10,28 @@ import {
     HttpException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { LoginDto } from './dto/login.dto';
+import { SignupDto } from './dto/signup.dto';
+import { Response } from 'express';
+import { Res } from '@nestjs/common';
 
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) {}
 
     @Post('login')
-    create(@Body() createAuthDto: CreateAuthDto) {
-        return this.authService.login(createAuthDto);
+    login(
+        @Body() LoginDto: LoginDto,
+        @Res({ passthrough: true }) res: Response,
+    ) {
+        return this.authService.login(LoginDto, res);
+    }
+
+    @Post('signup')
+    signup(
+        @Body() SignupDto: SignupDto,
+        @Res({ passthrough: true }) res: Response,
+    ) {
+        return this.authService.signup(SignupDto, res);
     }
 }
