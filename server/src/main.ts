@@ -1,13 +1,19 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { JSendInterceptor } from './common/interceptors/jsend.interceptor';
-import { AllExceptionsFilter } from './common/interceptors/all-exceptions.filter';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
     app.setGlobalPrefix('api/v1');
-    app.useGlobalInterceptors(new JSendInterceptor());
+    app.useGlobalPipes(
+        new ValidationPipe({
+            transform: true,
+        }),
+    );
     app.useGlobalFilters(new AllExceptionsFilter());
+    app.useGlobalInterceptors(new JSendInterceptor());
     await app.listen(5000);
 }
 bootstrap();
