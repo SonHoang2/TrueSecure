@@ -3,7 +3,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 @Injectable()
 export class UserService {
@@ -77,5 +77,12 @@ export class UserService {
         return this.userRepo.findOne({
             where: { id, active: true },
         });
+    }
+
+    async findUsersByIds(users: number[]) {
+        const existUsers = await this.userRepo.find({
+            where: { id: In(users) },
+        });
+        return existUsers;
     }
 }

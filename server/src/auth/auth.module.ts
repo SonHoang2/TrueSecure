@@ -5,11 +5,11 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UserModule } from 'src/user/user.module';
 import { RedisModule } from 'src/redis/redis.module';
-import { JwtGuard } from './jwt/jwt.guard';
+import { JwtAuthGuard } from './jwt/jwt-auth.guard';
 
 @Module({
     controllers: [AuthController],
-    providers: [AuthService, JwtGuard],
+    providers: [AuthService, JwtAuthGuard],
     imports: [
         JwtModule.registerAsync({
             imports: [ConfigModule],
@@ -26,6 +26,6 @@ import { JwtGuard } from './jwt/jwt.guard';
         forwardRef(() => UserModule),
         RedisModule,
     ],
-    exports: [JwtGuard, JwtModule],
+    exports: [JwtAuthGuard, JwtModule],
 })
 export class AuthModule {}

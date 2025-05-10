@@ -5,7 +5,7 @@ import { Res } from '@nestjs/common';
 import { GoogleLoginDto } from './dto/googleLogin.dto';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
-import { JwtGuard } from './jwt/jwt.guard';
+import { JwtAuthGuard } from './jwt/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -35,13 +35,13 @@ export class AuthController {
         return this.authService.googleLogin(googleLoginDto, res);
     }
 
-    @UseGuards(JwtGuard)
+    @UseGuards(JwtAuthGuard)
     @Get('logout')
     logout(@Res({ passthrough: true }) res: Response, @Req() req: Request) {
         return this.authService.logout(req, res);
     }
 
-    @UseGuards(JwtGuard)
+    @UseGuards(JwtAuthGuard)
     @Get('refresh')
     refreshToken(
         @Res({ passthrough: true }) res: Response,
