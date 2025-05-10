@@ -85,4 +85,56 @@ export class UserService {
         });
         return existUsers;
     }
+
+    async updatePublicKey(userId: number, publicKey: string) {
+        await this.userRepo.update(userId, { publicKey });
+        return { success: true };
+    }
+
+    async getPublicKeyById(userId: number) {
+        const user = await this.userRepo.findOne({
+            where: { id: userId },
+            select: ['publicKey'],
+        });
+
+        if (!user) {
+            throw new Error(`User with ID ${userId} not found`);
+        }
+
+        return user.publicKey;
+    }
+
+    async searchUsersByName(name: string, currentUserId: number) {
+        // Handle search for full name (first + last)
+        const nameParts = name.split(' ');
+        const firstName = nameParts[0];
+        const lastName = nameParts.length > 1 ? nameParts[1] : '';
+
+        const queryBuilder = this.userRepo.createQueryBuilder('user');
+
+        queryBuilder
+            .where('user.id != :currentUserId', { currentUserId })
+            .andWhere(
+                '(user.firstName LIKE :firstNameTerm OR ' +
+                    'user.lastName LIKE :lastNameTerm' +
+                    (lastName
+                        ? ' OR (user.firstName LIKE :firstName AND user.lastName LIKE :lastName)'
+                        : '') +
+                    ')',
+                {
+                    firstNameTerm: `%${name}%`,
+                    lastNameTerm: `%${name}%`,
+                    firstName: firstName ? `%${firstName}%` : '',
+                    lastName: lastName ? `%${lastName}%` : '',
+                },
+            )
+            .select([
+                'user.id',
+                'user.firstName',
+                'user.lastName',
+                'user.avatar',
+            ]);
+
+        return queryBuilder.getMany();
+    }
 }
