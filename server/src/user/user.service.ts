@@ -65,4 +65,17 @@ export class UserService {
             select: ['id', 'email', 'password', 'active'],
         });
     }
+
+    async findByEmail(email: string) {
+        return this.userRepo.findOne({
+            where: { email },
+            select: ['id', 'email', 'active'],
+        });
+    }
+
+    async findActiveById(id: number) {
+        return this.userRepo.findOne({
+            where: { id, active: true },
+        });
+    }
 }
