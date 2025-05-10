@@ -54,10 +54,7 @@ export class JwtAuthGuard implements CanActivate {
                 'Password was changed after token issued',
             );
         }
-        console.log('Access token verified:', accessToken);
         request.user = user;
-
-        console.log('User found:', user);
 
         return true;
     }
