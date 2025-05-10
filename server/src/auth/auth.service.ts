@@ -11,11 +11,10 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/user/user.service';
 import * as bcrypt from 'bcrypt';
-import { InjectRedis } from '@nestjs-modules/ioredis';
-import Redis from 'ioredis';
 import { User } from 'src/user/entities/user.entity';
 import { cleanDto } from 'src/common/utils/cleanDto';
 import { GoogleLoginDto } from './dto/googleLogin.dto';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class AuthService {
@@ -26,7 +25,7 @@ export class AuthService {
         private jwtService: JwtService,
         private configService: ConfigService,
         private userService: UserService,
-        @InjectRedis() private readonly redis: Redis,
+        private redisService: RedisService,
     ) {
         this.jwtConfig = this.configService.get('jwt');
         this.env = this.configService.get<string>('env');
@@ -71,12 +70,6 @@ export class AuthService {
     }
 
     private async createSendToken(user: User, res: Response) {
-        console.log(
-            this.jwtConfig.accessToken.expiresIn,
-            this.jwtConfig.refreshToken.expiresIn,
-            this.jwtConfig.refreshToken.cookieExpiresIn,
-        );
-
         const accessToken = this.signToken(
             user.id,
             this.jwtConfig.accessToken.expiresIn,
@@ -87,16 +80,11 @@ export class AuthService {
             this.jwtConfig.refreshToken.expiresIn,
         );
 
-        await this.redis
-            .multi()
-            .set(
-                refreshToken,
-                String(user.id),
-                'EX',
-                this.jwtConfig.refreshToken.cookieExpiresIn * 86400,
-            )
-            .sadd(`user:${user.id}:tokens`, refreshToken)
-            .exec();
+        await this.redisService.storeRefreshTokenWithUserTracking(
+            refreshToken,
+            String(user.id),
+            this.jwtConfig.refreshToken.cookieExpiresIn,
+        );
 
         this.setCookies(res, accessToken, refreshToken);
 
@@ -133,10 +121,11 @@ export class AuthService {
     async logout(req: Request, res: Response) {
         const refreshToken = req.cookies.refreshToken;
 
-        const userId = await this.redis.get(refreshToken);
+        const userId =
+            await this.redisService.getRefreshTokenUserId(refreshToken);
         if (userId) {
-            await this.redis.del(refreshToken);
-            await this.redis.srem(`user:${userId}:tokens`, refreshToken);
+            await this.redisService.deleteRefreshToken(refreshToken);
+            await this.redisService.removeUserToken(userId, refreshToken);
         }
 
         const ATOptions = {
@@ -167,7 +156,8 @@ export class AuthService {
             );
         }
 
-        const userId = await this.redis.get(refreshToken);
+        const userId =
+            await this.redisService.getRefreshTokenUserId(refreshToken);
         if (!userId) {
             try {
                 const decoded = this.jwtService.verify(refreshToken);
@@ -179,14 +169,7 @@ export class AuthService {
                 );
 
                 // Invalidate all tokens for the user
-                const userTokensKey = `user:${decoded.id}:tokens`;
-                const tokens = await this.redis.smembers(userTokensKey);
-                if (tokens.length > 0) {
-                    await Promise.all(
-                        tokens.map((token) => this.redis.del(token)),
-                    );
-                    await this.redis.del(userTokensKey);
-                }
+                await this.redisService.deleteUserTokens(decoded.id);
 
                 throw new ForbiddenException(
                     'Security alert: Session compromised!',
@@ -197,8 +180,8 @@ export class AuthService {
         }
 
         // Delete the old token
-        await this.redis.del(refreshToken);
-        await this.redis.srem(`user:${userId}:tokens`, refreshToken);
+        await this.redisService.deleteRefreshToken(refreshToken);
+        await this.redisService.removeUserToken(userId, refreshToken);
 
         // Generate new tokens
         const accessToken = this.signToken(
@@ -212,16 +195,11 @@ export class AuthService {
         );
 
         // Store new refresh token and track it
-        await this.redis
-            .multi()
-            .set(
-                newRefreshToken,
-                userId,
-                'EX',
-                this.jwtConfig.refreshToken.cookieExpiresIn * 86400,
-            )
-            .sadd(`user:${userId}:tokens`, newRefreshToken)
-            .exec();
+        await this.redisService.storeRefreshTokenWithUserTracking(
+            refreshToken,
+            String(userId),
+            this.jwtConfig.refreshToken.cookieExpiresIn,
+        );
 
         this.setCookies(res, accessToken, newRefreshToken);
 
