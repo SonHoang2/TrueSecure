@@ -10,8 +10,10 @@ import {
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UseGuards } from '@nestjs/common';
+import { JwtGuard } from 'src/auth/jwt/jwt.guard';
 
-@Controller('user')
+@Controller('users')
 export class UserController {
     constructor(private readonly userService: UserService) {}
 
@@ -25,6 +27,7 @@ export class UserController {
         return this.userService.findAll();
     }
 
+    @UseGuards(JwtGuard)
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.userService.findOne(+id);
