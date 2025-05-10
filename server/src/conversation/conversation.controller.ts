@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
-import { JwtAuthGuard } from 'src/auth/jwt/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RequestWithUser } from 'src/common/interfaces/request-with-user.interface';
 import { CreateGroupKeyDto } from './dto/create-group-key.dto';
 

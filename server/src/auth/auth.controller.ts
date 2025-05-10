@@ -5,7 +5,7 @@ import { Res } from '@nestjs/common';
 import { GoogleLoginDto } from './dto/googleLogin.dto';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
-import { JwtAuthGuard } from './jwt/jwt-auth.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {

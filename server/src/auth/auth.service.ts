@@ -43,8 +43,8 @@ export class AuthService {
                     this.jwtConfig.accessToken.cookieExpiresIn * 60 * 60 * 1000,
             ),
             httpOnly: true,
-            secure: this.env === 'production',
-            sameSite: 'strict' as const,
+            secure: true,
+            sameSite: 'none' as const,
         };
 
         const RTOptions = {
@@ -57,9 +57,9 @@ export class AuthService {
                         1000,
             ),
             httpOnly: true,
-            secure: this.env === 'production',
             path: '/api/v1/auth/',
-            sameSite: 'strict' as const,
+            secure: true,
+            sameSite: 'none' as const,
         };
 
         res.cookie('accessToken', accessToken, ATOptions);
@@ -101,7 +101,7 @@ export class AuthService {
         this.setCookies(res, accessToken, refreshToken);
 
         const filter = cleanDto(user, ['password']);
-        return { filter };
+        return { user: filter };
     }
 
     async login(LoginDto: LoginDto, res: Response) {
