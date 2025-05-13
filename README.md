@@ -9,9 +9,9 @@ This real-time messaging application enables users to seamlessly connect with fr
 ## Technologies
 
 - Front End: React, HTML, CSS, Tailwindcss, Typescript
-- Back End: NodeJS, Express, Python, Flask
+- Back End: NodeJS, NestJS, Typescript, Python, Flask
 - Deepfake Detection: OpenCV, PyTorch, Facenet-PyTorch, Grad-CAM
-- Database: PortgresSQL, Redis, Sequelize
+- Database: PortgresSQL, Redis, TypeORM
 - Real-Time Communication: Socket.io, WebRTC
 - Messaging Queue: RabbitMQ
 
