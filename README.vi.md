@@ -9,9 +9,9 @@
 ## Công nghệ
 
 - Front End: React, HTML, CSS, Tailwindcss, Typescript
-- Back End: NodeJS, Express, Python, Flask
+- Back End: NodeJS, NestJS, Typescript, Python, Flask
 - Deepfake Detection: OpenCV, PyTorch, Facenet-PyTorch, Grad-CAM
-- Cơ sở dữ liệu: PostgreSQL, Redis, Sequelize
+- Cơ sở dữ liệu: PortgresSQL, Redis, TypeORM
 - Giao tiếp thời gian thực: Socket.io, WebRTC
 - Hàng đợi tin nhắn: RabbitMQ
 
