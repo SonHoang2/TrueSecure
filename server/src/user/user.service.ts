@@ -135,6 +135,8 @@ export class UserService {
                 'user.avatar',
             ]);
 
-        return queryBuilder.getMany();
+        return {
+            users: await queryBuilder.getMany(),
+        };
     }
 }

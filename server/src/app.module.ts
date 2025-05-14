@@ -4,6 +4,7 @@ import { UserModule } from './user/user.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConversationModule } from './conversation/conversation.module';
+import { SocketModule } from './socket/socket.module';
 import config from './config';
 
 @Module({
@@ -30,6 +31,7 @@ import config from './config';
         AuthModule,
         UserModule,
         ConversationModule,
+        SocketModule,
     ],
 })
 export class AppModule {}
