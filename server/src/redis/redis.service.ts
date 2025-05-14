@@ -61,4 +61,24 @@ export class RedisService {
             .sadd(`user:${userId}:tokens`, token)
             .exec();
     }
+
+    async storeValue(
+        collection: string,
+        key: string,
+        value: string,
+    ): Promise<void> {
+        await this.redis.hset(collection, key, value);
+    }
+
+    async getValue(collection: string, key: string): Promise<string | null> {
+        return this.redis.hget(collection, key);
+    }
+
+    async deleteValue(collection: string, key: string): Promise<void> {
+        await this.redis.hdel(collection, key);
+    }
+
+    async getAllValues(collection: string): Promise<Record<string, string>> {
+        return this.redis.hgetall(collection);
+    }
 }

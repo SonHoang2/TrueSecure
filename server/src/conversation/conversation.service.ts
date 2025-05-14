@@ -119,10 +119,7 @@ export class ConversationService {
         }
 
         return {
-            status: 'success',
-            data: {
-                conversation,
-            },
+            conversation,
         };
     }
 
@@ -147,10 +144,7 @@ export class ConversationService {
         }
 
         return {
-            status: 'success',
-            data: {
-                conversation,
-            },
+            conversation,
         };
     }
 
@@ -173,10 +167,7 @@ export class ConversationService {
         }
 
         return {
-            status: 'success',
-            data: {
-                conversations: userParticipations,
-            },
+            conversations: userParticipations,
         };
     }
 
@@ -189,10 +180,7 @@ export class ConversationService {
         );
 
         return {
-            status: 'success',
-            data: {
-                groupKey,
-            },
+            groupKey,
         };
     }
 
@@ -214,10 +202,7 @@ export class ConversationService {
         }
 
         return {
-            status: 'success',
-            data: {
-                groupKey: participant.groupKey,
-            },
+            groupKey: participant.groupKey,
         };
     }
 }

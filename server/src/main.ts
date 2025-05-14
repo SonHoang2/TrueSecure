@@ -6,6 +6,7 @@ import { ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import * as fs from 'fs';
 import { ConfigService } from '@nestjs/config';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap() {
     // Create a temporary module to access config before app creation
@@ -27,6 +28,9 @@ async function bootstrap() {
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
     app.useGlobalFilters(new AllExceptionsFilter());
     app.useGlobalInterceptors(new JSendInterceptor());
+
+    // Enable WebSockets with Socket.io
+    app.useWebSocketAdapter(new IoAdapter(app));
 
     const clientUrl = configService.get<string>('client');
 
