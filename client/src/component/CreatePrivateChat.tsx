@@ -85,8 +85,8 @@ export const CreatePrivateChat = ({
 
       <div className="mb-4">
         <div className="py-3">
-          {filteredUsers.length > 0 ? (
-            filteredUsers.map((user) => (
+          {filteredUsers?.length > 0 ? (
+            filteredUsers?.map((user) => (
               <button
                 key={user.id}
                 className="w-full flex items-center space-x-3 p-3 hover:bg-neutral-50 rounded-lg transition-colors duration-200"
