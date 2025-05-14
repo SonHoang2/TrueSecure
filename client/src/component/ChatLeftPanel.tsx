@@ -33,7 +33,7 @@ export const ChatLeftPanel = ({
       }
 
       const res = await axiosPrivate.get(
-        USERS_URL + `/search?name=${searchTerm}`,
+        USERS_URL + `/search?name=${searchTerm}`
       );
 
       setUsers(res.data.data.users);
@@ -108,13 +108,13 @@ export const ChatLeftPanel = ({
             </div>
           </div>
           <div className="flex flex-col">
-            {chatState.conversations.map((conv) => {
+            {chatState.conversations?.map((conv) => {
               const { conversation } = conv;
-              const { convParticipants, messages, isGroup } = conversation;
+              const { convParticipants, isGroup } = conversation;
 
               // Safely get the first participant and message
               const otherUser = convParticipants[0]?.user;
-              const lastMessage = messages[0];
+            //   const lastMessage = messages[0];
 
               // Determine the display name
               const displayName = isGroup
@@ -124,11 +124,11 @@ export const ChatLeftPanel = ({
                   : "Unknown User";
 
               // Determine the message content
-              const messageContent = lastMessage
-                ? lastMessage.senderId === user.id
-                  ? `You: ${lastMessage.content}`
-                  : lastMessage.content
-                : "No message yet";
+            //   const messageContent = lastMessage
+            //     ? lastMessage.senderId === user.id
+            //       ? `You: ${lastMessage.content}`
+            //       : lastMessage.content
+            //     : "No message yet";
               return (
                 <div
                   key={conv.conversationId}
@@ -148,9 +148,9 @@ export const ChatLeftPanel = ({
                   </div>
                   <div className="flex flex-col ms-2 flex-1 min-w-0">
                     <p className="text-base font-bold">{displayName}</p>
-                    <p className="text-sm text-gray-500 overflow-hidden text-ellipsis whitespace-nowrap break-all">
+                    {/* <p className="text-sm text-gray-500 overflow-hidden text-ellipsis whitespace-nowrap break-all">
                       {messageContent}
-                    </p>
+                    </p> */}
                   </div>
                 </div>
               );
