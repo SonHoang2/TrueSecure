@@ -144,7 +144,7 @@ export class AuthService {
         res.clearCookie('accessToken', ATOptions);
         res.clearCookie('refreshToken', RTOptions);
 
-        return { status: 'success' };
+        return;
     }
 
     async refreshToken(req: Request, res: Response) {
@@ -158,6 +158,7 @@ export class AuthService {
 
         const userId =
             await this.redisService.getRefreshTokenUserId(refreshToken);
+
         if (!userId) {
             try {
                 const decoded = this.jwtService.verify(refreshToken);
@@ -196,14 +197,14 @@ export class AuthService {
 
         // Store new refresh token and track it
         await this.redisService.storeRefreshTokenWithUserTracking(
-            refreshToken,
+            newRefreshToken,
             String(userId),
             this.jwtConfig.refreshToken.cookieExpiresIn,
         );
 
         this.setCookies(res, accessToken, newRefreshToken);
 
-        return { status: 'success' };
+        return;
     }
 
     async googleLogin(googleLoginDto: GoogleLoginDto, res: Response) {
