@@ -23,10 +23,7 @@ const useAxiosPrivate = () => {
                         debounceTimeout.current = setTimeout(async () => {
                             try {
                                 console.log(error);
-                                if (
-                                    error.response.data.message ===
-                                    'accessToken expired'
-                                ) {
+                                if (error.response.status === 401) {
                                     await refreshTokens();
                                 }
                                 resolve(axiosPrivate(prevRequest)); // Retry the request
