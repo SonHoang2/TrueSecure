@@ -3,16 +3,13 @@ import {
     Get,
     Post,
     Body,
-    Patch,
     Param,
-    Delete,
     UseGuards,
     Query,
     Req,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
@@ -28,13 +25,11 @@ export class UserController {
         return this.userService.findOne(req.user.id);
     }
 
-    @Delete('me')
-    deleteMe(@Req() req: RequestWithUser) {
-        return this.userService.remove(req.user.id);
-    }
-
     @Post('public-key')
-    createPublicKey(@Req() req: RequestWithUser, @Body() publicKey: string) {
+    createPublicKey(
+        @Req() req: RequestWithUser,
+        @Body('publicKey') publicKey: string,
+    ) {
         return this.userService.updatePublicKey(req.user.id, publicKey);
     }
 
@@ -75,15 +70,5 @@ export class UserController {
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.userService.findOne(+id);
-    }
-
-    @Patch(':id')
-    update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-        return this.userService.update(+id, updateUserDto);
-    }
-
-    @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.userService.remove(+id);
     }
 }

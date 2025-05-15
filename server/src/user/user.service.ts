@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { In, Repository } from 'typeorm';
@@ -36,7 +35,9 @@ export class UserService {
             options.select = query.fields;
         }
 
-        return this.userRepo.find(options);
+        return {
+            users: await this.userRepo.find(options),
+        };
     }
 
     async findOne(id: number) {
@@ -44,19 +45,9 @@ export class UserService {
         if (!user) {
             throw new Error(`User with ID ${id} not found`);
         }
-        return user;
-    }
-
-    async update(id: number, updateUserDto: UpdateUserDto) {
-        const user = await this.findOne(id);
-        this.userRepo.merge(user, updateUserDto);
-        return this.userRepo.save(user);
-    }
-
-    async remove(id: number) {
-        const user = await this.findOne(id);
-        user.active = false;
-        return this.userRepo.save(user);
+        return {
+            user,
+        };
     }
 
     async findByEmailWithPassword(email: string) {
@@ -67,16 +58,20 @@ export class UserService {
     }
 
     async findByEmail(email: string) {
-        return this.userRepo.findOne({
+        const user = await this.userRepo.findOne({
             where: { email },
             select: ['id', 'email', 'active'],
         });
+
+        return user;
     }
 
     async findActiveById(id: number) {
-        return this.userRepo.findOne({
+        const user = await this.userRepo.findOne({
             where: { id, active: true },
         });
+
+        return user;
     }
 
     async findUsersByIds(users: number[]) {
@@ -87,6 +82,8 @@ export class UserService {
     }
 
     async updatePublicKey(userId: number, publicKey: string) {
+        console.log(`Updating public key for user ${userId} to ${publicKey}`);
+
         await this.userRepo.update(userId, { publicKey });
         return { success: true };
     }
@@ -101,7 +98,7 @@ export class UserService {
             throw new Error(`User with ID ${userId} not found`);
         }
 
-        return user.publicKey;
+        return { publicKey: user.publicKey };
     }
 
     async searchUsersByName(name: string, currentUserId: number) {
