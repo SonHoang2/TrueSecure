@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { IMAGES_URL } from '../config/config';
 import { useAuth } from '../hooks/useAuth';
 import { MdLogout, MdChatBubble } from 'react-icons/md';
 
@@ -36,7 +35,7 @@ const SidebarNavigation = () => {
                 >
                     <img
                         className="inline-block size-10 rounded-full"
-                        src={`${IMAGES_URL}/${user?.avatar}`}
+                        src={`${user?.avatar}`}
                         alt="User Avatar"
                     />
                 </div>

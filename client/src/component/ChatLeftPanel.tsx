@@ -1,4 +1,4 @@
-import { IMAGES_URL, USERS_URL } from '../config/config';
+import { USERS_URL } from '../config/config';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import CreateGroupChat from './CreateGroupChat';
@@ -146,7 +146,7 @@ export const ChatLeftPanel = ({
                                     <div className="relative flex items-center">
                                         <img
                                             className="inline-block size-10 rounded-full ring-0"
-                                            src={`${IMAGES_URL}/${isGroup ? conversation?.avatar : otherUser?.avatar}`}
+                                            src={`${isGroup ? conversation?.avatar : otherUser?.avatar}`}
                                             alt={displayName}
                                         />
                                         {!isGroup &&

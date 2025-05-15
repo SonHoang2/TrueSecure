@@ -1,5 +1,4 @@
 import React, { useRef, useEffect } from 'react';
-import { IMAGES_URL } from '../config/config';
 import { MdClose, MdCall } from 'react-icons/md';
 
 const OutgoingCallModal = ({
@@ -41,7 +40,7 @@ const OutgoingCallModal = ({
                     <div className="my-4 flex justify-center">
                         <img
                             className="size-16 rounded-full shadow-md border-2 border-gray-300"
-                            src={`${IMAGES_URL}/${receiver?.avatar}`}
+                            src={`${receiver?.avatar}`}
                             alt="Caller Avatar"
                         />
                     </div>

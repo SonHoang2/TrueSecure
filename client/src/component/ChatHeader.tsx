@@ -1,5 +1,4 @@
 import React from 'react';
-import { IMAGES_URL } from '../config/config';
 import { FaPhoneAlt } from 'react-icons/fa';
 import { IoIosVideocam, IoMdMore } from 'react-icons/io';
 
@@ -32,7 +31,7 @@ export const ChatHeader = ({
                 <div className="relative flex items-center">
                     <img
                         className="inline-block size-10 rounded-full ring-0"
-                        src={`${IMAGES_URL}/${conversation?.isGroup ? conversation?.avatar : receiver?.avatar}`}
+                        src={`${conversation?.isGroup ? conversation?.avatar : receiver?.avatar}`}
                         alt="avatar"
                     />
                     {!conversation?.isGroup &&

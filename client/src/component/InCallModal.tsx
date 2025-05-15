@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { IMAGES_URL } from '../config/config';
 
 const InCallModal = ({
     localStream,
@@ -62,7 +61,7 @@ const InCallModal = ({
                         <div className="flex items-center justify-center">
                             <img
                                 className="w-48 h-48 rounded-full object-cover"
-                                src={`${IMAGES_URL}/${receiver?.avatar}`}
+                                src={`${receiver?.avatar}`}
                                 alt=""
                             />
                         </div>
