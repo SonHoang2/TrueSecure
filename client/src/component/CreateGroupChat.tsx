@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 import { MdClose } from 'react-icons/md';
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
-import { CONVERSATIONS_URL, IMAGES_URL, USERS_URL } from '../config/config';
+import { CONVERSATIONS_URL, USERS_URL } from '../config/config';
 import debounce from '../utils/debounce';
 import * as cryptoUtils from '../utils/cryptoUtils';
 
@@ -221,11 +221,7 @@ export const CreateGroupChat = ({
                                     >
                                         <div>
                                             <img
-                                                src={
-                                                    IMAGES_URL +
-                                                    '/' +
-                                                    user.avatar
-                                                }
+                                                src={user.avatar}
                                                 alt={user.firstName}
                                                 className="w-10 h-10 rounded-full"
                                             />

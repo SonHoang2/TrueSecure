@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CONVERSATIONS_URL, IMAGES_URL } from '../config/config';
+import { CONVERSATIONS_URL } from '../config/config';
 import { FaArrowLeft, FaSearch } from 'react-icons/fa';
 import debounce from '../utils/debounce';
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
@@ -97,7 +97,7 @@ export const CreatePrivateChat = ({
                             >
                                 <div>
                                     <img
-                                        src={IMAGES_URL + '/' + user.avatar}
+                                        src={user.avatar}
                                         alt={user.firstName}
                                         className="w-10 h-10 rounded-full"
                                     />

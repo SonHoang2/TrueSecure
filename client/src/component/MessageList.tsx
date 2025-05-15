@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { IMAGES_URL } from '../config/config';
 import { MESSAGE_STATUS } from '../config/config';
 
 export const MessageList = ({
@@ -60,7 +59,7 @@ export const MessageList = ({
                                     <div className="flex-none pe-2 items-end">
                                         <img
                                             className="size-8 rounded-full"
-                                            src={`${IMAGES_URL}/${avatar}`}
+                                            src={`${avatar}`}
                                             alt=""
                                         />
                                     </div>
@@ -94,7 +93,7 @@ export const MessageList = ({
                                       >
                                           <img
                                               className="size-4 rounded-full"
-                                              src={`${IMAGES_URL}/${status.avatar}`}
+                                              src={`${status.avatar}`}
                                               alt=""
                                           />
                                       </div>
@@ -103,7 +102,7 @@ export const MessageList = ({
                                       <div className="flex pe-1 items-end">
                                           <img
                                               className="size-4 rounded-full"
-                                              src={`${IMAGES_URL}/${avatar}`}
+                                              src={`${avatar}`}
                                               alt=""
                                           />
                                       </div>
