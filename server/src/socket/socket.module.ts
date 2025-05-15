@@ -11,6 +11,7 @@ import { ConversationModule } from 'src/conversation/conversation.module';
 import { SocketAuthGuard } from './guards/socket-auth/socket-auth.guard';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConvParticipant } from 'src/conversation/entities/convParticipant.entity';
+import { SocketAuthService } from './services/socket-auth/socket-auth.service';
 
 @Module({
     imports: [
@@ -35,6 +36,7 @@ import { ConvParticipant } from 'src/conversation/entities/convParticipant.entit
         SocketCacheService,
         SocketService,
         SocketAuthGuard,
+        SocketAuthService,
     ],
     exports: [SocketService],
 })

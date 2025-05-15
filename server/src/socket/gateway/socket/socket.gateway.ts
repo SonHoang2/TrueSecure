@@ -26,6 +26,7 @@ import {
 } from '../../dto/call/call.dto';
 import { Logger } from '@nestjs/common';
 import { SocketUser } from 'src/socket/interfaces/socket-user.interface';
+import { SocketAuthService } from 'src/socket/services/socket-auth/socket-auth.service';
 
 @WebSocketGateway({
     cors: {
@@ -45,6 +46,7 @@ export class SocketGateway
         private readonly socketManagerService: SocketManagerService,
         private readonly socketService: SocketService,
         private readonly configService: ConfigService,
+        private readonly socketAuthService: SocketAuthService,
     ) {}
 
     afterInit(server: Server) {
@@ -59,6 +61,7 @@ export class SocketGateway
 
     async handleConnection(@ConnectedSocket() client: SocketUser) {
         try {
+            await this.socketAuthService.validateSocket(client);
             await this.socketManagerService.handleConnection(client);
         } catch (error) {
             this.logger.error(`Error handling connection: ${error.message}`);
