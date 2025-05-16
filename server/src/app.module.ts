@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConversationModule } from './conversation/conversation.module';
 import { SocketModule } from './socket/socket.module';
+import { RabbitmqModule } from './rabbitmq/rabbitmq.module';
 import config from './config';
 
 @Module({
@@ -32,6 +33,7 @@ import config from './config';
         UserModule,
         ConversationModule,
         SocketModule,
+        RabbitmqModule,
     ],
 })
 export class AppModule {}
