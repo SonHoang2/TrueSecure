@@ -237,25 +237,29 @@ export const useChatMessages = ({
     }, [conversationId]);
 
     useEffect(() => {
+        if (!userKeys?.privateKey) return;
+
         socket.on(
             'new-private-message',
-            async (data: {
-                messageId: string;
-                senderId: string;
-                conversationId: string;
-                content: string;
-                iv: string;
-                ephemeralPublicKey: string;
-                createdAt: string;
-                status: MESSAGE_STATUS;
-            }) => {
+            async (
+                data: {
+                    messageId: string;
+                    senderId: string;
+                    conversationId: string;
+                    content: string;
+                    iv: string;
+                    ephemeralPublicKey: string;
+                    createdAt: string;
+                    status: MESSAGE_STATUS;
+                },
+                ackCallback: (ack: boolean) => void,
+            ) => {
                 try {
                     // messageSoundRef.current.play().catch((error) =>
                     //     console.error("Audio play error:", error)
                     // );
                     if (!userKeys.privateKey) {
-                        console.error('Private key is not available!');
-                        return;
+                        throw new Error('Private key is not available!');
                     }
 
                     if (data.conversationId === conversationIdRef.current) {
@@ -307,8 +311,7 @@ export const useChatMessages = ({
                             );
 
                         if (!decryptedMessage) {
-                            console.error('Failed to decrypt message!');
-                            return;
+                            throw new Error('Decryption failed');
                         }
 
                         await storeMessagesInIndexedDB({
@@ -326,8 +329,13 @@ export const useChatMessages = ({
                         //     conversationId: data.conversationId,
                         // })
                     }
+
+                    console.log('I acknowledge the message');
+                    ackCallback(true);
                 } catch (error) {
                     console.error(error);
+                    console.error('I not acknowledge the message');
+                    ackCallback(false);
                 }
             },
         );
@@ -436,7 +444,7 @@ export const useChatMessages = ({
             socket.off('group-message-status-update');
             socket.off('new-group-message');
         };
-    }, [chatState.messages?.length]);
+    }, [chatState.messages?.length, userKeys?.privateKey,]);
 
     useEffect(() => {
         conversationIdRef.current = conversationId;
