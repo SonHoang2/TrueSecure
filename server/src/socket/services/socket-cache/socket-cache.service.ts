@@ -17,14 +17,13 @@ export class SocketCacheService {
             userId.toString(),
             socketId,
         );
-        this.logger.debug(
+        this.logger.log(
             `User ${userId} added to online users with socket ID ${socketId}`,
         );
     }
 
     async removeOnlineUser(userId: string | number): Promise<void> {
         await this.redisService.deleteValue('onlineUsers', userId.toString());
-        this.logger.debug(`User ${userId} removed from online users`);
     }
 
     async updateLastSeen(userId: string | number): Promise<void> {
@@ -33,7 +32,6 @@ export class SocketCacheService {
             userId.toString(),
             new Date().toISOString(),
         );
-        this.logger.debug(`Last seen updated for user ${userId}`);
     }
 
     async getSocketId(userId: string | number): Promise<string | null> {
@@ -59,9 +57,6 @@ export class SocketCacheService {
             if (!activeSocketIds.has(socketId)) {
                 await this.removeOnlineUser(userId);
                 await this.updateLastSeen(userId);
-                this.logger.log(
-                    `Cleaned up stale connection for user ${userId}`,
-                );
                 hasChanges = true;
             }
         }

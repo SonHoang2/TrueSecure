@@ -36,28 +36,38 @@ export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
             persistent: true,
         });
 
-        console.log(`📤 Sent message to offline user ${receiverId}`, message);
+        // console.log(`📤 Sent message to offline user ${receiverId}`, message);
     }
 
     async consumeMessages(userId: string, socketId: string) {
         if (!this.channel) throw new Error('RabbitMQ channel not initialized');
 
         const queue = `offline_user_${userId}`;
-        await this.channel.assertQueue(queue, { durable: true });
+        const queueInfo = await this.channel.assertQueue(queue, {
+            durable: true,
+        });
+
+        console.log(`Queue "${queue}" info:`, queueInfo);
 
         const { consumerTag } = await this.channel.consume(
             queue,
-            (msg: ConsumeMessage | null) => {
+            async (msg: ConsumeMessage | null) => {
                 if (msg !== null) {
                     const message = JSON.parse(msg.content.toString());
 
-                    this.io.to(socketId).emit('new-private-message', {
-                        ...message,
-                        messageId: message.messageId,
-                    });
+                    const [ackResponse] = await this.io
+                        .to(socketId)
+                        .timeout(10000)
+                        .emitWithAck('new-private-message', {
+                            ...message,
+                            messageId: message.messageId,
+                        });
 
-                    this.channel.ack(msg);
-                    console.log(`📥 Delivered message to ${userId}`, message);
+                    if (ackResponse) {
+                        this.channel.ack(msg);
+                    } else {
+                        this.channel.nack(msg, false, true);
+                    }
                 }
             },
             { noAck: false },
@@ -77,8 +87,8 @@ export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
     }
 
     async onModuleDestroy() {
-        await this.channel?.close();
-        await this.connection?.close();
+        if (this.channel) await this.channel.close();
+        if (this.connection) await this.connection.close();
         console.log('🔌 Disconnected from RabbitMQ');
     }
 }

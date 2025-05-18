@@ -2,13 +2,17 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { SocketCacheService } from '../socket-cache/socket-cache.service';
 import { SocketUser } from 'src/socket/interfaces/socket-user.interface';
+import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 
 @Injectable()
 export class SocketManagerService {
     private readonly logger = new Logger(SocketManagerService.name);
     private server: Server;
 
-    constructor(private readonly socketCacheService: SocketCacheService) {}
+    constructor(
+        private readonly socketCacheService: SocketCacheService,
+        private readonly rabbitmqService: RabbitmqService,
+    ) {}
 
     setServer(server: Server): void {
         this.server = server;
@@ -30,6 +34,8 @@ export class SocketManagerService {
         // Add user to online users
         await this.socketCacheService.addOnlineUser(user.id, client.id);
 
+        await this.rabbitmqService.consumeMessages(user.id, client.id);
+
         // Clean up stale connections
         await this.cleanupStaleConnections();
 
@@ -48,7 +54,7 @@ export class SocketManagerService {
         // Remove user from online users and update last seen
         await this.socketCacheService.removeOnlineUser(user.id);
         await this.socketCacheService.updateLastSeen(user.id);
-
+        await this.rabbitmqService.cancelConsumeMessages(user.id);
         // Broadcast updated online status
         await this.broadcastOnlineStatus();
     }

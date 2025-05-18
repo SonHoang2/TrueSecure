@@ -3,6 +3,7 @@ import { SocketManagerService } from './services/socket-manager/socket-manager.s
 import { SocketCacheService } from './services/socket-cache/socket-cache.service';
 import { ConversationService } from 'src/conversation/conversation.service';
 import { MessageStatus } from 'src/common/enum/message-status.enum';
+import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 
 @Injectable()
 export class SocketService {
@@ -12,6 +13,7 @@ export class SocketService {
         private readonly socketManagerService: SocketManagerService,
         private readonly socketCacheService: SocketCacheService,
         private readonly conversationService: ConversationService,
+        private readonly rabbitmqService: RabbitmqService,
     ) {}
 
     async sendPrivateMessage(data: any): Promise<void> {
@@ -27,8 +29,8 @@ export class SocketService {
                 data,
             );
         } else {
-            // Handle offline message (implementation would depend on your specific needs)
-            this.logger.log(`User ${receiverId} is offline, message queued`);
+            // If receiver is offline, store the message in cache
+            await this.rabbitmqService.sendOfflineMessage(receiverId, data);
         }
 
         // Notify sender about message status
