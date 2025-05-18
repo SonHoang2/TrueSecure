@@ -7,20 +7,12 @@ import {
 } from '../utils/indexedDB';
 import { v4 as uuidv4 } from 'uuid';
 import { getGroupKey } from '../services/encryptionService';
-import { Socket } from 'socket.io-client';
-import { AxiosInstance } from 'axios';
 import { MessageStatus } from '../enums/messageStatus.enum';
-
-type UseChatMessagesProps = {
-    conversationId: string;
-    userId: string;
-    socket: Socket;
-    axiosPrivate: AxiosInstance;
-    userKeys: {
-        publicKey?: string;
-        privateKey?: string;
-    };
-};
+import {
+    UseChatMessagesProps,
+    ChatState,
+    ConversationParticipant,
+} from '../types/chatMessages.types';
 
 export const useChatMessages = ({
     conversationId,
@@ -29,21 +21,6 @@ export const useChatMessages = ({
     axiosPrivate,
     userKeys,
 }: UseChatMessagesProps) => {
-    type Conversation = {
-        title: string;
-        isGroup: boolean | null;
-        avatar: string;
-    };
-
-    type ChatState = {
-        message: string;
-        messages: any[];
-        receiver: any | null;
-        convParticipants: any[];
-        conversations: any[];
-        conversation: Conversation;
-    };
-
     const [chatState, setChatState] = useState<ChatState>({
         message: '',
         messages: [],
@@ -66,14 +43,25 @@ export const useChatMessages = ({
                 CONVERSATIONS_URL + `/${conversationId}`,
             );
 
-            const { convParticipants, title, isGroup, avatar } =
-                res.data.data.conversation;
+            const {
+                convParticipants,
+                title,
+                isGroup,
+                avatar,
+            }: {
+                convParticipants: ConversationParticipant[];
+                title: string;
+                isGroup: boolean | null;
+                avatar: string;
+            } = res.data.data.conversation;
 
             const receiver =
-                convParticipants.find((x) => x.userId !== userId)?.user || null;
+                convParticipants.find((user) => user.userId !== userId)?.user ||
+                null;
+
+            console.log({ convParticipants });
 
             const messages = await getMessagesFromIndexedDB(conversationId);
-            console.log({ messages });
 
             setChatState((prevState) => ({
                 ...prevState,
@@ -221,10 +209,13 @@ export const useChatMessages = ({
                     if (participant.userId === userId) {
                         return null;
                     }
-
+                    
                     for (let i = chatState.messages.length - 1; i >= 0; i--) {
                         const user = chatState.messages[i]?.statuses?.find(
-                            (status) =>
+                            (status: {
+                                userId: number;
+                                status: MessageStatus;
+                            }) =>
                                 status.userId === participant.userId &&
                                 status.status === MessageStatus.SEEN,
                         );
