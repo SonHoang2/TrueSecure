@@ -2,17 +2,42 @@ import React from 'react';
 import { FaPhoneAlt } from 'react-icons/fa';
 import { IoIosVideocam, IoMdMore } from 'react-icons/io';
 
-export const ChatHeader = ({
+type Conversation = {
+    isGroup: boolean;
+    avatar: string;
+    title: string;
+};
+
+type Receiver = {
+    id: string;
+    avatar: string;
+    firstName: string;
+    lastName: string;
+};
+
+type UserStatus = {
+    onlineUsers: Record<string, boolean>;
+    lastSeen: Record<string, string>;
+};
+
+type ChatHeaderProps = {
+    conversation: Conversation;
+    userStatus: UserStatus;
+    receiver: Receiver;
+    startCall: (video?: boolean) => void;
+};
+
+export const ChatHeader: React.FC<ChatHeaderProps> = ({
     conversation,
     userStatus,
     receiver,
     startCall,
 }) => {
-    const getLastSeenTime = (timestamp) => {
+    const getLastSeenTime = (timestamp: string) => {
         if (!timestamp) return '';
 
-        const now = new Date();
-        const lastSeen = new Date(timestamp);
+        const now = new Date().getTime();
+        const lastSeen = new Date(timestamp).getTime();
 
         const diffInSeconds = Math.floor((now - lastSeen) / 1000);
         if (diffInSeconds < 60) return `last seen ${diffInSeconds} sec ago`;
