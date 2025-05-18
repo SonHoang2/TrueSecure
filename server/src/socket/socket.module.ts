@@ -12,6 +12,7 @@ import { SocketAuthGuard } from './guards/socket-auth/socket-auth.guard';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConvParticipant } from 'src/conversation/entities/convParticipant.entity';
 import { SocketAuthService } from './services/socket-auth/socket-auth.service';
+import { RabbitmqModule } from 'src/rabbitmq/rabbitmq.module';
 
 @Module({
     imports: [
@@ -29,6 +30,7 @@ import { SocketAuthService } from './services/socket-auth/socket-auth.service';
         UserModule,
         RedisModule,
         ConversationModule,
+        RabbitmqModule,
     ],
     providers: [
         SocketGateway,

@@ -13,7 +13,6 @@ import { UseGuards } from '@nestjs/common';
 import { SocketAuthGuard } from 'src/socket/guards/socket-auth/socket-auth.guard';
 import { SocketManagerService } from 'src/socket/services/socket-manager/socket-manager.service';
 import { SocketService } from 'src/socket/socket.service';
-import { ConfigService } from '@nestjs/config';
 import {
     PrivateMessageDto,
     MessageSeenDto,
@@ -27,6 +26,8 @@ import {
 import { Logger } from '@nestjs/common';
 import { SocketUser } from 'src/socket/interfaces/socket-user.interface';
 import { SocketAuthService } from 'src/socket/services/socket-auth/socket-auth.service';
+import { MessageStatus } from 'src/common/enum/message-status.enum';
+import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 
 @WebSocketGateway({
     cors: {
@@ -45,14 +46,14 @@ export class SocketGateway
     constructor(
         private readonly socketManagerService: SocketManagerService,
         private readonly socketService: SocketService,
-        private readonly configService: ConfigService,
         private readonly socketAuthService: SocketAuthService,
+        private readonly rabbitmqService: RabbitmqService,
     ) {}
 
     afterInit(server: Server) {
         this.logger.log('WebSocket Gateway initialized');
         this.socketManagerService.setServer(server);
-
+        this.rabbitmqService.setSocketServer(server);
         // Set up periodic cleanup (every 5 minutes)
         setInterval(() => {
             this.socketManagerService.cleanupStaleConnections();
@@ -191,7 +192,7 @@ export class SocketGateway
                 'private-message-status-update',
                 {
                     messageId: data.messageId,
-                    status: 'seen',
+                    status: MessageStatus.SEEN,
                 },
             );
         } catch (error) {
