@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { MESSAGE_STATUS } from '../config/config';
+import { MessageStatus } from '../enums/messageStatus.enum';
 
 export const MessageList = ({
     messages,
@@ -75,7 +75,7 @@ export const MessageList = ({
                                         {isLastMessage &&
                                             isSentByUser &&
                                             msg?.status !==
-                                                MESSAGE_STATUS.SEEN && (
+                                                MessageStatus.SEEN && (
                                                 <p className="text-xs pe-4 text-gray-600 first-letter:uppercase">
                                                     {msg?.status}
                                                 </p>

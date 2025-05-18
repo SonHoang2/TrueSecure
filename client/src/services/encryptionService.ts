@@ -1,5 +1,6 @@
 import * as cryptoUtils from '../utils/cryptoUtils';
-import { CONVERSATIONS_URL, USERS_URL, ROLE } from '../config/config';
+import { CONVERSATIONS_URL, USERS_URL } from '../config/config';
+import { Role } from '../enums/role.enum';
 
 export const initialize = async (userId, axiosPrivate) => {
     try {
@@ -36,7 +37,7 @@ export const getAdminPublicKey = async (convParticipants, axiosPrivate) => {
         }
 
         const adminId = convParticipants.find(
-            (participant) => participant.role === ROLE.ADMIN,
+            (participant) => participant.role === Role.ADMIN,
         ).userId;
 
         const res = await axiosPrivate.get(

@@ -1,4 +1,4 @@
-import { MESSAGE_STATUS } from '../config/config';
+import { MessageStatus } from "../enums/messageStatus.enum";
 
 const openDatabase = () => {
     return new Promise((resolve, reject) => {
@@ -43,7 +43,7 @@ export const storeMessagesInIndexedDB = async ({
     conversationId: string;
     content: string;
     createdAt: string;
-    status: MESSAGE_STATUS;
+    status: MessageStatus;
 }) => {
     try {
         if (
@@ -73,7 +73,7 @@ export const storeMessagesInIndexedDB = async ({
             conversationId: string;
             content: string;
             createdAt: string;
-            status: MESSAGE_STATUS;
+            status: MessageStatus;
         };
 
         const messageData: MessageData = {

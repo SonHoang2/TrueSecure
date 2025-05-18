@@ -1,10 +1,10 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { ROUTES } from '../config/config';
+import { Routes } from '../enums/routes.enum';
 
 export const ProtectedRoute = ({ allowedRole }) => {
     const { user } = useAuth();
-    if (!user) return <Navigate to={ROUTES.LOGIN} />;
+    if (!user) return <Navigate to={Routes.LOGIN} />;
 
     if (allowedRole && allowedRole !== user.role) {
         return <Navigate to="/" />;
