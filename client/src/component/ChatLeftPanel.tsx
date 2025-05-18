@@ -8,7 +8,15 @@ import { FaEdit, FaSearch } from 'react-icons/fa';
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
 import { MdClose } from 'react-icons/md';
 
-export const ChatLeftPanel = ({
+type ChatLeftPanelProps = {
+    chatState: any; // Replace 'any' with your actual chat state type if available
+    user: any;
+    userStatus: any;
+    conversationId: string;
+    setChatState: React.Dispatch<React.SetStateAction<any>>; // Update type if you have a specific state type
+};
+
+export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
     chatState,
     user,
     userStatus,
@@ -26,7 +34,10 @@ export const ChatLeftPanel = ({
 
     const axiosPrivate = useAxiosPrivate();
 
-    const searchUsers = async (searchTerm, setUsers) => {
+    const searchUsers = async (
+        searchTerm: string,
+        setUsers: React.Dispatch<React.SetStateAction<any[]>>,
+    ) => {
         try {
             if (!searchTerm) {
                 return;
