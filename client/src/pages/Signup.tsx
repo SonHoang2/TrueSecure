@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Link } from 'react-router-dom';
 import { FaEye } from 'react-icons/fa';
 import { IoIosEyeOff } from 'react-icons/io';
-import { ROUTES } from '../config/config';
+import { Routes } from '../enums/routes.enum';
 
 export default function Signup() {
     const [formData, setFormData] = useState({
@@ -143,7 +143,7 @@ export default function Signup() {
                     <p>
                         Already have an account?
                         <Link
-                            to={ROUTES.LOGIN}
+                            to={Routes.LOGIN}
                             className="text-blue-500 hover:underline ps-1"
                         >
                             Login

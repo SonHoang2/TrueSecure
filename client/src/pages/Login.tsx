@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { ROUTES } from '../config/config';
+import { Routes } from '../enums/routes.enum';
 import { FaEye } from 'react-icons/fa';
 import { IoIosEyeOff } from 'react-icons/io';
 import queryString from 'query-string';
@@ -164,7 +164,7 @@ export default function Login() {
                     <p>
                         Don't have an account?
                         <Link
-                            to={ROUTES.SIGN_UP}
+                            to={Routes.SIGN_UP}
                             className="text-blue-500 hover:underline ps-1"
                         >
                             Signup
