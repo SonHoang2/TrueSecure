@@ -33,7 +33,6 @@ export class ConversationController {
     @Get('me')
     findUserConversations(@Req() req: RequestWithUser) {
         const userId = req.user.id;
-        console.log('User ID:', userId, 123);
         return this.conversationService.getUserConversations(userId);
     }
 

@@ -90,8 +90,6 @@ export class UserService {
     }
 
     async updatePublicKey(userId: number, publicKey: string) {
-        console.log(`Updating public key for user ${userId} to ${publicKey}`);
-
         await this.userRepo.update(userId, { publicKey });
         return { success: true };
     }
