@@ -1,23 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
+import { CallState, UseWebRTCProps, UseWebRTCResult } from './useWebRTC.types';
 
 export const useWebRTC = ({
     receiverId,
     socket,
     user,
-}: {
-    receiverId: string;
-    socket: any;
-    user: any;
-}) => {
-    type CallState = {
-        isCalling: boolean;
-        isRinging: boolean;
-        isConnected: boolean;
-        isVideoCall: boolean;
-        sender: string | null;
-        offer: any | null;
-    };
-
+}: UseWebRTCProps): UseWebRTCResult => {
     const [callState, setCallState] = useState<CallState>({
         isCalling: false,
         isRinging: false,
@@ -32,7 +20,7 @@ export const useWebRTC = ({
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const peer = useRef<RTCPeerConnection | null>(null);
 
-    const candidateQueue = useRef([]);
+    const candidateQueue = useRef<RTCIceCandidateInit[]>([]);
 
     const createPeerConnection = () => {
         console.log('Creating new peer connection...');
@@ -88,13 +76,18 @@ export const useWebRTC = ({
             console.log('Local stream:', stream);
 
             // Add tracks to peer connection
-            stream
-                .getTracks()
-                .forEach((track) => peer.current.addTrack(track, stream));
+            stream.getTracks().forEach((track) => {
+                if (peer.current) {
+                    peer.current.addTrack(track, stream);
+                }
+            });
 
             // Create and send WebRTC offer
-            const offer = await peer.current?.createOffer();
-            await peer.current?.setLocalDescription(offer);
+            let offer: RTCSessionDescriptionInit | null = null;
+            if (peer.current) {
+                offer = await peer.current.createOffer();
+                await peer.current.setLocalDescription(offer);
+            }
 
             socket.emit('offer', { offer, receiverId, sender: user, isVideo });
 
@@ -106,7 +99,7 @@ export const useWebRTC = ({
                 sender: null,
                 offer: offer,
             });
-        } catch (error) {
+        } catch (error: any) {
             if (error.name === 'NotFoundError') {
                 alert('No camera or microphone found!');
             }
@@ -118,9 +111,12 @@ export const useWebRTC = ({
         try {
             if (!callState.offer) return;
 
-            await peer.current.setRemoteDescription(
-                new RTCSessionDescription(callState.offer),
-            );
+            if (peer.current) {
+                await peer.current.setRemoteDescription(
+                    new RTCSessionDescription(callState.offer),
+                );
+            }
+
             await flushCandidateQueue(); // Flush queued ICE candidates
 
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -131,13 +127,19 @@ export const useWebRTC = ({
             setLocalStream(stream);
             localStreamRef.current = stream;
 
-            stream
-                .getTracks()
-                .forEach((track) => peer.current.addTrack(track, stream));
+            stream.getTracks().forEach((track) => {
+                if (peer.current) {
+                    peer.current.addTrack(track, stream);
+                }
+            });
 
-            const answer = await peer.current.createAnswer();
-            await peer.current.setLocalDescription(answer);
-            socket.emit('answer', { answer, receiverId: callState.sender.id });
+            let answer: RTCSessionDescriptionInit | null = null;
+            if (peer.current) {
+                answer = await peer.current.createAnswer();
+                await peer.current.setLocalDescription(answer);
+            }
+
+            socket.emit('answer', { answer, receiverId: callState.sender?.id });
 
             // Reset incoming call and mark as in a call
             setCallState((prev) => ({
@@ -156,7 +158,7 @@ export const useWebRTC = ({
     const rejectCall = () => {
         try {
             socket.emit('call-rejected', {
-                receiverId: callState.sender.id as string,
+                receiverId: callState.sender?.id,
             });
 
             setCallState({
@@ -208,7 +210,7 @@ export const useWebRTC = ({
         try {
             for (const candidate of candidateQueue.current) {
                 try {
-                    await peer.current.addIceCandidate(
+                    await peer.current?.addIceCandidate(
                         new RTCIceCandidate(candidate),
                     );
                 } catch (err) {
@@ -239,7 +241,7 @@ export const useWebRTC = ({
             // Receive WebRTC Offer
             socket.on('offer', async ({ offer, sender, isVideo }) => {
                 createPeerConnection();
-                await peer.current.setRemoteDescription(
+                await peer.current?.setRemoteDescription(
                     new RTCSessionDescription(offer),
                 ); // Process immediately
                 await flushCandidateQueue(); // Flush ICE candidates
@@ -256,7 +258,7 @@ export const useWebRTC = ({
 
             socket.on('answer', async ({ answer }) => {
                 try {
-                    await peer.current.setRemoteDescription(
+                    await peer.current?.setRemoteDescription(
                         new RTCSessionDescription(answer),
                     );
 
@@ -277,7 +279,7 @@ export const useWebRTC = ({
             socket.on('ice-candidate', async ({ candidate }) => {
                 // Check if remote description is set
                 if (
-                    peer.current.remoteDescription &&
+                    peer.current?.remoteDescription &&
                     peer.current.remoteDescription.type
                 ) {
                     try {
