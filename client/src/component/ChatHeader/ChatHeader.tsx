@@ -1,31 +1,7 @@
 import React from 'react';
 import { FaPhoneAlt } from 'react-icons/fa';
 import { IoIosVideocam, IoMdMore } from 'react-icons/io';
-
-type Conversation = {
-    isGroup: boolean;
-    avatar: string;
-    title: string;
-};
-
-type Receiver = {
-    id: string;
-    avatar: string;
-    firstName: string;
-    lastName: string;
-};
-
-type UserStatus = {
-    onlineUsers: Record<string, boolean>;
-    lastSeen: Record<string, string>;
-};
-
-type ChatHeaderProps = {
-    conversation: Conversation;
-    userStatus: UserStatus;
-    receiver: Receiver;
-    startCall: (video?: boolean) => void;
-};
+import { ChatHeaderProps } from './chatHeader.types';
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
     conversation,

@@ -12,7 +12,7 @@ import {
     UseChatMessagesProps,
     ChatState,
     ConversationParticipant,
-} from '../types/chatMessages.types';
+} from '../types/useChatMessages.types';
 
 export const useChatMessages = ({
     conversationId,
@@ -58,8 +58,6 @@ export const useChatMessages = ({
             const receiver =
                 convParticipants.find((user) => user.userId !== userId)?.user ||
                 null;
-
-            console.log({ convParticipants });
 
             const messages = await getMessagesFromIndexedDB(conversationId);
 
@@ -209,7 +207,7 @@ export const useChatMessages = ({
                     if (participant.userId === userId) {
                         return null;
                     }
-                    
+
                     for (let i = chatState.messages.length - 1; i >= 0; i--) {
                         const user = chatState.messages[i]?.statuses?.find(
                             (status: {
@@ -385,63 +383,63 @@ export const useChatMessages = ({
             },
         );
 
-        socket.on('new-group-message', (data) => {
-            messageSoundRef.current
-                .play()
-                .catch((error) => console.error('Audio play error:', error));
+        // socket.on('new-group-message', (data) => {
+        //     messageSoundRef.current
+        //         .play()
+        //         .catch((error) => console.error('Audio play error:', error));
 
-            if (data.conversationId === conversationIdRef.current) {
-                setChatState((prevState) => ({
-                    ...prevState,
-                    encryptedMessages: [...prevState.encryptedMessages, data],
-                }));
+        //     if (data.conversationId === conversationIdRef.current) {
+        //         setChatState((prevState) => ({
+        //             ...prevState,
+        //             encryptedMessages: [...prevState.encryptedMessages, data],
+        //         }));
 
-                socket.emit('group-message-seen', {
-                    senderId: data.senderId,
-                    messageId: data.messageId,
-                    conversationId: data.conversationId,
-                });
-            }
-        });
+        //         socket.emit('group-message-seen', {
+        //             senderId: data.senderId,
+        //             messageId: data.messageId,
+        //             conversationId: data.conversationId,
+        //         });
+        //     }
+        // });
 
-        socket.on(
-            'group-message-status-update',
-            ({ messageId, userId, status }) => {
-                setChatState((prevState) => {
-                    const updatedMessages = [...prevState.messages];
-                    const messageIndex = updatedMessages.findLastIndex(
-                        (msg) =>
-                            msg.status === MessageStatus.SENDING ||
-                            msg.id === messageId,
-                    );
+        // socket.on(
+        //     'group-message-status-update',
+        //     ({ messageId, userId, status }) => {
+        //         setChatState((prevState) => {
+        //             const updatedMessages = [...prevState.messages];
+        //             const messageIndex = updatedMessages.findLastIndex(
+        //                 (msg) =>
+        //                     msg.status === MessageStatus.SENDING ||
+        //                     msg.id === messageId,
+        //             );
 
-                    if (messageIndex === -1) return prevState;
-                    const message = updatedMessages[messageIndex];
+        //             if (messageIndex === -1) return prevState;
+        //             const message = updatedMessages[messageIndex];
 
-                    if (status === MessageStatus.SEEN) {
-                        message.statuses = message.statuses || [];
-                        message.status = null;
+        //             if (status === MessageStatus.SEEN) {
+        //                 message.statuses = message.statuses || [];
+        //                 message.status = null;
 
-                        const statusIndex = message.statuses.findIndex(
-                            (s) => s.userId === userId,
-                        );
-                        if (statusIndex === -1) {
-                            message.statuses.push({ userId, status });
-                        } else {
-                            message.statuses[statusIndex].status = status;
-                        }
-                    } else {
-                        updatedMessages[messageIndex] = {
-                            ...message,
-                            status,
-                            id: messageId,
-                        };
-                    }
+        //                 const statusIndex = message.statuses.findIndex(
+        //                     (s) => s.userId === userId,
+        //                 );
+        //                 if (statusIndex === -1) {
+        //                     message.statuses.push({ userId, status });
+        //                 } else {
+        //                     message.statuses[statusIndex].status = status;
+        //                 }
+        //             } else {
+        //                 updatedMessages[messageIndex] = {
+        //                     ...message,
+        //                     status,
+        //                     id: messageId,
+        //                 };
+        //             }
 
-                    return { ...prevState, messages: updatedMessages };
-                });
-            },
-        );
+        //             return { ...prevState, messages: updatedMessages };
+        //         });
+        //     },
+        // );
 
         return () => {
             socket.off('new-private-message');

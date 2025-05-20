@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Chat from './pages/Chat';
-import { ProtectedRoute } from './component/ProtectedRoute';
+import { ProtectedRoute } from './component/ProtectedRoute/ProtectedRoute';
 import { Routes, Route } from 'react-router-dom';
 import ChatRouter from './pages/ChatRouter';
 import socket from './utils/socket';
