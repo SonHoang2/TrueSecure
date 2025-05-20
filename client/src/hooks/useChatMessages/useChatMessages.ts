@@ -10,9 +10,9 @@ import { getGroupKey } from '../../services/encryptionService';
 import { MessageStatus } from '../../enums/messageStatus.enum';
 import {
     UseChatMessagesProps,
-    ChatState,
-    ConversationParticipant,
 } from './useChatMessages.types';
+import { ChatState } from '../../types/chats.types';
+import { ConversationParticipant } from '../../types/conversations.types';
 
 export const useChatMessages = ({
     conversationId,
