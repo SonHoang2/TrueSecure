@@ -1,13 +1,14 @@
-import React, { useRef, useEffect } from 'react';
-import { MdClose, MdCall } from 'react-icons/md';
+import { useRef, useEffect } from 'react';
+import { MdClose } from 'react-icons/md';
+import { OutgoingCallModalProps } from './OutgoingCallModal.types';
 
-const OutgoingCallModal = ({
+const OutgoingCallModal: React.FC<OutgoingCallModalProps> = ({
     onEndCall,
     receiver,
     isVideoCall,
     localStream,
 }) => {
-    const localRef = useRef(null);
+    const localRef = useRef<HTMLVideoElement | null>(null);
 
     useEffect(() => {
         // Connect the local stream to the video element when available

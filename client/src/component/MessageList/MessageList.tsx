@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { MessageStatus } from '../../enums/messageStatus.enum';
+import { MessageListProps } from './MessageList.types';
 
-export const MessageList = ({
+export const MessageList: React.FC<MessageListProps> = ({
     messages,
     userId,
     conversation,
@@ -9,10 +10,10 @@ export const MessageList = ({
     receiver,
     convParticipants,
 }) => {
-    const messagesEndRef = useRef(null);
+    const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
     const scrollToBottom = () => {
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     useEffect(() => {
@@ -36,9 +37,12 @@ export const MessageList = ({
 
                 const avatar = otherUser?.avatar;
 
-                const statuses = isGroup
-                    ? lastSeenStatus.filter((item) => item.messageId === msg.id)
-                    : [];
+                const statuses =
+                    isGroup && Array.isArray(lastSeenStatus)
+                        ? lastSeenStatus.filter(
+                              (item) => item.messageId === msg.id,
+                          )
+                        : [];
 
                 return (
                     <div key={index} className="flex flex-col">
@@ -98,7 +102,8 @@ export const MessageList = ({
                                           />
                                       </div>
                                   ))
-                                : lastSeenStatus?.id === msg.id && (
+                                : !Array.isArray(lastSeenStatus) &&
+                                  lastSeenStatus?.id === msg.id && (
                                       <div className="flex pe-1 items-end">
                                           <img
                                               className="size-4 rounded-full"

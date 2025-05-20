@@ -1,7 +1,11 @@
-import React from 'react';
 import { MdClose, MdCall } from 'react-icons/md';
+import { IncomingCallModalProps } from './IncomingCallModal.types';
 
-export const IncomingCallModal = ({ onReject, onAccept, sender }) => {
+export const IncomingCallModal = ({
+    onReject,
+    onAccept,
+    sender,
+}: IncomingCallModalProps) => {
     return (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-md">
             <div className="relative bg-white p-6 rounded-2xl shadow-xl w-80 text-center animate-fade-in">

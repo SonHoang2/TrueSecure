@@ -7,7 +7,7 @@ import { FaEdit, FaSearch } from 'react-icons/fa';
 
 import useAxiosPrivate from '../../hooks/useAxiosPrivate';
 import { MdClose } from 'react-icons/md';
-import { ChatLeftPanelProps } from './chatLeftPanel.types';
+import { ChatLeftPanelProps } from './ChatLeftPanel.types';
 
 export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
     chatState,

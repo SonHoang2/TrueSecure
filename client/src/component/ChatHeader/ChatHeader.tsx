@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaPhoneAlt } from 'react-icons/fa';
 import { IoIosVideocam, IoMdMore } from 'react-icons/io';
-import { ChatHeaderProps } from './chatHeader.types';
+import { ChatHeaderProps } from './ChatHeader.types';
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
     conversation,
