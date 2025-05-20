@@ -1,15 +1,19 @@
-import { MessageStatus } from "../enums/messageStatus.enum";
+import { MessageStatus } from '../enums/messageStatus.enum';
 
-const openDatabase = () => {
+const openDatabase = (): Promise<IDBDatabase> => {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open('chatAppDB', 1);
 
         request.onerror = (event) =>
-            reject('Error opening IndexedDB: ' + event.target.errorCode);
-        request.onsuccess = (event) => resolve(event.target.result);
+            reject(
+                'Error opening IndexedDB: ' +
+                    (event.target as IDBOpenDBRequest).error,
+            );
+        request.onsuccess = (event) =>
+            resolve((event.target as IDBOpenDBRequest).result);
 
         request.onupgradeneeded = (event) => {
-            const db = event.target.result;
+            const db = (event.target as IDBOpenDBRequest).result;
 
             if (!db.objectStoreNames.contains('messages')) {
                 const objectStore = db.createObjectStore('messages', {
@@ -25,6 +29,12 @@ const openDatabase = () => {
                 objectStore.createIndex('createdAt', 'createdAt', {
                     unique: false,
                 });
+                // Add this compound index:
+                objectStore.createIndex(
+                    'conversationId_createdAt',
+                    ['conversationId', 'createdAt'],
+                    { unique: false },
+                );
             }
         };
     });
@@ -85,8 +95,6 @@ export const storeMessagesInIndexedDB = async ({
             status,
         };
 
-        console.log('Storing message in IndexedDB:', messageData);
-
         store.put(messageData);
 
         tx.oncomplete = () => {
@@ -94,7 +102,10 @@ export const storeMessagesInIndexedDB = async ({
         };
 
         tx.onerror = (event) => {
-            console.error('Failed to store message:', event.target.error);
+            console.error(
+                'Failed to store message:',
+                (event.target as IDBTransaction).error,
+            );
         };
     } catch (err) {
         console.error('IndexedDB error:', err);
@@ -108,22 +119,33 @@ export const getMessagesFromIndexedDB = async (
         const db = await openDatabase();
         const tx = db.transaction('messages', 'readonly');
         const store = tx.objectStore('messages');
-        const index = store.index('conversationId');
+        const index = store.index('conversationId_createdAt');
 
-        const messages = await new Promise<any[]>((resolve, reject) => {
-            const request = index.getAll(IDBKeyRange.only(conversationId));
+        const messages: any[] = [];
+
+        return await new Promise<any[]>((resolve, reject) => {
+            // Lower and upper bound for the compound index
+            const range = IDBKeyRange.bound(
+                [conversationId, ''],
+                [conversationId, '\uffff'],
+            );
+            const request = index.openCursor(range, 'next'); // Ascending order
 
             request.onsuccess = (event) => {
-                resolve(event.target.result);
+                const cursor = (event.target as IDBRequest<IDBCursorWithValue>)
+                    .result;
+                if (cursor) {
+                    messages.push(cursor.value);
+                    cursor.continue();
+                } else {
+                    resolve(messages); // Already sorted by createdAt
+                }
             };
 
             request.onerror = (event) => {
-                reject(event.target.error);
+                reject((event.target as IDBRequest).error);
             };
         });
-
-        console.log('Messages retrieved from IndexedDB:', messages);
-        return messages;
     } catch (err) {
         console.error('IndexedDB error:', err);
         return [];
