@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Chat from './pages/Chat';
 import { ProtectedRoute } from './component/ProtectedRoute/ProtectedRoute';
 import { Routes, Route } from 'react-router-dom';

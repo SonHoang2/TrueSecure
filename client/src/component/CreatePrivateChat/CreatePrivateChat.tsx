@@ -4,7 +4,7 @@ import { FaArrowLeft, FaSearch } from 'react-icons/fa';
 import debounce from '../../utils/debounce';
 import useAxiosPrivate from '../../hooks/useAxiosPrivate';
 import { User } from '../../types/users.types';
-import { CreatePrivateChatProps } from './createPrivateChat.types';
+import { CreatePrivateChatProps } from './CreatePrivateChat.types';
 
 export const CreatePrivateChat: React.FC<CreatePrivateChatProps> = ({
     setCreateChat,

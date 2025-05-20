@@ -1,4 +1,4 @@
-import { Receiver } from './users.types';
+import { Receiver } from "../../types/users.types";
 
 export type InCallModalProps = {
     localStream: MediaStream | null;

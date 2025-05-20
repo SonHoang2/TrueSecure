@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { InCallModalProps } from './incallModal.types';
+import { InCallModalProps } from './IncallModal.types';
 
 const InCallModal: React.FC<InCallModalProps> = ({
     localStream,
@@ -8,8 +8,8 @@ const InCallModal: React.FC<InCallModalProps> = ({
     isVideoCall,
     receiver,
 }) => {
-    const localRef = useRef();
-    const remoteRef = useRef();
+    const localRef = useRef<any>(null);
+    const remoteRef = useRef<any>(null);
 
     useEffect(() => {
         if (localRef.current) {

@@ -1,18 +1,18 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import * as cryptoUtils from '../utils/cryptoUtils';
-import { CONVERSATIONS_URL } from '../config/config';
+import * as cryptoUtils from '../../utils/cryptoUtils';
+import { CONVERSATIONS_URL } from '../../config/config';
 import {
     getMessagesFromIndexedDB,
     storeMessagesInIndexedDB,
-} from '../utils/indexedDB';
+} from '../../utils/indexedDB';
 import { v4 as uuidv4 } from 'uuid';
-import { getGroupKey } from '../services/encryptionService';
-import { MessageStatus } from '../enums/messageStatus.enum';
+import { getGroupKey } from '../../services/encryptionService';
+import { MessageStatus } from '../../enums/messageStatus.enum';
 import {
     UseChatMessagesProps,
     ChatState,
     ConversationParticipant,
-} from '../types/useChatMessages.types';
+} from './useChatMessages.types';
 
 export const useChatMessages = ({
     conversationId,

@@ -1,4 +1,4 @@
-import { ChatState } from '../../types/useChatMessages.types';
+import { ChatState } from "../../types/chats.types";
 import { User, UserStatus } from '../../types/users.types';
 
 export type ChatLeftPanelProps = {
