@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CONVERSATIONS_URL } from '../config/config';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth/useAuth';
 import { ChatLeftPanel } from '../component/ChatLeftPanel/ChatLeftPanel';
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
 import SidebarNavigation from '../component/SidebarNavigation/SidebarNavigation';

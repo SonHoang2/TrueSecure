@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import socket from '../utils/socket';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth/useAuth';
 import ChatLeftPanel from '../component/ChatLeftPanel/ChatLeftPanel';
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
 import { MessageList } from '../component/MessageList/MessageList';

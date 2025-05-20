@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth/useAuth';
 import { Routes } from '../enums/routes.enum';
 import { FaEye } from 'react-icons/fa';
 import { IoIosEyeOff } from 'react-icons/io';

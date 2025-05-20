@@ -11,6 +11,7 @@ export type User = {
     publicKey: string | null;
     passwordResetToken: string | null;
     passwordResetExpires: Date | null;
+    role: string;
 };
 
 export type UserKeys = {

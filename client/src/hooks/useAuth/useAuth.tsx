@@ -5,30 +5,21 @@ import {
     CLIENT_URL,
     USERS_URL,
     GOOGLE_CLIENT_ID,
-} from '../config/config';
+} from '../../config/config';
 import queryString from 'query-string';
-import axios, { axiosPrivate } from '../api/axios';
-
-interface AuthContextType {
-    user: any; // Replace `any` with a specific type if you know the user structure
-    login: (credentials: { email: string; password: string }) => Promise<void>;
-    signup: (credentials: {
-        email: string;
-        password: string;
-        passwordConfirm: string;
-        firstName: string;
-        lastName: string;
-    }) => Promise<void>;
-    logout: () => Promise<void>;
-    getGoogleCode: () => void;
-    sendGoogleCode: (code: string) => Promise<void>;
-    refreshTokens: () => Promise<void>;
-}
+import axios, { axiosPrivate } from '../../api/axios';
+import {
+    AuthContextType,
+    AuthProviderProps,
+    LoginCredentials,
+    SignupCredentials,
+} from './useAuth.types';
+import { User } from '../../types/users.types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(() => {
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+    const [user, setUser] = useState<User | null>(() => {
         const savedUser = localStorage.getItem('user');
         return savedUser ? JSON.parse(savedUser) : null;
     });
@@ -60,7 +51,7 @@ export const AuthProvider = ({ children }) => {
         passwordConfirm,
         firstName,
         lastName,
-    }) => {
+    }: SignupCredentials) => {
         const res = await axiosPrivate.post(AUTH_URL + '/signup', {
             email,
             password,
@@ -74,7 +65,7 @@ export const AuthProvider = ({ children }) => {
         navigate('/');
     };
 
-    const login = async ({ email, password }) => {
+    const login = async ({ email, password }: LoginCredentials) => {
         const res = await axiosPrivate.post(AUTH_URL + '/login', {
             email,
             password,
@@ -106,7 +97,7 @@ export const AuthProvider = ({ children }) => {
         window.location.href = url;
     };
 
-    const sendGoogleCode = async (code) => {
+    const sendGoogleCode = async (code: string) => {
         const URL = AUTH_URL + `/login/google`;
         const res = await axiosPrivate.post(URL, {
             code,

@@ -6,7 +6,7 @@ import ChatRouter from './pages/ChatRouter';
 import socket from './utils/socket';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import { useAuth } from './hooks/useAuth';
+import { useAuth } from './hooks/useAuth/useAuth';
 import useAxiosPrivate from './hooks/useAxiosPrivate';
 import { EncryptionProvider } from './contexts/EncryptionContext';
 
