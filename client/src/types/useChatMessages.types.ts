@@ -33,4 +33,3 @@ export type ChatState = {
     conversations: any[];
     conversation: Conversation;
 };
-

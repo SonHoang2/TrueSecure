@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { MessageStatus } from '../enums/messageStatus.enum';
+import { MessageStatus } from '../../enums/messageStatus.enum';
 
 export const MessageList = ({
     messages,

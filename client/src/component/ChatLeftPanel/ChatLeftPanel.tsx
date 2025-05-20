@@ -1,20 +1,13 @@
-import { USERS_URL } from '../config/config';
+import { USERS_URL } from '../../config/config';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import CreateGroupChat from './CreateGroupChat';
-import CreatePrivateChat from './CreatePrivateChat';
+import { useState } from 'react';
+import CreateGroupChat from '../CreateGroupChat/CreateGroupChat';
+import CreatePrivateChat from '../CreatePrivateChat/CreatePrivateChat';
 import { FaEdit, FaSearch } from 'react-icons/fa';
 
-import useAxiosPrivate from '../hooks/useAxiosPrivate';
+import useAxiosPrivate from '../../hooks/useAxiosPrivate';
 import { MdClose } from 'react-icons/md';
-
-type ChatLeftPanelProps = {
-    chatState: any; // Replace 'any' with your actual chat state type if available
-    user: any;
-    userStatus: any;
-    conversationId: string;
-    setChatState: React.Dispatch<React.SetStateAction<any>>; // Update type if you have a specific state type
-};
+import { ChatLeftPanelProps } from './chatLeftPanel.types';
 
 export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
     chatState,

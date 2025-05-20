@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
+import { InCallModalProps } from './incallModal.types';
 
-const InCallModal = ({
+const InCallModal: React.FC<InCallModalProps> = ({
     localStream,
     remoteStream,
     onEndCall,

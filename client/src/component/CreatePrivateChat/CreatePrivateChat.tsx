@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { CONVERSATIONS_URL } from '../config/config';
+import { CONVERSATIONS_URL } from '../../config/config';
 import { FaArrowLeft, FaSearch } from 'react-icons/fa';
-import debounce from '../utils/debounce';
-import useAxiosPrivate from '../hooks/useAxiosPrivate';
+import debounce from '../../utils/debounce';
+import useAxiosPrivate from '../../hooks/useAxiosPrivate';
+import { User } from '../../types/users.types';
+import { CreatePrivateChatProps } from './createPrivateChat.types';
 
-export const CreatePrivateChat = ({
-    users,
+export const CreatePrivateChat: React.FC<CreatePrivateChatProps> = ({
     setCreateChat,
     onSearch,
     setChatState,
@@ -15,11 +16,14 @@ export const CreatePrivateChat = ({
 
     const axiosPrivate = useAxiosPrivate();
 
-    const handleSearch = (e) => {
+    const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
     };
 
-    const handleSubmit = async (e, userId) => {
+    const handleSubmit = async (
+        e: React.MouseEvent<HTMLButtonElement>,
+        userId: number,
+    ) => {
         try {
             e.preventDefault();
 
@@ -89,7 +93,7 @@ export const CreatePrivateChat = ({
             <div className="mb-4">
                 <div className="py-3">
                     {filteredUsers?.length > 0 ? (
-                        filteredUsers?.map((user) => (
+                        filteredUsers?.map((user: User) => (
                             <button
                                 key={user.id}
                                 className="w-full flex items-center space-x-3 p-3 hover:bg-neutral-50 rounded-lg transition-colors duration-200"

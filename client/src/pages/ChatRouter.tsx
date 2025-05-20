@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { CONVERSATIONS_URL } from '../config/config';
 import { useAuth } from '../hooks/useAuth';
-import { ChatLeftPanel } from '../component/ChatLeftPanel';
+import { ChatLeftPanel } from '../component/ChatLeftPanel/ChatLeftPanel';
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
-import SidebarNavigation from '../component/SidebarNavigation';
+import SidebarNavigation from '../component/SidebarNavigation/SidebarNavigation';
 
 const ChatRouter = ({ userStatus }) => {
     const [chatState, setChatState] = useState({
