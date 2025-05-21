@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Conversation } from './conversation.entity';
-import { Role } from 'src/common/enum/roles.enum';
+import { ChatGroupRole } from 'src/common/enum/chat-role.enum';
 
 @Entity('conv_participant')
 @Unique(['userId', 'conversationId'])
@@ -24,10 +24,10 @@ export class ConvParticipant {
 
     @Column({
         type: 'enum',
-        enum: Role,
-        default: Role.MEMBER,
+        enum: ChatGroupRole,
+        default: ChatGroupRole.MEMBER,
     })
-    role: Role;
+    role: ChatGroupRole;
 
     @Column({
         nullable: true,
