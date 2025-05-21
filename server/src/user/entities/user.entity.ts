@@ -11,6 +11,7 @@ import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 // import { ConvParticipant } from '../../conversation/entities/conv-participant.entity';
 import { BadRequestException } from '@nestjs/common';
+import { AppRole } from 'src/common/enum/roles.enum';
 
 @Entity('users')
 export class User {
@@ -49,6 +50,13 @@ export class User {
 
     @Column({ nullable: true })
     passwordResetExpires: Date;
+
+    @Column({
+        type: 'enum',
+        enum: AppRole,
+        default: AppRole.USER,
+    })
+    role: AppRole;
 
     // Relationships
     // @OneToMany(() => ConvParticipant, (participant) => participant.user)

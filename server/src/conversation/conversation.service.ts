@@ -10,8 +10,8 @@ import { CreateConversationDto } from './dto/create-conversation.dto';
 import { Conversation } from './entities/conversation.entity';
 import { ConvParticipant } from './entities/convParticipant.entity';
 import { CreateGroupKeyDto } from './dto/create-group-key.dto';
-import { Role } from 'src/common/enum/roles.enum';
 import { UserService } from 'src/user/user.service';
+import { ChatGroupRole } from 'src/common/enum/chat-role.enum';
 
 @Injectable()
 export class ConversationService {
@@ -102,10 +102,10 @@ export class ConversationService {
             await this.conversationRepo.save(conversation);
 
             for (const userId of users) {
-                let role = Role.MEMBER;
+                let role = ChatGroupRole.MEMBER;
 
                 if (userId === currentUserId && users.length > 2) {
-                    role = Role.ADMIN;
+                    role = ChatGroupRole.ADMIN;
                 }
 
                 const participant = this.convParticipantRepo.create({
