@@ -9,6 +9,7 @@ import Signup from './pages/Signup';
 import { useAuth } from './hooks/useAuth/useAuth';
 import useAxiosPrivate from './hooks/useAxiosPrivate';
 import { EncryptionProvider } from './contexts/EncryptionContext';
+import { AppRole } from './enums/roles.enum';
 
 const App = () => {
     const [userStatus, setUserStatus] = useState({
@@ -53,7 +54,7 @@ const App = () => {
                         userId={user?.id}
                         axiosPrivate={axiosPrivate}
                     >
-                        <ProtectedRoute />
+                        <ProtectedRoute allowedRole={AppRole.USER} />
                     </EncryptionProvider>
                 }
             >
