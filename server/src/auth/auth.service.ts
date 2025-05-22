@@ -180,6 +180,14 @@ export class AuthService {
             }
         }
 
+        const user = await this.userService.findActiveById(+userId);
+
+        if (!user) {
+            throw new UnauthorizedException(
+                'User does not exist or is inactive',
+            );
+        }
+
         // Delete the old token
         await this.redisService.deleteRefreshToken(refreshToken);
         await this.redisService.removeUserToken(userId, refreshToken);
