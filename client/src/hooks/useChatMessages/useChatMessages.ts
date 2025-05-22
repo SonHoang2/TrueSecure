@@ -8,9 +8,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { getGroupKey } from '../../services/encryptionService';
 import { MessageStatus } from '../../enums/messageStatus.enum';
-import {
-    UseChatMessagesProps,
-} from './useChatMessages.types';
+import { UseChatMessagesProps } from './useChatMessages.types';
 import { ChatState } from '../../types/chats.types';
 import { ConversationParticipant } from '../../types/conversations.types';
 
@@ -255,27 +253,40 @@ export const useChatMessages = ({
                     createdAt: string;
                     status: MessageStatus;
                 },
-                ackCallback: (ack: boolean) => void,
+                ackCallback?: (ack: boolean) => void,
             ) => {
                 try {
-                    // messageSoundRef.current.play().catch((error) =>
-                    //     console.error("Audio play error:", error)
-                    // );
                     if (!userKeys.privateKey) {
-                        throw new Error('Private key is not available!');
+                        throw new Error('Private key is not available');
                     }
 
-                    if (data.conversationId === conversationIdRef.current) {
-                        const decryptedMessage =
-                            await cryptoUtils.decryptPrivateMessage(
-                                userKeys.privateKey,
-                                {
-                                    content: data.content,
-                                    iv: data.iv,
-                                    ephemeralPublicKey: data.ephemeralPublicKey,
-                                },
-                            );
+                    const decryptedMessage =
+                        await cryptoUtils.decryptPrivateMessage(
+                            userKeys.privateKey,
+                            {
+                                content: data.content,
+                                iv: data.iv,
+                                ephemeralPublicKey: data.ephemeralPublicKey,
+                            },
+                        );
 
+                    if (!decryptedMessage) {
+                        throw new Error('Decryption failed');
+                    }
+
+                    await storeMessagesInIndexedDB({
+                        messageId: data.messageId,
+                        senderId: data.senderId,
+                        conversationId: data.conversationId,
+                        content: decryptedMessage,
+                        createdAt: data.createdAt,
+                        status: data.status,
+                    });
+
+                    // Only update UI if the message belongs to the current conversation
+                    const isCurrentConversation =
+                        data.conversationId === conversationIdRef.current;
+                    if (isCurrentConversation) {
                         const message = {
                             ...data,
                             content: decryptedMessage,
@@ -283,62 +294,26 @@ export const useChatMessages = ({
                             ephemeralPublicKey: null,
                         };
 
-                        setChatState((prevState) => ({
-                            ...prevState,
-                            messages: [...prevState.messages, message],
+                        setChatState((prev) => ({
+                            ...prev,
+                            messages: [...prev.messages, message],
                         }));
-
-                        await storeMessagesInIndexedDB({
-                            messageId: data.messageId,
-                            senderId: data.senderId,
-                            conversationId: data.conversationId,
-                            content: decryptedMessage,
-                            createdAt: data.createdAt,
-                            status: data.status,
-                        });
 
                         socket.emit('private-message-seen', {
                             senderId: data.senderId,
                             messageId: data.messageId,
                             conversationId: data.conversationId,
                         });
-                    } else {
-                        const decryptedMessage =
-                            await cryptoUtils.decryptPrivateMessage(
-                                userKeys.privateKey,
-                                {
-                                    content: data.content,
-                                    iv: data.iv,
-                                    ephemeralPublicKey: data.ephemeralPublicKey,
-                                },
-                            );
-
-                        if (!decryptedMessage) {
-                            throw new Error('Decryption failed');
-                        }
-
-                        await storeMessagesInIndexedDB({
-                            messageId: data.messageId,
-                            senderId: data.senderId,
-                            conversationId: data.conversationId,
-                            content: decryptedMessage,
-                            createdAt: data.createdAt,
-                            status: data.status,
-                        });
-
-                        // socket.emit("private-message-delivered", {
-                        //     senderId: data.senderId,
-                        //     messageId: data.messageId,
-                        //     conversationId: data.conversationId,
-                        // })
                     }
 
-                    console.log('I acknowledge the message');
-                    ackCallback(true);
+                    ackCallback?.(true);
                 } catch (error) {
-                    console.error(error);
-                    console.error('I not acknowledge the message');
-                    ackCallback(false);
+                    console.error(
+                        'Failed to process new-private-message:',
+                        error,
+                        data,
+                    );
+                    ackCallback?.(true); // Acknowledge even on error to prevent retries
                 }
             },
         );
