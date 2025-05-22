@@ -1,5 +1,5 @@
-import { Role } from "../../enums/role.enum";
+import { AppRole } from '../../enums/roles.enum';
 
 export interface ProtectedRouteProps {
-    allowedRole: Role;
+    allowedRole: AppRole;
 }
