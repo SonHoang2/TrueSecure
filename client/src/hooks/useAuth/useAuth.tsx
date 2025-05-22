@@ -28,15 +28,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     const refreshTokens = async () => {
         try {
+            if (!user) {
+                throw new Error('not logged in');
+            }
             await axios.get(AUTH_URL + '/refresh', { withCredentials: true });
-            console.log('Token Refreshed');
 
             const res = await axiosPrivate.get(USERS_URL + '/me');
-            const { user } = res.data.data;
 
-            if (user) {
-                setUser(user);
-                localStorage.setItem('user', JSON.stringify(user));
+            const refreshedUser = res.data.data.user;
+
+            if (refreshedUser) {
+                setUser(refreshedUser);
+                localStorage.setItem('user', JSON.stringify(refreshedUser));
             }
         } catch (error) {
             console.log('Token Refresh Failed', error);

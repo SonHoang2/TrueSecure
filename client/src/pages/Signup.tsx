@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { FaEye } from 'react-icons/fa';
 import { IoIosEyeOff } from 'react-icons/io';
 import { Routes } from '../enums/routes.enum';
+import { AxiosError } from 'axios';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 export default function Signup() {
     const [formData, setFormData] = useState({
@@ -30,8 +32,9 @@ export default function Signup() {
         try {
             await signup(formData);
         } catch (err) {
-            setError(err.message);
-            console.error(err);
+            let message = extractErrorMessage(err, "Signup failed")
+            setError(message);
+            console.log(err);
         }
     };
 
@@ -76,7 +79,7 @@ export default function Signup() {
         <div
             className="h-screen flex justify-center items-center"
             style={{
-                backgroundImage: `url('/img/background.png')`,
+                backgroundImage: `url('/assets/img/background.png')`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',

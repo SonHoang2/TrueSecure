@@ -2,36 +2,45 @@ import { useEffect, useRef } from 'react';
 import { axiosPrivate } from '../api/axios';
 import { useAuth } from './useAuth/useAuth';
 
+let refreshPromise: Promise<void> | null = null;
+
 const useAxiosPrivate = () => {
     const { refreshTokens } = useAuth();
-    const debounceTimeout = useRef(null); // Reference for debounce timeout
+    const debounceTimeout = useRef(null);
 
     useEffect(() => {
         const responseIntercept = axiosPrivate.interceptors.response.use(
             (response) => response,
             async (error) => {
                 const prevRequest = error?.config;
-                if (error?.response?.status === 401 && !prevRequest?.sent) {
+                const isAuthEndpoint =
+                    prevRequest?.url?.includes('/login') ||
+                    prevRequest?.url?.includes('/signup') ||
+                    prevRequest?.url?.includes('/refresh');
+
+                if (
+                    error?.response?.status === 401 &&
+                    !prevRequest?.sent &&
+                    !isAuthEndpoint
+                ) {
                     prevRequest.sent = true;
 
-                    // Debounce logic
-                    if (debounceTimeout.current) {
-                        clearTimeout(debounceTimeout.current); // Clear previous timeout
+                    if (!refreshPromise) {
+                        refreshPromise = (async () => {
+                            try {
+                                await refreshTokens();
+                            } finally {
+                                refreshPromise = null;
+                            }
+                        })();
                     }
 
-                    return new Promise((resolve, reject) => {
-                        debounceTimeout.current = setTimeout(async () => {
-                            try {
-                                console.log(error);
-                                if (error.response.status === 401) {
-                                    await refreshTokens();
-                                }
-                                resolve(axiosPrivate(prevRequest)); // Retry the request
-                            } catch (refreshError) {
-                                reject(refreshError);
-                            }
-                        }, 500); // 500ms debounce duration
-                    });
+                    try {
+                        await refreshPromise;
+                        return axiosPrivate(prevRequest);
+                    } catch (refreshError) {
+                        return Promise.reject(refreshError);
+                    }
                 }
                 return Promise.reject(error);
             },
@@ -40,7 +49,7 @@ const useAxiosPrivate = () => {
         return () => {
             axiosPrivate.interceptors.response.eject(responseIntercept);
             if (debounceTimeout.current) {
-                clearTimeout(debounceTimeout.current); // Clear timeout on unmount
+                clearTimeout(debounceTimeout.current);
             }
         };
     }, []);
