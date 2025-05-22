@@ -115,7 +115,7 @@ export class AuthService {
 
         const newUser = await this.userService.create(userDto);
 
-        this.createSendToken(newUser, res);
+        return this.createSendToken(newUser, res);
     }
 
     async logout(req: Request, res: Response) {

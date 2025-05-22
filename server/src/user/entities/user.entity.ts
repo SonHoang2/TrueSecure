@@ -2,16 +2,14 @@ import {
     Entity,
     PrimaryGeneratedColumn,
     Column,
-    OneToMany,
     BeforeInsert,
     BeforeUpdate,
-    CreateDateColumn,
 } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 // import { ConvParticipant } from '../../conversation/entities/conv-participant.entity';
-import { BadRequestException } from '@nestjs/common';
 import { AppRole } from 'src/common/enum/roles.enum';
+import { DEFAULT_AVATAR_URL } from 'src/common/constants/default-avatar';
 
 @Entity('users')
 export class User {
@@ -30,7 +28,9 @@ export class User {
     @Column({ select: false })
     password: string;
 
-    @Column({ default: 'user-avatar-default.jpg' })
+    @Column({
+        default: DEFAULT_AVATAR_URL,
+    })
     avatar: string;
 
     @Column({ default: false })

@@ -61,6 +61,7 @@ export class UserService {
                 'firstName',
                 'lastName',
                 'avatar',
+                'role',
             ],
         });
     }
