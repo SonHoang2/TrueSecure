@@ -5,6 +5,7 @@ import { Routes } from '../enums/routes.enum';
 import { FaEye } from 'react-icons/fa';
 import { IoIosEyeOff } from 'react-icons/io';
 import queryString from 'query-string';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 export default function Login() {
     const [formData, setFormData] = useState({
@@ -38,7 +39,8 @@ export default function Login() {
             event.preventDefault();
             await login(formData);
         } catch (err) {
-            setError(err.message);
+            let message = extractErrorMessage(err, "Login failed.")
+            setError(message);
             console.log(err);
         }
     };
@@ -52,7 +54,7 @@ export default function Login() {
         <div
             className="h-screen flex justify-center items-center"
             style={{
-                backgroundImage: `url('/img/background.png')`,
+                backgroundImage: `url('/assets/img/background.png')`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
