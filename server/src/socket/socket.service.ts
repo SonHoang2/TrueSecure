@@ -4,6 +4,9 @@ import { SocketCacheService } from './services/socket-cache/socket-cache.service
 import { ConversationService } from 'src/conversation/conversation.service';
 import { MessageStatus } from 'src/common/enum/message-status.enum';
 import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
+import { PrivateMessageDto } from './dto/message/private-message.dto';
+import { GroupMessageDto } from './dto/message/group-message.dto';
+import { GroupMessageSeenDto } from './dto/message/group-message-seen.dto';
 
 @Injectable()
 export class SocketService {
@@ -16,7 +19,7 @@ export class SocketService {
         private readonly rabbitmqService: RabbitmqService,
     ) {}
 
-    async sendPrivateMessage(data: any): Promise<void> {
+    async sendPrivateMessage(data: PrivateMessageDto): Promise<void> {
         const { receiverId, senderId, messageId } = data;
 
         // Notify receiver if online
@@ -44,135 +47,67 @@ export class SocketService {
         );
     }
 
-    // async sendGroupMessage(data: any): Promise<void> {
-    //     try {
-    //         const {
-    //             conversationId,
-    //             senderId,
-    //             content,
-    //             iv,
-    //             messageType = 'text',
-    //         } = data;
+    async sendGroupMessage(data: GroupMessageDto): Promise<void> {
+        try {
+            const { conversationId, senderId } = data;
 
-    //         // Create message in database
-    //         const messageRepository =
-    //             this.conversationService.getMessageRepository();
-    //         const messageStatusRepository =
-    //             this.conversationService.getMessageStatusRepository();
-    //         const convParticipantRepository =
-    //             this.conversationService.getConvParticipantRepository();
+            // Find all participants except sender
+            const participants =
+                await this.conversationService.getOtherParticipantsInConversation(
+                    conversationId,
+                    +senderId,
+                );
 
-    //         // Create message
-    //         const message = messageRepository.create({
-    //             conversationId,
-    //             senderId,
-    //             content,
-    //             messageType,
-    //             iv,
-    //         });
+            // Notify all participants
+            for (const participant of participants) {
+                await this.socketManagerService.emitToUser(
+                    participant.userId,
+                    'new-group-message',
+                    {
+                        ...data,
+                    },
+                );
+            }
 
-    //         await messageRepository.save(message);
+            // Notify sender
+            await this.socketManagerService.emitToUser(
+                senderId,
+                'group-message-status-update',
+                {
+                    messageId: data.messageId,
+                    status: MessageStatus.SENT,
+                },
+            );
+        } catch (error) {
+            this.logger.error(`Error sending group message: ${error.message}`);
+        }
+    }
 
-    //         // Find all participants except sender
-    //         const participants = await convParticipantRepository.find({
-    //             where: {
-    //                 conversationId,
-    //                 userId: Not(senderId),
-    //             },
-    //         });
+    async updateGroupMessageStatus(data: GroupMessageSeenDto): Promise<void> {
+        try {
+            const { messageId, senderId, conversationId } = data;
 
-    //         // Create message status entries for each participant
-    //         const statusMap = new Map();
+            // Notify all participants in the group
+            const participants =
+                await this.conversationService.getAllParticipantsInConversation(
+                    conversationId,
+                );
 
-    //         for (const participant of participants) {
-    //             const status = messageStatusRepository.create({
-    //                 messageId: message.id,
-    //                 userId: participant.userId,
-    //                 status: MessageStatus.SENT,
-    //             });
-
-    //             await messageStatusRepository.save(status);
-    //             statusMap.set(participant.userId, status.id);
-    //         }
-
-    //         // Notify all participants
-    //         for (const participant of participants) {
-    //             await this.socketManagerService.emitToUser(
-    //                 participant.userId,
-    //                 'new-group-message',
-    //                 {
-    //                     ...data,
-    //                     messageId: message.id,
-    //                     messageStatusId: statusMap.get(participant.userId),
-    //                 },
-    //             );
-    //         }
-
-    //         // Notify sender
-    //         await this.socketManagerService.emitToUser(
-    //             senderId,
-    //             'group-message-status-update',
-    //             {
-    //                 messageId: message.id,
-    //                 status: MessageStatus.SENT,
-    //             },
-    //         );
-    //     } catch (error) {
-    //         this.logger.error(`Error sending group message: ${error.message}`);
-    //     }
-    // }
-
-    // async updateGroupMessageStatus(data: any): Promise<void> {
-    //     try {
-    //         const { messageStatusId } = data;
-
-    //         const messageStatusRepository =
-    //             this.conversationService.getMessageStatusRepository();
-    //         const messageRepository =
-    //             this.conversationService.getMessageRepository();
-    //         const convParticipantRepository =
-    //             this.conversationService.getConvParticipantRepository();
-
-    //         // Find and update message status
-    //         const status = await messageStatusRepository.findOne({
-    //             where: { id: messageStatusId },
-    //         });
-
-    //         if (!status) return;
-
-    //         status.status = MessageStatus.SEEN;
-    //         await messageStatusRepository.save(status);
-
-    //         // Find the message
-    //         const message = await messageRepository.findOne({
-    //             where: { id: status.messageId },
-    //         });
-
-    //         if (!message) return;
-
-    //         // Get all conversation participants
-    //         const participants = await convParticipantRepository.find({
-    //             where: { conversationId: message.conversationId },
-    //         });
-
-    //         // Notify all participants about the status update
-    //         const updateData = {
-    //             messageId: message.id,
-    //             userId: status.userId,
-    //             status: MessageStatus.SEEN,
-    //         };
-
-    //         for (const participant of participants) {
-    //             await this.socketManagerService.emitToUser(
-    //                 participant.userId,
-    //                 'group-message-status-update',
-    //                 updateData,
-    //             );
-    //         }
-    //     } catch (error) {
-    //         this.logger.error(
-    //             `Error updating group message status: ${error.message}`,
-    //         );
-    //     }
-    // }
+            for (const participant of participants) {
+                await this.socketManagerService.emitToUser(
+                    participant.userId,
+                    'group-message-status-update',
+                    {
+                        messageId,
+                        status: MessageStatus.SEEN,
+                        userId: senderId,
+                    },
+                );
+            }
+        } catch (error) {
+            this.logger.error(
+                `Error updating group message status: ${error.message}`,
+            );
+        }
+    }
 }

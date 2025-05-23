@@ -42,7 +42,7 @@ export class ConvParticipant {
         () => Conversation,
         (conversation) => conversation.convParticipants,
         {
-            onDelete: 'RESTRICT',
+            onDelete: 'CASCADE',
         },
     )
     @JoinColumn({ name: 'conversationId' })

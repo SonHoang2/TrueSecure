@@ -1,12 +1,10 @@
 import * as cryptoUtils from '../utils/cryptoUtils';
 import { CONVERSATIONS_URL, USERS_URL } from '../config/config';
-import { Role } from '../enums/role.enum';
+import { ChatGroupRole } from '../enums/chat-role.enum';
 
 export const initialize = async (userId, axiosPrivate) => {
     try {
         let privateKey = await cryptoUtils.importPrivateKey(userId);
-
-        console.log('privateKey: ', !privateKey, privateKey);
 
         if (!privateKey) {
             const { privateKey, publicKey } =
@@ -37,7 +35,7 @@ export const getAdminPublicKey = async (convParticipants, axiosPrivate) => {
         }
 
         const adminId = convParticipants.find(
-            (participant) => participant.role === Role.ADMIN,
+            (participant) => participant.role === ChatGroupRole.ADMIN,
         ).userId;
 
         const res = await axiosPrivate.get(
@@ -80,9 +78,17 @@ export const getUserPublicKey = async (userId, axiosPrivate) => {
     }
 };
 
-export const getGroupKey = async (conversationId, axiosPrivate) => {
+export const getGroupKey = async ({
+    conversationId,
+    userKeys,
+    userId,
+    axiosPrivate,
+}) => {
     try {
         const { publicKey, privateKey } = userKeys;
+
+        console.log(publicKey, privateKey);
+        
 
         if (!publicKey || !privateKey) {
             console.error('Public key or private key is missing!');

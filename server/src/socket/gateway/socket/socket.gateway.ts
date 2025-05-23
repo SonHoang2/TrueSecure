@@ -13,10 +13,7 @@ import { UseGuards } from '@nestjs/common';
 import { SocketAuthGuard } from 'src/socket/guards/socket-auth/socket-auth.guard';
 import { SocketManagerService } from 'src/socket/services/socket-manager/socket-manager.service';
 import { SocketService } from 'src/socket/socket.service';
-import {
-    PrivateMessageDto,
-    MessageSeenDto,
-} from '../../dto/message/message.dto';
+
 import {
     OfferDto,
     AnswerDto,
@@ -28,6 +25,10 @@ import { SocketUser } from 'src/socket/interfaces/socket-user.interface';
 import { SocketAuthService } from 'src/socket/services/socket-auth/socket-auth.service';
 import { MessageStatus } from 'src/common/enum/message-status.enum';
 import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
+import { PrivateMessageDto } from 'src/socket/dto/message/private-message.dto';
+import { GroupMessageDto } from 'src/socket/dto/message/group-message.dto';
+import { GroupMessageSeenDto } from 'src/socket/dto/message/group-message-seen.dto';
+import { PrivateMessageSeenDto } from 'src/socket/dto/message/private-message-seen.dto';
 
 @WebSocketGateway({
     cors: {
@@ -168,10 +169,7 @@ export class SocketGateway
     }
 
     @SubscribeMessage('send-private-message')
-    async handlePrivateMessage(
-        @ConnectedSocket() client: SocketUser,
-        @MessageBody() data: PrivateMessageDto,
-    ) {
+    async handlePrivateMessage(@MessageBody() data: PrivateMessageDto) {
         try {
             await this.socketService.sendPrivateMessage(data);
         } catch (error) {
@@ -182,10 +180,7 @@ export class SocketGateway
     }
 
     @SubscribeMessage('private-message-seen')
-    async handlePrivateMessageSeen(
-        @ConnectedSocket() client: SocketUser,
-        @MessageBody() data: MessageSeenDto,
-    ) {
+    async handlePrivateMessageSeen(@MessageBody() data: PrivateMessageSeenDto) {
         try {
             await this.socketManagerService.emitToUser(
                 data.senderId,
@@ -202,29 +197,23 @@ export class SocketGateway
         }
     }
 
-    // @SubscribeMessage('send-group-message')
-    // async handleGroupMessage(
-    //     @ConnectedSocket() client: SocketUser,
-    //     @MessageBody() data: GroupMessageDto,
-    // ) {
-    //     try {
-    //         await this.socketService.sendGroupMessage(data);
-    //     } catch (error) {
-    //         this.logger.error(`Error handling group message: ${error.message}`);
-    //     }
-    // }
+    @SubscribeMessage('send-group-message')
+    async handleGroupMessage(@MessageBody() data: GroupMessageDto) {
+        try {
+            await this.socketService.sendGroupMessage(data);
+        } catch (error) {
+            this.logger.error(`Error handling group message: ${error.message}`);
+        }
+    }
 
-    // @SubscribeMessage('group-message-seen')
-    // async handleGroupMessageSeen(
-    //     @ConnectedSocket() client: SocketUser,
-    //     @MessageBody() data: GroupMessageSeenDto,
-    // ) {
-    //     try {
-    //         await this.socketService.updateGroupMessageStatus(data);
-    //     } catch (error) {
-    //         this.logger.error(
-    //             `Error handling group message seen: ${error.message}`,
-    //         );
-    //     }
-    // }
+    @SubscribeMessage('group-message-seen')
+    async handleGroupMessageSeen(@MessageBody() data: GroupMessageSeenDto) {
+        try {
+            await this.socketService.updateGroupMessageStatus(data);
+        } catch (error) {
+            this.logger.error(
+                `Error handling group message seen: ${error.message}`,
+            );
+        }
+    }
 }
