@@ -18,28 +18,10 @@ import { CreateGroupKeyDto } from './dto/create-group-key.dto';
 export class ConversationController {
     constructor(private readonly conversationService: ConversationService) {}
 
-    @Post()
-    create(
-        @Body() createConversationDto: CreateConversationDto,
-        @Req() req: RequestWithUser,
-    ) {
-        const userId = req.user.id;
-        return this.conversationService.createConversation(
-            createConversationDto,
-            userId,
-        );
-    }
-
     @Get('me')
     findUserConversations(@Req() req: RequestWithUser) {
         const userId = req.user.id;
         return this.conversationService.getUserConversations(userId);
-    }
-
-    @Get(':id')
-    findOne(@Param('id') id: string, @Req() req: RequestWithUser) {
-        const userId = req.user.id;
-        return this.conversationService.getConversation(+id, userId);
     }
 
     @Post('key')
@@ -55,6 +37,24 @@ export class ConversationController {
         const userId = req.user.id;
         return this.conversationService.getConversationKey(
             +conversationId,
+            userId,
+        );
+    }
+
+    @Get(':id')
+    findOne(@Param('id') id: string, @Req() req: RequestWithUser) {
+        const userId = req.user.id;
+        return this.conversationService.getConversation(+id, userId);
+    }
+
+    @Post()
+    create(
+        @Body() createConversationDto: CreateConversationDto,
+        @Req() req: RequestWithUser,
+    ) {
+        const userId = req.user.id;
+        return this.conversationService.createConversation(
+            createConversationDto,
             userId,
         );
     }

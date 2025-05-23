@@ -4,12 +4,13 @@ import {
     Column,
     BeforeInsert,
     BeforeUpdate,
+    OneToMany,
 } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
-// import { ConvParticipant } from '../../conversation/entities/conv-participant.entity';
 import { AppRole } from 'src/common/enum/roles.enum';
 import { DEFAULT_AVATAR_URL } from 'src/common/constants/default-avatar';
+import { ConvParticipant } from 'src/conversation/entities/convParticipant.entity';
 
 @Entity('users')
 export class User {
@@ -59,10 +60,9 @@ export class User {
     role: AppRole;
 
     // Relationships
-    // @OneToMany(() => ConvParticipant, (participant) => participant.user)
-    // participants: ConvParticipant[];
+    @OneToMany(() => ConvParticipant, (participant) => participant.user)
+    participants: ConvParticipant[];
 
-    // Methods
     @BeforeInsert()
     async hashPasswordBeforeInsert() {
         if (this.password) {

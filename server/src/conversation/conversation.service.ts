@@ -5,7 +5,7 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { Conversation } from './entities/conversation.entity';
 import { ConvParticipant } from './entities/convParticipant.entity';
@@ -204,5 +204,39 @@ export class ConversationService {
         return {
             groupKey: participant.groupKey,
         };
+    }
+
+    async getOtherParticipantsInConversation(
+        conversationId: number,
+        userId: number,
+    ) {
+        const participants = await this.convParticipantRepo.find({
+            where: {
+                conversationId,
+                userId: Not(userId),
+            },
+            relations: ['user'],
+        });
+
+        if (!participants) {
+            throw new NotFoundException('Participants not found');
+        }
+
+        return participants;
+    }
+
+    async getAllParticipantsInConversation(conversationId: number) {
+        const participants = await this.convParticipantRepo.find({
+            where: {
+                conversationId,
+            },
+            relations: ['user'],
+        });
+
+        if (!participants) {
+            throw new NotFoundException('Participants not found');
+        }
+
+        return participants;
     }
 }
