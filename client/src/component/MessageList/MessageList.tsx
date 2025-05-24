@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { MessageStatus } from '../../enums/messageStatus.enum';
 import { LastSeenStatus, MessageListProps } from './MessageList.types';
 
@@ -22,38 +22,73 @@ export const MessageList: React.FC<MessageListProps> = ({
         }
     }, [messages.length]);
 
+    const participantMap = useMemo(() => {
+        const map = new Map();
+        convParticipants.forEach((participant) => {
+            map.set(participant.userId, participant.user);
+        });
+        return map;
+    }, [convParticipants]);
+
+    const lastSeenMap = useMemo(() => {
+        if (!Array.isArray(lastSeenStatus)) return null;
+
+        const map = new Map();
+        lastSeenStatus.forEach((status) => {
+            if (!map.has(status.messageId)) {
+                map.set(status.messageId, []);
+            }
+            map.get(status.messageId).push(status);
+        });
+        return map;
+    }, [lastSeenStatus]);
+
+    const processedMessages = useMemo(() => {
+        return messages.map((msg, index) => {
+            const { isGroup } = conversation;
+            const isSentByUser = msg.senderId === userId;
+            const isLastMessage = index === messages.length - 1;
+
+            const otherUser = isGroup
+                ? participantMap.get(msg.senderId)
+                : receiver;
+
+            const avatar = otherUser?.avatar;
+
+            const statuses: LastSeenStatus[] =
+                isGroup && lastSeenMap ? lastSeenMap.get(msg.id) || [] : [];
+
+            return {
+                msg,
+                index,
+                isSentByUser,
+                isLastMessage,
+                otherUser,
+                avatar,
+                statuses,
+                isGroup,
+            };
+        });
+    }, [messages, conversation, userId, participantMap, lastSeenMap, receiver]);
+
     return (
         <div className="flex-grow overflow-y-auto flex flex-col pb-4 pt-2">
-            {messages.map((msg, index) => {
-                const { isGroup } = conversation;
-
-                const isSentByUser = msg.senderId === userId;
-                const isLastMessage = index === messages.length - 1;
-
-                const otherUser = isGroup
-                    ? convParticipants.find((x) => x.userId === msg.senderId)
-                          ?.user
-                    : receiver;
-
-                const avatar = otherUser?.avatar;
-
-                const statuses =
-                    isGroup && Array.isArray(lastSeenStatus)
-                        ? lastSeenStatus.filter(
-                              (item) => item.messageId === msg.id,
-                          )
-                        : [];
-
-                console.log('Last Seen Status:', lastSeenStatus);
-
-                return (
-                    <div key={index} className="flex flex-col">
+            {processedMessages.map(
+                ({
+                    msg,
+                    index,
+                    isSentByUser,
+                    isLastMessage,
+                    otherUser,
+                    avatar,
+                    statuses,
+                    isGroup,
+                }) => (
+                    <div key={msg.id || index} className="flex flex-col">
                         {!isSentByUser && isGroup && (
                             <div className="ps-14">
                                 <p className="text-xs text-gray-500">
-                                    {otherUser?.firstName +
-                                        ' ' +
-                                        otherUser?.lastName}
+                                    {`${otherUser?.firstName || ''} ${otherUser?.lastName || ''}`.trim()}
                                 </p>
                             </div>
                         )}
@@ -65,15 +100,20 @@ export const MessageList: React.FC<MessageListProps> = ({
                                     <div className="flex-none pe-2 items-end">
                                         <img
                                             className="size-8 rounded-full"
-                                            src={`${avatar}`}
+                                            src={
+                                                avatar || '/default-avatar.png'
+                                            }
                                             alt="avatar"
                                         />
                                     </div>
                                 )}
                                 <div className="flex-grow flex flex-col">
                                     <p
-                                        className={`rounded-3xl px-3 py-2 break-all text-s
-                                                        ${isSentByUser ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white' : 'bg-gray-100 text-black'}`}
+                                        className={`rounded-3xl px-3 py-2 break-all text-s ${
+                                            isSentByUser
+                                                ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white'
+                                                : 'bg-gray-100 text-black'
+                                        }`}
                                     >
                                         {msg.content}
                                     </p>
@@ -92,14 +132,14 @@ export const MessageList: React.FC<MessageListProps> = ({
                         </div>
                         <div className="flex justify-end w-full pe-3">
                             {isGroup
-                                ? statuses.map((status) => (
+                                ? statuses.map((status: LastSeenStatus) => (
                                       <div
                                           key={`${status.userId}-${status.messageId}`}
                                           className="flex pe-1 items-end"
                                       >
                                           <img
                                               className="size-4 rounded-full"
-                                              src={`${status.avatar}`}
+                                              src={status.avatar}
                                               alt=""
                                           />
                                       </div>
@@ -109,22 +149,16 @@ export const MessageList: React.FC<MessageListProps> = ({
                                       <div className="flex pe-1 items-end">
                                           <img
                                               className="size-4 rounded-full"
-                                              src={`${avatar}`}
+                                              src={avatar}
                                               alt=""
                                           />
                                       </div>
                                   )}
                         </div>
                     </div>
-                );
-            })}
+                ),
+            )}
             <div ref={messagesEndRef} />
         </div>
     );
 };
-function useMemo(
-    arg0: () => Map<string, LastSeenStatus[]> | null,
-    arg1: (LastSeenStatus | LastSeenStatus[])[],
-) {
-    throw new Error('Function not implemented.');
-}
