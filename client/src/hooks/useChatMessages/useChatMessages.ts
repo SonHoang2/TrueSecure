@@ -8,7 +8,13 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { getGroupKey } from '../../services/encryptionService';
 import { MessageStatus } from '../../enums/messageStatus.enum';
-import { UseChatMessagesProps } from './useChatMessages.types';
+import {
+    GroupMessageProps,
+    GroupMessageStatusUpdateProps,
+    PrivateMessageProps,
+    PrivateMessageStatusUpdateProps,
+    UseChatMessagesProps,
+} from './useChatMessages.types';
 import { ChatState } from '../../types/chats.types';
 import { ConversationParticipant } from '../../types/conversations.types';
 
@@ -82,8 +88,6 @@ export const useChatMessages = ({
                 return;
             }
 
-            console.log({ userKeys });
-
             const { content, iv, ephemeralPublicKey } =
                 await cryptoUtils.encryptPrivateMessage(
                     userKeys.publicKey,
@@ -91,7 +95,7 @@ export const useChatMessages = ({
                 );
 
             const messageData = {
-                messageId: uuidv4(),
+                id: uuidv4(),
                 senderId: userId,
                 conversationId: conversationId,
                 content: chatState.message,
@@ -116,7 +120,12 @@ export const useChatMessages = ({
 
     const sendGroupMessage = async () => {
         try {
-            const groupkey = await getGroupKey(conversationId, axiosPrivate);
+            const groupkey = await getGroupKey({
+                conversationId,
+                userKeys,
+                axiosPrivate,
+                userId,
+            });
 
             if (!groupkey) {
                 console.error('Group key is not available!');
@@ -129,7 +138,7 @@ export const useChatMessages = ({
             );
 
             const messageData = {
-                messageId: uuidv4(),
+                id: uuidv4(),
                 senderId: userId,
                 conversationId: conversationId,
                 content: chatState.message,
@@ -143,8 +152,6 @@ export const useChatMessages = ({
                 iv: iv,
                 receiverId: chatState.receiver?.id,
             };
-
-            console.log({ encryptedMessage });
 
             socket.emit('send-group-message', encryptedMessage);
 
@@ -215,6 +222,7 @@ export const useChatMessages = ({
                                 status.userId === participant.userId &&
                                 status.status === MessageStatus.SEEN,
                         );
+
                         if (user) {
                             return {
                                 userId: participant.userId,
@@ -228,9 +236,15 @@ export const useChatMessages = ({
                 .filter(Boolean);
         }
 
-        return chatState.messages.findLast(
+        const lastMessage = chatState.messages.findLast(
             (message) => message.status === MessageStatus.SEEN,
         );
+
+        return {
+            userId: lastMessage?.senderId,
+            messageId: lastMessage?.id || '',
+            avatar: chatState.receiver?.avatar || '',
+        };
     }, [chatState.convParticipants, chatState.messages]);
 
     useEffect(() => {
@@ -238,21 +252,12 @@ export const useChatMessages = ({
     }, [conversationId]);
 
     useEffect(() => {
-        if (!userKeys?.privateKey) return;
+        if (!userKeys?.privateKey || !userKeys?.publicKey) return;
 
         socket.on(
             'new-private-message',
             async (
-                data: {
-                    messageId: string;
-                    senderId: string;
-                    conversationId: string;
-                    content: string;
-                    iv: string;
-                    ephemeralPublicKey: string;
-                    createdAt: string;
-                    status: MessageStatus;
-                },
+                data: PrivateMessageProps,
                 ackCallback?: (ack: boolean) => void,
             ) => {
                 try {
@@ -275,7 +280,7 @@ export const useChatMessages = ({
                     }
 
                     await storeMessagesInIndexedDB({
-                        messageId: data.messageId,
+                        id: data.id,
                         senderId: data.senderId,
                         conversationId: data.conversationId,
                         content: decryptedMessage,
@@ -301,7 +306,7 @@ export const useChatMessages = ({
 
                         socket.emit('private-message-seen', {
                             senderId: data.senderId,
-                            messageId: data.messageId,
+                            messageId: data.id,
                             conversationId: data.conversationId,
                         });
                     }
@@ -320,7 +325,7 @@ export const useChatMessages = ({
 
         socket.on(
             'private-message-status-update',
-            async (data: { messageId: string; status: MessageStatus }) => {
+            async (data: PrivateMessageStatusUpdateProps) => {
                 setChatState((prevState) => {
                     const messageIndex = prevState.messages.findLastIndex(
                         (msg) => {
@@ -342,7 +347,7 @@ export const useChatMessages = ({
                     const updatedMessage = updatedMessages[messageIndex];
 
                     storeMessagesInIndexedDB({
-                        messageId: updatedMessage.id,
+                        id: updatedMessage.id,
                         senderId: updatedMessage.senderId,
                         conversationId: updatedMessage.conversationId,
                         content: updatedMessage.content,
@@ -358,63 +363,96 @@ export const useChatMessages = ({
             },
         );
 
-        // socket.on('new-group-message', (data) => {
-        //     messageSoundRef.current
-        //         .play()
-        //         .catch((error) => console.error('Audio play error:', error));
+        socket.on('new-group-message', async (data: GroupMessageProps) => {
+            // messageSoundRef.current
+            //     .play()
+            //     .catch((error) => console.error('Audio play error:', error));
+            const groupkey = await getGroupKey({
+                conversationId,
+                userKeys,
+                axiosPrivate,
+                userId,
+            });
 
-        //     if (data.conversationId === conversationIdRef.current) {
-        //         setChatState((prevState) => ({
-        //             ...prevState,
-        //             encryptedMessages: [...prevState.encryptedMessages, data],
-        //         }));
+            const decryptedMessage = await cryptoUtils.decryptGroupMessage(
+                groupkey,
+                {
+                    content: data.content,
+                    iv: data.iv,
+                },
+            );
 
-        //         socket.emit('group-message-seen', {
-        //             senderId: data.senderId,
-        //             messageId: data.messageId,
-        //             conversationId: data.conversationId,
-        //         });
-        //     }
-        // });
+            if (!decryptedMessage) {
+                throw new Error('Decryption failed');
+            }
 
-        // socket.on(
-        //     'group-message-status-update',
-        //     ({ messageId, userId, status }) => {
-        //         setChatState((prevState) => {
-        //             const updatedMessages = [...prevState.messages];
-        //             const messageIndex = updatedMessages.findLastIndex(
-        //                 (msg) =>
-        //                     msg.status === MessageStatus.SENDING ||
-        //                     msg.id === messageId,
-        //             );
+            const isCurrentConversation =
+                data.conversationId === conversationIdRef.current;
+            if (isCurrentConversation) {
+                const message = {
+                    ...data,
+                    content: decryptedMessage,
+                    iv: null,
+                    ephemeralPublicKey: null,
+                };
 
-        //             if (messageIndex === -1) return prevState;
-        //             const message = updatedMessages[messageIndex];
+                setChatState((prev) => ({
+                    ...prev,
+                    messages: [...prev.messages, message],
+                }));
 
-        //             if (status === MessageStatus.SEEN) {
-        //                 message.statuses = message.statuses || [];
-        //                 message.status = null;
+                socket.emit('group-message-seen', {
+                    senderId: data.senderId,
+                    messageId: data.id,
+                    conversationId: data.conversationId,
+                });
+            }
+        });
 
-        //                 const statusIndex = message.statuses.findIndex(
-        //                     (s) => s.userId === userId,
-        //                 );
-        //                 if (statusIndex === -1) {
-        //                     message.statuses.push({ userId, status });
-        //                 } else {
-        //                     message.statuses[statusIndex].status = status;
-        //                 }
-        //             } else {
-        //                 updatedMessages[messageIndex] = {
-        //                     ...message,
-        //                     status,
-        //                     id: messageId,
-        //                 };
-        //             }
+        socket.on(
+            'group-message-status-update',
+            ({ messageId, userId, status }: GroupMessageStatusUpdateProps) => {
+                setChatState((prevState) => {
+                    const updatedMessages = [...prevState.messages];
+                    const messageIndex = updatedMessages.findLastIndex(
+                        (msg) =>
+                            msg.status === MessageStatus.SENDING ||
+                            msg.id === messageId,
+                    );
 
-        //             return { ...prevState, messages: updatedMessages };
-        //         });
-        //     },
-        // );
+                    if (messageIndex === -1) return prevState;
+                    const message = updatedMessages[messageIndex];
+
+                    console.log('message', message);
+
+                    if (status === MessageStatus.SEEN) {
+                        message.statuses = message.statuses || [];
+                        message.status = null;
+
+                        const statusIndex = message.statuses.findIndex(
+                            (s) => s.userId === userId,
+                        );
+
+                        if (statusIndex === -1) {
+                            message.statuses.push({
+                                userId,
+                                status,
+                            });
+                        } else {
+                            message.statuses[statusIndex].status = status;
+                        }
+                    } else {
+                        updatedMessages[messageIndex] = {
+                            ...message,
+                            status,
+                            id: messageId,
+                        };
+                    }
+
+                    return { ...prevState, messages: updatedMessages };
+                });
+            },
+        );
 
         return () => {
             socket.off('new-private-message');
@@ -422,7 +460,7 @@ export const useChatMessages = ({
             socket.off('group-message-status-update');
             socket.off('new-group-message');
         };
-    }, [chatState.messages?.length, userKeys?.privateKey]);
+    }, [chatState.messages?.length, userKeys?.privateKey, userKeys?.publicKey]);
 
     useEffect(() => {
         conversationIdRef.current = conversationId;

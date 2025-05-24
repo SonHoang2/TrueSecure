@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { MessageStatus } from '../../enums/messageStatus.enum';
-import { MessageListProps } from './MessageList.types';
+import { LastSeenStatus, MessageListProps } from './MessageList.types';
 
 export const MessageList: React.FC<MessageListProps> = ({
     messages,
@@ -44,6 +44,8 @@ export const MessageList: React.FC<MessageListProps> = ({
                           )
                         : [];
 
+                console.log('Last Seen Status:', lastSeenStatus);
+
                 return (
                     <div key={index} className="flex flex-col">
                         {!isSentByUser && isGroup && (
@@ -64,7 +66,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                                         <img
                                             className="size-8 rounded-full"
                                             src={`${avatar}`}
-                                            alt=""
+                                            alt="avatar"
                                         />
                                     </div>
                                 )}
@@ -92,7 +94,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                             {isGroup
                                 ? statuses.map((status) => (
                                       <div
-                                          key={status?.id}
+                                          key={`${status.userId}-${status.messageId}`}
                                           className="flex pe-1 items-end"
                                       >
                                           <img
@@ -103,7 +105,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                                       </div>
                                   ))
                                 : !Array.isArray(lastSeenStatus) &&
-                                  lastSeenStatus?.id === msg.id && (
+                                  lastSeenStatus?.messageId === msg.id && (
                                       <div className="flex pe-1 items-end">
                                           <img
                                               className="size-4 rounded-full"
@@ -120,3 +122,9 @@ export const MessageList: React.FC<MessageListProps> = ({
         </div>
     );
 };
+function useMemo(
+    arg0: () => Map<string, LastSeenStatus[]> | null,
+    arg1: (LastSeenStatus | LastSeenStatus[])[],
+) {
+    throw new Error('Function not implemented.');
+}

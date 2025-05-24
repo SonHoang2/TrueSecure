@@ -3,7 +3,7 @@ import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 export class PrivateMessageDto {
     @IsString()
     @IsNotEmpty()
-    messageId: string;
+    id: string;
 
     @IsNumber()
     @IsNotEmpty()

@@ -6,7 +6,7 @@ import { MessageStatus } from 'src/common/enum/message-status.enum';
 import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 import { PrivateMessageDto } from './dto/message/private-message.dto';
 import { GroupMessageDto } from './dto/message/group-message.dto';
-import { GroupMessageSeenDto } from './dto/message/group-message-seen.dto';
+import { MessageStatusDto } from './dto/message/message-status.dto';
 
 @Injectable()
 export class SocketService {
@@ -20,7 +20,7 @@ export class SocketService {
     ) {}
 
     async sendPrivateMessage(data: PrivateMessageDto): Promise<void> {
-        const { receiverId, senderId, messageId } = data;
+        const { receiverId, senderId, id } = data;
 
         // Notify receiver if online
         const receiverSocketId =
@@ -41,72 +41,73 @@ export class SocketService {
             senderId,
             'private-message-status-update',
             {
-                messageId,
+                id,
                 status: MessageStatus.SENT,
             },
         );
     }
 
     async sendGroupMessage(data: GroupMessageDto): Promise<void> {
-        try {
-            const { conversationId, senderId } = data;
+        const { conversationId, senderId, id } = data;
 
-            // Find all participants except sender
-            const participants =
-                await this.conversationService.getOtherParticipantsInConversation(
-                    conversationId,
-                    +senderId,
-                );
+        // Find all participants except sender
+        const participants =
+            await this.conversationService.getOtherParticipantsInConversation(
+                conversationId,
+                +senderId,
+            );
 
-            // Notify all participants
-            for (const participant of participants) {
-                await this.socketManagerService.emitToUser(
-                    participant.userId,
-                    'new-group-message',
-                    {
-                        ...data,
-                    },
-                );
-            }
-
-            // Notify sender
+        // Notify all participants
+        for (const participant of participants) {
             await this.socketManagerService.emitToUser(
-                senderId,
-                'group-message-status-update',
+                participant.userId,
+                'new-group-message',
                 {
-                    messageId: data.messageId,
-                    status: MessageStatus.SENT,
+                    ...data,
                 },
             );
-        } catch (error) {
-            this.logger.error(`Error sending group message: ${error.message}`);
         }
+
+        // Notify sender
+        await this.socketManagerService.emitToUser(
+            senderId,
+            'group-message-status-update',
+            {
+                id,
+                status: MessageStatus.SENT,
+            },
+        );
     }
 
-    async updateGroupMessageStatus(data: GroupMessageSeenDto): Promise<void> {
-        try {
-            const { messageId, senderId, conversationId } = data;
+    async updatePrivateMessageStatus(data: MessageStatusDto): Promise<void> {
+        await this.socketManagerService.emitToUser(
+            data.senderId,
+            'private-message-status-update',
+            {
+                messageId: data.messageId,
+                status: MessageStatus.SEEN,
+            },
+        );
+    }
 
-            // Notify all participants in the group
-            const participants =
-                await this.conversationService.getAllParticipantsInConversation(
-                    conversationId,
-                );
+    async updateGroupMessageStatus(data: MessageStatusDto): Promise<void> {
+        const { messageId, senderId, conversationId } = data;
 
-            for (const participant of participants) {
-                await this.socketManagerService.emitToUser(
-                    participant.userId,
-                    'group-message-status-update',
-                    {
-                        messageId,
-                        status: MessageStatus.SEEN,
-                        userId: senderId,
-                    },
-                );
-            }
-        } catch (error) {
-            this.logger.error(
-                `Error updating group message status: ${error.message}`,
+        // Notify all participants in the group
+        const participants =
+            await this.conversationService.getAllParticipantsInConversation(
+                conversationId,
+            );
+
+        for (const participant of participants) {
+            await this.socketManagerService.emitToUser(
+                participant.userId,
+                'group-message-status-update',
+                {
+                    messageId: messageId,
+                    status: MessageStatus.SEEN,
+                    userId: senderId,
+                },
             );
         }
     }
