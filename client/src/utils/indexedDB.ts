@@ -40,15 +40,8 @@ const openDatabase = (): Promise<IDBDatabase> => {
     });
 };
 
-export const storeMessagesInIndexedDB = async ({
-    messageId,
-    senderId,
-    conversationId,
-    content,
-    createdAt,
-    status,
-}: {
-    messageId: string;
+export const storeMessagesInIndexedDB = async (data: {
+    id: string;
     senderId: string;
     conversationId: string;
     content: string;
@@ -56,15 +49,11 @@ export const storeMessagesInIndexedDB = async ({
     status: MessageStatus;
 }) => {
     try {
-        if (
-            !messageId ||
-            !senderId ||
-            !conversationId ||
-            !content ||
-            !createdAt
-        ) {
+        const { id, senderId, conversationId, content, createdAt } = data;
+
+        if (!id || !senderId || !conversationId || !content || !createdAt) {
             console.error('Invalid message data:', {
-                messageId,
+                id,
                 senderId,
                 conversationId,
                 content,
@@ -77,25 +66,7 @@ export const storeMessagesInIndexedDB = async ({
         const tx = db.transaction('messages', 'readwrite');
         const store = tx.objectStore('messages');
 
-        type MessageData = {
-            id: string;
-            senderId: string;
-            conversationId: string;
-            content: string;
-            createdAt: string;
-            status: MessageStatus;
-        };
-
-        const messageData: MessageData = {
-            id: messageId,
-            senderId,
-            conversationId,
-            content,
-            createdAt,
-            status,
-        };
-
-        store.put(messageData);
+        store.put(data);
 
         tx.oncomplete = () => {
             console.log('Message stored in IndexedDB');

@@ -27,8 +27,7 @@ import { MessageStatus } from 'src/common/enum/message-status.enum';
 import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 import { PrivateMessageDto } from 'src/socket/dto/message/private-message.dto';
 import { GroupMessageDto } from 'src/socket/dto/message/group-message.dto';
-import { GroupMessageSeenDto } from 'src/socket/dto/message/group-message-seen.dto';
-import { PrivateMessageSeenDto } from 'src/socket/dto/message/private-message-seen.dto';
+import { MessageStatusDto } from 'src/socket/dto/message/message-status.dto';
 
 @WebSocketGateway({
     cors: {
@@ -180,16 +179,9 @@ export class SocketGateway
     }
 
     @SubscribeMessage('private-message-seen')
-    async handlePrivateMessageSeen(@MessageBody() data: PrivateMessageSeenDto) {
+    async handlePrivateMessageSeen(@MessageBody() data: MessageStatusDto) {
         try {
-            await this.socketManagerService.emitToUser(
-                data.senderId,
-                'private-message-status-update',
-                {
-                    messageId: data.messageId,
-                    status: MessageStatus.SEEN,
-                },
-            );
+            await this.socketService.updatePrivateMessageStatus(data);
         } catch (error) {
             this.logger.error(
                 `Error handling private message seen: ${error.message}`,
@@ -207,7 +199,7 @@ export class SocketGateway
     }
 
     @SubscribeMessage('group-message-seen')
-    async handleGroupMessageSeen(@MessageBody() data: GroupMessageSeenDto) {
+    async handleGroupMessageSeen(@MessageBody() data: MessageStatusDto) {
         try {
             await this.socketService.updateGroupMessageStatus(data);
         } catch (error) {

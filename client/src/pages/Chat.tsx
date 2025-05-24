@@ -18,8 +18,13 @@ import {
     getAdminPublicKey,
     getUserPublicKey,
 } from '../services/encryptionService';
+import { UserStatus } from '../types/users.types';
 
-const Chat = ({ userStatus }) => {
+interface ChatProps {
+    userStatus: UserStatus;
+}
+
+const Chat: React.FC<ChatProps> = ({ userStatus }) => {
     const conversationId = Number(useParams()?.conversationId);
 
     const { user } = useAuth();

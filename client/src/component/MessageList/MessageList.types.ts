@@ -5,13 +5,11 @@ import {
     ConversationParticipant,
 } from '../../types/conversations.types';
 
-export interface GroupSeenStatus {
-    id: string;
+export interface LastSeenStatus {
+    userId: string;
     messageId: string;
     avatar: string;
 }
-
-export interface LastSeenStatus extends GroupSeenStatus {}
 
 export interface MessageListProps {
     messages: Message[];
