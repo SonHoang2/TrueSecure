@@ -29,7 +29,6 @@ export class SocketManagerService {
         }
 
         const user = client.user;
-        this.logger.log(`Client connected: ${client.id} - User ID: ${user.id}`);
 
         // Add user to online users
         await this.socketCacheService.addOnlineUser(user.id, client.id);
@@ -46,10 +45,6 @@ export class SocketManagerService {
     async handleDisconnect(client: Socket): Promise<void> {
         const user = (client as any).user as SocketUser;
         if (!user) return;
-
-        this.logger.log(
-            `Client disconnected: ${client.id} - User ID: ${user.id}`,
-        );
 
         // Remove user from online users and update last seen
         await this.socketCacheService.removeOnlineUser(user.id);
@@ -81,6 +76,7 @@ export class SocketManagerService {
 
     async broadcastOnlineStatus(): Promise<void> {
         const onlineStatus = await this.socketCacheService.getOnlineStatus();
+        console.log('Online users: ', onlineStatus.onlineUsers);
         this.server.emit('online-users', onlineStatus);
     }
 
