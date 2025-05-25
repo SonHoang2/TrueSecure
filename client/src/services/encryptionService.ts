@@ -86,10 +86,7 @@ export const getGroupKey = async ({
 }) => {
     try {
         const { publicKey, privateKey } = userKeys;
-
-        console.log(publicKey, privateKey);
         
-
         if (!publicKey || !privateKey) {
             console.error('Public key or private key is missing!');
             return;

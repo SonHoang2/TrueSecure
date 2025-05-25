@@ -23,7 +23,6 @@ import {
 import { Logger } from '@nestjs/common';
 import { SocketUser } from 'src/socket/interfaces/socket-user.interface';
 import { SocketAuthService } from 'src/socket/services/socket-auth/socket-auth.service';
-import { MessageStatus } from 'src/common/enum/message-status.enum';
 import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 import { PrivateMessageDto } from 'src/socket/dto/message/private-message.dto';
 import { GroupMessageDto } from 'src/socket/dto/message/group-message.dto';
