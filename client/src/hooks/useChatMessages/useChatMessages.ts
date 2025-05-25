@@ -316,9 +316,15 @@ export const useChatMessages = ({
                     console.error(
                         'Failed to process new-private-message:',
                         error,
-                        data,
                     );
-                    ackCallback?.(true); // Acknowledge even on error to prevent retries
+
+                    const isNetworkError =
+                        error instanceof Error &&
+                        (error.message.includes('network') ||
+                            error.message.includes('timeout') ||
+                            error.message.includes('connection'));
+
+                    ackCallback?.(isNetworkError ? false : true);
                 }
             },
         );
