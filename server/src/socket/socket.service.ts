@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { SocketManagerService } from './services/socket-manager/socket-manager.service';
 import { SocketCacheService } from './services/socket-cache/socket-cache.service';
 import { ConversationService } from 'src/conversation/conversation.service';
@@ -10,8 +10,6 @@ import { MessageStatusDto } from './dto/message/message-status.dto';
 
 @Injectable()
 export class SocketService {
-    private readonly logger = new Logger(SocketService.name);
-
     constructor(
         private readonly socketManagerService: SocketManagerService,
         private readonly socketCacheService: SocketCacheService,
@@ -41,7 +39,7 @@ export class SocketService {
             senderId,
             'private-message-status-update',
             {
-                id,
+                messageId: id,
                 status: MessageStatus.SENT,
             },
         );
@@ -73,7 +71,7 @@ export class SocketService {
             senderId,
             'group-message-status-update',
             {
-                id,
+                messageId: id,
                 status: MessageStatus.SENT,
             },
         );
