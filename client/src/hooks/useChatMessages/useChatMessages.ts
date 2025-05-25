@@ -392,6 +392,15 @@ export const useChatMessages = ({
                 throw new Error('Decryption failed');
             }
 
+            await storeMessagesInIndexedDB({
+                id: data.id,
+                senderId: data.senderId,
+                conversationId: data.conversationId,
+                content: decryptedMessage,
+                createdAt: data.createdAt,
+                status: data.status,
+            });
+
             const isCurrentConversation =
                 data.conversationId === conversationIdRef.current;
             if (isCurrentConversation) {
@@ -408,7 +417,7 @@ export const useChatMessages = ({
                 }));
 
                 socket.emit('group-message-seen', {
-                    senderId: data.senderId,
+                    senderId: userId,
                     messageId: data.id,
                     conversationId: data.conversationId,
                 });
@@ -419,20 +428,32 @@ export const useChatMessages = ({
             'group-message-status-update',
             ({ messageId, userId, status }: GroupMessageStatusUpdateProps) => {
                 setChatState((prevState) => {
-                    const updatedMessages = [...prevState.messages];
-                    const messageIndex = updatedMessages.findLastIndex(
+                    console.log(
+                        'Received group message status update:',
+                        messageId,
+                        userId,
+                        status,
+                    );
+
+                    const messageIndex = prevState.messages.findLastIndex(
                         (msg) =>
                             msg.status === MessageStatus.SENDING ||
                             msg.id === messageId,
                     );
 
                     if (messageIndex === -1) return prevState;
-                    const message = updatedMessages[messageIndex];
 
-                    console.log('message', message);
+                    const updatedMessages = [...prevState.messages];
+                    const originalMessage = updatedMessages[messageIndex];
+
+                    // Create a proper copy to avoid mutation
+                    const message = { ...originalMessage };
 
                     if (status === MessageStatus.SEEN) {
-                        message.statuses = message.statuses || [];
+                        // Properly copy the statuses array
+                        message.statuses = originalMessage.statuses
+                            ? [...originalMessage.statuses]
+                            : [];
                         message.status = null;
 
                         const statusIndex = message.statuses.findIndex(
@@ -440,20 +461,31 @@ export const useChatMessages = ({
                         );
 
                         if (statusIndex === -1) {
-                            message.statuses.push({
-                                userId,
-                                status,
-                            });
+                            message.statuses.push({ userId, status });
                         } else {
-                            message.statuses[statusIndex].status = status;
+                            message.statuses[statusIndex] = {
+                                ...message.statuses[statusIndex],
+                                status,
+                            };
                         }
                     } else {
-                        updatedMessages[messageIndex] = {
-                            ...message,
-                            status,
-                            id: messageId,
-                        };
+                        message.status = status;
+                        message.id = messageId;
                     }
+
+                    updatedMessages[messageIndex] = message;
+
+                    console.log('Updated message:', message);
+
+                    storeMessagesInIndexedDB({
+                        id: message.id,
+                        senderId: message.senderId,
+                        conversationId: message.conversationId,
+                        content: message.content,
+                        createdAt: message.createdAt,
+                        status: message.status,
+                        statuses: message.statuses,
+                    });
 
                     return { ...prevState, messages: updatedMessages };
                 });
@@ -466,7 +498,7 @@ export const useChatMessages = ({
             socket.off('group-message-status-update');
             socket.off('new-group-message');
         };
-    }, [chatState.messages?.length, userKeys?.privateKey, userKeys?.publicKey]);
+    }, [userKeys?.privateKey, userKeys?.publicKey, conversationId, userId]);
 
     useEffect(() => {
         conversationIdRef.current = conversationId;
