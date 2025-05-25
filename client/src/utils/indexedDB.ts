@@ -46,10 +46,19 @@ export const storeMessagesInIndexedDB = async (data: {
     conversationId: string;
     content: string;
     createdAt: string;
-    status: MessageStatus;
+    status: MessageStatus | null;
+    statuses?: Array<{ userId: string; status: MessageStatus }>;
 }) => {
     try {
-        const { id, senderId, conversationId, content, createdAt } = data;
+        const {
+            id,
+            senderId,
+            conversationId,
+            content,
+            createdAt,
+            status,
+            statuses,
+        } = data;
 
         if (!id || !senderId || !conversationId || !content || !createdAt) {
             console.error('Invalid message data:', {
@@ -62,11 +71,28 @@ export const storeMessagesInIndexedDB = async (data: {
             return;
         }
 
+        if (status === undefined && (!statuses || statuses.length === 0)) {
+            console.warn('Message has neither status nor statuses array:', {
+                id,
+                senderId,
+            });
+        }
+
         const db = await openDatabase();
         const tx = db.transaction('messages', 'readwrite');
         const store = tx.objectStore('messages');
 
-        store.put(data);
+        const messageData = {
+            id,
+            senderId,
+            conversationId,
+            content,
+            createdAt,
+            ...(status !== undefined && status !== null && { status }),
+            ...(statuses && statuses.length > 0 && { statuses }),
+        };
+
+        store.put(messageData);
 
         tx.oncomplete = () => {
             console.log('Message stored in IndexedDB');
