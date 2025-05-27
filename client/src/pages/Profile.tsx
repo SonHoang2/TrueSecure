@@ -122,8 +122,8 @@ const Profile = () => {
                         </div>
                     </div>
 
-                    <div className="relative px-8 pb-8 pt-3">
-                        <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-16 mb-6">
+                    <div className="relative px-8 pb-8">
+                        <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-8 mb-6">
                             <div className="relative">
                                 <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-100">
                                     {formData.avatar ? (
@@ -151,15 +151,15 @@ const Profile = () => {
                                 </h2>
                                 <div className="flex items-center justify-center sm:justify-start gap-2 mt-2">
                                     <span
-                                        className={`px-3 py-1 rounded-full text-sm font-medium border ${getRoleColor(formData.role)} flex items-center gap-1`}
+                                        className={`px-3 py-1 rounded-full text-md font-medium border ${getRoleColor(formData.role)} flex items-center gap-1`}
                                     >
                                         {getRoleIcon(formData.role)}
                                         {formData.role.charAt(0).toUpperCase() +
                                             formData.role.slice(1)}
                                     </span>
                                     {formData.googleAccount && (
-                                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium border border-green-200 flex items-center gap-1">
-                                            <FaGoogle className="text-sm" />
+                                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-md font-medium border border-green-200 flex items-center gap-1">
+                                            <FaGoogle className="text-md" />
                                             Google
                                         </span>
                                     )}
@@ -171,7 +171,7 @@ const Profile = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* First Name */}
                             <div className="space-y-2">
-                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                <label className="text-md font-semibold text-gray-700 flex items-center gap-2">
                                     <MdPerson className="text-gray-500" />
                                     First Name
                                 </label>
@@ -191,7 +191,7 @@ const Profile = () => {
 
                             {/* Last Name */}
                             <div className="space-y-2">
-                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                <label className="text-md font-semibold text-gray-700 flex items-center gap-2">
                                     <MdPerson className="text-gray-500" />
                                     Last Name
                                 </label>
@@ -211,7 +211,7 @@ const Profile = () => {
 
                             {/* Email */}
                             <div className="space-y-2">
-                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                <label className="text-md font-semibold text-gray-700 flex items-center gap-2">
                                     <MdEmail className="text-gray-500" />
                                     Email Address
                                 </label>
@@ -231,7 +231,7 @@ const Profile = () => {
 
                             {/* Role */}
                             <div className="space-y-2">
-                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                <label className="text-md font-semibold text-gray-700 flex items-center gap-2">
                                     {getRoleIcon(formData.role)}
                                     Role
                                 </label>
@@ -254,7 +254,7 @@ const Profile = () => {
 
                             {/* Google Account */}
                             <div className="md:col-span-2 space-y-2">
-                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                <label className="text-md font-semibold text-gray-700 flex items-center gap-2">
                                     <FaGoogle className="text-gray-500" />
                                     Google Account Integration
                                 </label>
@@ -293,7 +293,7 @@ const Profile = () => {
                             <div className="text-2xl font-bold text-blue-600">
                                 Free
                             </div>
-                            <div className="text-sm text-gray-600">
+                            <div className="text-md text-gray-600">
                                 Account Level
                             </div>
                         </div>
@@ -301,13 +301,13 @@ const Profile = () => {
                             <div className="text-2xl font-bold text-green-600">
                                 Active
                             </div>
-                            <div className="text-sm text-gray-600">Status</div>
+                            <div className="text-md text-gray-600">Status</div>
                         </div>
                         <div className="bg-purple-50 p-4 rounded-lg text-center">
                             <div className="text-2xl font-bold text-purple-600">
                                 2024
                             </div>
-                            <div className="text-sm text-gray-600">
+                            <div className="text-md text-gray-600">
                                 Member Since
                             </div>
                         </div>
