@@ -10,6 +10,7 @@ import { useAuth } from './hooks/useAuth/useAuth';
 import useAxiosPrivate from './hooks/useAxiosPrivate';
 import { EncryptionProvider } from './contexts/EncryptionContext';
 import { AppRole } from './enums/roles.enum';
+import Profile from './pages/Profile';
 
 const App = () => {
     const [userStatus, setUserStatus] = useState({
@@ -70,6 +71,7 @@ const App = () => {
                     path="chat/:conversationId"
                     element={<Chat userStatus={userStatus} />}
                 />
+                <Route path="profile" element={<Profile />} />
             </Route>
             <Route path="/auth">
                 <Route path="login" element={<Login />} />
