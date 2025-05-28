@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth/useAuth';
+import { useAuth } from '../hooks/useAuth';
 import { MdLogout, MdChatBubble, MdPerson } from 'react-icons/md';
-import { Routes } from '../../enums/routes.enum';
+import { Routes } from '../enums/routes.enum';
 import { Link } from 'react-router-dom';
 
 const SidebarNavigation = () => {
@@ -16,7 +16,7 @@ const SidebarNavigation = () => {
             </div>
             <div className="relative">
                 {isPopupVisible && (
-                    <div className="absolute bg-white shadow-md rounded-lg bottom-12 ps-2 pe-5 py-4 min-w-max">
+                    <div className="absolute bg-white shadow-md rounded-lg bottom-12 ps-2 pe-3 py-4 min-w-max">
                         <div className="group mb-2">
                             <Link
                                 to={Routes.PROFILE}

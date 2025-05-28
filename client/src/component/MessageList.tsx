@@ -1,6 +1,23 @@
 import { useEffect, useRef, useMemo } from 'react';
-import { MessageStatus } from '../../enums/messageStatus.enum';
-import { LastSeenStatus, MessageListProps } from './MessageList.types';
+import { MessageStatus } from '../enums/messageStatus.enum';
+import { Message } from '../types/messages.types';
+import { Conversation, ConversationParticipant } from '../types/conversations.types';
+import { User } from '../types/users.types';
+
+interface LastSeenStatus {
+    userId: string;
+    messageId: string;
+    avatar: string;
+}
+
+interface MessageListProps {
+    messages: Message[];
+    userId: number;
+    conversation: Conversation;
+    lastSeenStatus: LastSeenStatus[] | LastSeenStatus;
+    receiver: User;
+    convParticipants: ConversationParticipant[];
+}
 
 export const MessageList: React.FC<MessageListProps> = ({
     messages,

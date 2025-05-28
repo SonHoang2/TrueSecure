@@ -1,7 +1,11 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth/useAuth';
-import { Routes } from '../../enums/routes.enum';
-import { ProtectedRouteProps } from './ProtectedRoute.types';
+import { useAuth } from '../hooks/useAuth';
+import { Routes } from '../enums/routes.enum';
+import { AppRole } from '../enums/roles.enum';
+
+interface ProtectedRouteProps {
+    allowedRole: AppRole;
+}
 
 export const ProtectedRoute = ({ allowedRole }: ProtectedRouteProps) => {
     const { user } = useAuth();

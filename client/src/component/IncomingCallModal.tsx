@@ -1,5 +1,11 @@
 import { MdClose, MdCall } from 'react-icons/md';
-import { IncomingCallModalProps } from './IncomingCallModal.types';
+import { User } from '../types/users.types';
+
+interface IncomingCallModalProps {
+    onReject: () => void;
+    onAccept: () => void;
+    sender: User;
+}
 
 export const IncomingCallModal = ({
     onReject,

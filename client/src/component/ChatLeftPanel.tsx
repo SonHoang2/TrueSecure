@@ -1,13 +1,22 @@
-import { USERS_URL } from '../../config/config';
+import { USERS_URL } from '../config/config';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import CreateGroupChat from '../CreateGroupChat/CreateGroupChat';
-import CreatePrivateChat from '../CreatePrivateChat/CreatePrivateChat';
+import CreateGroupChat from './CreateGroupChat';
+import CreatePrivateChat from './CreatePrivateChat';
 import { FaEdit, FaSearch } from 'react-icons/fa';
 
-import useAxiosPrivate from '../../hooks/useAxiosPrivate';
+import useAxiosPrivate from '../hooks/useAxiosPrivate';
 import { MdClose } from 'react-icons/md';
-import { ChatLeftPanelProps } from './ChatLeftPanel.types';
+import { ChatState } from '../types/chats.types';
+import { User, UserStatus } from '../types/users.types';
+
+type ChatLeftPanelProps = {
+    chatState: ChatState;
+    user: User;
+    userStatus: UserStatus;
+    conversationId: string;
+    setChatState: React.Dispatch<React.SetStateAction<ChatState>>;
+};
 
 export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
     chatState,

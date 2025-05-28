@@ -1,22 +1,58 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import * as cryptoUtils from '../../utils/cryptoUtils';
-import { CONVERSATIONS_URL } from '../../config/config';
+import * as cryptoUtils from '../utils/cryptoUtils';
+import { CONVERSATIONS_URL } from '../config/config';
 import {
     getMessagesFromIndexedDB,
     storeMessagesInIndexedDB,
-} from '../../utils/indexedDB';
+} from '../utils/indexedDB';
 import { v4 as uuidv4 } from 'uuid';
-import { getGroupKey } from '../../services/encryptionService';
-import { MessageStatus } from '../../enums/messageStatus.enum';
-import {
-    GroupMessageProps,
-    GroupMessageStatusUpdateProps,
-    PrivateMessageProps,
-    PrivateMessageStatusUpdateProps,
-    UseChatMessagesProps,
-} from './useChatMessages.types';
-import { ChatState } from '../../types/chats.types';
-import { ConversationParticipant } from '../../types/conversations.types';
+import { getGroupKey } from '../services/encryptionService';
+import { MessageStatus } from '../enums/messageStatus.enum';
+import { ChatState } from '../types/chats.types';
+import { ConversationParticipant } from '../types/conversations.types';
+import { Socket } from 'socket.io-client';
+import { AxiosInstance } from 'axios';
+import { UserKeys } from '../types/users.types';
+
+export type UseChatMessagesProps = {
+    conversationId: string;
+    userId: number;
+    socket: Socket;
+    axiosPrivate: AxiosInstance;
+    userKeys: UserKeys;
+};
+
+export type PrivateMessageProps = {
+    id: string;
+    senderId: string;
+    conversationId: string;
+    content: string;
+    iv: string;
+    ephemeralPublicKey: string;
+    createdAt: string;
+    status: MessageStatus;
+};
+
+export type PrivateMessageStatusUpdateProps = {
+    messageId: string;
+    status: MessageStatus;
+};
+
+export type GroupMessageProps = {
+    id: string;
+    senderId: string;
+    conversationId: string;
+    content: string;
+    iv: string;
+    createdAt: string;
+    status: MessageStatus;
+};
+
+export type GroupMessageStatusUpdateProps = {
+    messageId: string;
+    status: MessageStatus;
+    userId: number;
+};
 
 export const useChatMessages = ({
     conversationId,
