@@ -1,6 +1,13 @@
 import { useRef, useEffect } from 'react';
 import { MdClose } from 'react-icons/md';
-import { OutgoingCallModalProps } from './OutgoingCallModal.types';
+import { Receiver } from '../types/users.types';
+
+interface OutgoingCallModalProps {
+    onEndCall: () => void;
+    receiver: Receiver;
+    isVideoCall: boolean;
+    localStream?: MediaStream | null;
+}
 
 const OutgoingCallModal: React.FC<OutgoingCallModalProps> = ({
     onEndCall,

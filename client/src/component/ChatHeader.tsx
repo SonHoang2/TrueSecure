@@ -1,7 +1,15 @@
 import React from 'react';
 import { FaPhoneAlt } from 'react-icons/fa';
 import { IoIosVideocam, IoMdMore } from 'react-icons/io';
-import { ChatHeaderProps } from './ChatHeader.types';
+import { Conversation } from '../types/conversations.types';
+import { Receiver, UserStatus } from '../types/users.types';
+
+type ChatHeaderProps = {
+    conversation: Conversation;
+    userStatus: UserStatus;
+    receiver: Receiver;
+    startCall: (video?: boolean) => void;
+};
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
     conversation,

@@ -5,16 +5,37 @@ import {
     CLIENT_URL,
     USERS_URL,
     GOOGLE_CLIENT_ID,
-} from '../../config/config';
+} from '../config/config';
 import queryString from 'query-string';
-import axios, { axiosPrivate } from '../../api/axios';
-import {
-    AuthContextType,
-    AuthProviderProps,
-    LoginCredentials,
-    SignupCredentials,
-} from './useAuth.types';
-import { User } from '../../types/users.types';
+import axios, { axiosPrivate } from '../api/axios';
+import { User } from '../types/users.types';
+
+interface LoginCredentials {
+    email: string;
+    password: string;
+}
+
+interface SignupCredentials {
+    email: string;
+    password: string;
+    passwordConfirm: string;
+    firstName: string;
+    lastName: string;
+}
+
+interface AuthContextType {
+    user: User | null;
+    login(credentials: LoginCredentials): Promise<void>;
+    signup(credentials: SignupCredentials): Promise<void>;
+    logout(): Promise<void>;
+    getGoogleCode(): void;
+    sendGoogleCode(code: string): Promise<void>;
+    refreshTokens(): Promise<void>;
+}
+
+interface AuthProviderProps {
+    children: React.ReactNode;
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 

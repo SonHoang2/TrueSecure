@@ -1,5 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { InCallModalProps } from './IncallModal.types';
+import { Receiver } from '../types/users.types';
+
+type InCallModalProps = {
+    localStream: MediaStream | null;
+    remoteStream: MediaStream | null;
+    onEndCall: () => void;
+    isVideoCall: boolean;
+    receiver: Receiver | null;
+};
 
 const InCallModal: React.FC<InCallModalProps> = ({
     localStream,

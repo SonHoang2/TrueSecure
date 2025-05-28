@@ -1,17 +1,17 @@
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import socket from '../utils/socket';
-import { useAuth } from '../hooks/useAuth/useAuth';
-import ChatLeftPanel from '../component/ChatLeftPanel/ChatLeftPanel';
+import { useAuth } from '../hooks/useAuth';
+import ChatLeftPanel from '../component/ChatLeftPanel';
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
-import { MessageList } from '../component/MessageList/MessageList';
-import { ChatHeader } from '../component/ChatHeader/ChatHeader';
-import { IncomingCallModal } from '../component/IncomingCallModal/IncomingCallModal';
-import OutgoingCallModal from '../component/OutgoingCallModal/OutgoingCallModal';
-import InCallModal from '../component/InCallModal/InCallModal';
-import { useWebRTC } from '../hooks/useWebRTC/useWebRTC';
-import { useChatMessages } from '../hooks/useChatMessages/useChatMessages';
-import SidebarNavigation from '../component/SidebarNavigation/SidebarNavigation';
+import { MessageList } from '../component/MessageList';
+import { ChatHeader } from '../component/ChatHeader';
+import { IncomingCallModal } from '../component/IncomingCallModal';
+import OutgoingCallModal from '../component/OutgoingCallModal';
+import InCallModal from '../component/InCallModal';
+import { useWebRTC } from '../hooks/useWebRTC';
+import { useChatMessages } from '../hooks/useChatMessages';
+import SidebarNavigation from '../component/SidebarNavigation';
 import { MdAddCircle, MdImage, MdGifBox, MdThumbUp } from 'react-icons/md';
 import { useEncryptionContext } from '../contexts/EncryptionContext';
 import {

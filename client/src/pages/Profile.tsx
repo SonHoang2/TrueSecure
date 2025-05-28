@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuth } from '../hooks/useAuth/useAuth';
+import { useAuth } from '../hooks/useAuth';
 import {
     MdPerson,
     MdEmail,

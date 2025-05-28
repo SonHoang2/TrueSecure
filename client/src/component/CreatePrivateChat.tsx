@@ -1,10 +1,24 @@
-import { useState, useEffect } from 'react';
-import { CONVERSATIONS_URL } from '../../config/config';
+import { useState, useEffect, Dispatch, SetStateAction } from 'react';
+import { CONVERSATIONS_URL } from '../config/config';
 import { FaArrowLeft, FaSearch } from 'react-icons/fa';
-import debounce from '../../utils/debounce';
-import useAxiosPrivate from '../../hooks/useAxiosPrivate';
-import { User } from '../../types/users.types';
-import { CreatePrivateChatProps } from './CreatePrivateChat.types';
+import debounce from '../utils/debounce';
+import useAxiosPrivate from '../hooks/useAxiosPrivate';
+import { User } from '../types/users.types';
+import { ChatState } from '../types/chats.types';
+
+type CreateChatState = {
+    createGroupChat: boolean;
+    createPrivateChat: boolean;
+};
+
+type CreatePrivateChatProps = {
+    setCreateChat: Dispatch<SetStateAction<CreateChatState>>;
+    onSearch: (
+        searchTerm: string,
+        setUsers: Dispatch<SetStateAction<User[]>>,
+    ) => Promise<void>;
+    setChatState: Dispatch<SetStateAction<ChatState>>;
+};
 
 export const CreatePrivateChat: React.FC<CreatePrivateChatProps> = ({
     setCreateChat,
