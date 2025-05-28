@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import socket from '../utils/socket';
 import { useAuth } from '../hooks/useAuth';
@@ -12,13 +12,14 @@ import InCallModal from '../component/InCallModal';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useChatMessages } from '../hooks/useChatMessages';
 import SidebarNavigation from '../component/SidebarNavigation';
-import { MdAddCircle, MdImage, MdGifBox, MdThumbUp } from 'react-icons/md';
+import { MdImage, MdThumbUp } from 'react-icons/md';
 import { useEncryptionContext } from '../contexts/EncryptionContext';
 import {
     getAdminPublicKey,
     getUserPublicKey,
 } from '../services/encryptionService';
 import { UserStatus } from '../types/users.types';
+import ChatInfoSidebar from '../component/ChatInfoSidebar';
 
 interface ChatProps {
     userStatus: UserStatus;
@@ -26,6 +27,7 @@ interface ChatProps {
 
 const Chat: React.FC<ChatProps> = ({ userStatus }) => {
     const conversationId = Number(useParams()?.conversationId);
+    const [showChatInfo, setShowChatInfo] = useState(true);
 
     const { user } = useAuth();
     const { userKeys, setUserKeys } = useEncryptionContext();
@@ -101,6 +103,8 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
                         userStatus={userStatus}
                         receiver={chatState.receiver}
                         startCall={startCall}
+                        onMoreClick={() => setShowChatInfo(!showChatInfo)}
+                        showChatInfo={showChatInfo}
                     />
                     <MessageList
                         messages={chatState.messages}
@@ -112,13 +116,7 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
                     />
                     <div className="flex p-1 items-center mb-2">
                         <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                            <MdAddCircle className="text-blue-500 text-2xl" />
-                        </button>
-                        <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
                             <MdImage className="text-blue-500 text-2xl" />
-                        </button>
-                        <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                            <MdGifBox className="text-blue-500 text-2xl" />
                         </button>
                         <input
                             type="text"
@@ -143,7 +141,12 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
                     </div>
                 </div>
             }
-
+            <ChatInfoSidebar
+                isOpen={showChatInfo}
+                onClose={() => setShowChatInfo(false)}
+                conversation={chatState.conversation}
+                receiver={chatState.receiver}
+            />
             <div>
                 {callState.isRinging && (
                     <IncomingCallModal

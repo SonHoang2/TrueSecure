@@ -89,7 +89,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     }, [messages, conversation, userId, participantMap, lastSeenMap, receiver]);
 
     return (
-        <div className="flex-grow overflow-y-auto flex flex-col pb-4 pt-2">
+        <div className="overflow-y-auto flex flex-col pb-4 pt-2">
             {processedMessages.map(
                 ({
                     msg,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaPhoneAlt } from 'react-icons/fa';
-import { IoIosVideocam, IoMdMore } from 'react-icons/io';
+import { IoIosVideocam, IoIosMore } from 'react-icons/io';
 import { Conversation } from '../types/conversations.types';
 import { Receiver, UserStatus } from '../types/users.types';
 
@@ -9,6 +9,8 @@ type ChatHeaderProps = {
     userStatus: UserStatus;
     receiver: Receiver;
     startCall: (video?: boolean) => void;
+    showChatInfo: boolean;
+    onMoreClick: () => void;
 };
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -16,6 +18,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     userStatus,
     receiver,
     startCall,
+    showChatInfo,
+    onMoreClick,
 }) => {
     const getLastSeenTime = (timestamp: string) => {
         if (!timestamp) return '';
@@ -71,7 +75,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             <div className="flex items-center">
                 {!conversation?.isGroup && (
                     <button
-                        className="p-2 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
+                        className="p-2 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200 transition-all duration-300 hover:scale-110"
                         onClick={() => startCall()}
                     >
                         <FaPhoneAlt className="text-blue-500" size={20} />
@@ -79,14 +83,23 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                 )}
                 {!conversation?.isGroup && (
                     <button
-                        className="p-2 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
+                        className="p-2 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200 transition-all duration-300 hover:scale-110"
                         onClick={() => startCall(true)}
                     >
                         <IoIosVideocam className="text-blue-500" size={30} />
                     </button>
                 )}
-                <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                    <IoMdMore className="text-blue-500 text-2xl" />
+                <button
+                    className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200 transition-all duration-300 hover:scale-110"
+                    onClick={onMoreClick}
+                >
+                    <IoIosMore
+                        className={`text-2xl ${
+                            showChatInfo
+                                ? 'bg-blue-500 text-white rounded-full'
+                                : 'text-blue-500 hover:text-blue-600'
+                        }`}
+                    />
                 </button>
             </div>
         </div>
