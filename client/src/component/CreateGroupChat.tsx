@@ -1,20 +1,37 @@
-import { useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 import { MdClose } from 'react-icons/md';
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
 import { CONVERSATIONS_URL, USERS_URL } from '../config/config';
 import debounce from '../utils/debounce';
 import * as cryptoUtils from '../utils/cryptoUtils';
+import { User } from '../types/users.types';
+import { ChatState } from '../types/chats.types';
 
-export const CreateGroupChat = ({
+type CreateChatState = {
+    createGroupChat: boolean;
+    createPrivateChat: boolean;
+};
+
+interface CreateGroupChatProps {
+    setCreateChat: Dispatch<SetStateAction<CreateChatState>>;
+    onSearch: (
+        searchTerm: string,
+        setUsers: Dispatch<SetStateAction<User[]>>,
+    ) => Promise<void>;
+    setChatState: Dispatch<SetStateAction<ChatState>>;
+    user: User;
+}
+
+export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
     setCreateChat,
     onSearch,
     setChatState,
     user,
 }) => {
-    const [filteredUsers, setFilteredUsers] = useState([]);
+    const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [isNewGroupChat, setNewGroupChat] = useState(null);
+    const [isNewGroupChat, setNewGroupChat] = useState<boolean | null>(null);
 
     interface User {
         id: string;
@@ -37,7 +54,7 @@ export const CreateGroupChat = ({
 
     const axiosPrivate = useAxiosPrivate();
 
-    const handleSearch = (e) => {
+    const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
     };
 
@@ -102,7 +119,7 @@ export const CreateGroupChat = ({
         }
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
         try {
             e.preventDefault();
 
