@@ -27,7 +27,7 @@ interface ChatProps {
 
 const Chat: React.FC<ChatProps> = ({ userStatus }) => {
     const conversationId = Number(useParams()?.conversationId);
-    const [showChatInfo, setShowChatInfo] = useState(true);
+    const [showChatInfo, setShowChatInfo] = useState(false);
 
     const { user } = useAuth();
     const { userKeys, setUserKeys } = useEncryptionContext();

@@ -29,7 +29,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
 
     return (
         <div
-            className="rounded-lg p-2 bg-white me-4 w-3/12"
+            className="rounded-lg p-2 bg-white me-4 w-3/12 overflow-y-auto"
         >
             {/* Profile Section */}
             <div className="flex flex-col items-center p-4 border-b">
