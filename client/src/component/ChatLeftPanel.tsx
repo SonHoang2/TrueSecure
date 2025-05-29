@@ -1,6 +1,6 @@
 import { USERS_URL } from '../config/config';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import CreateGroupChat from './CreateGroupChat';
 import CreatePrivateChat from './CreatePrivateChat';
 import { FaEdit, FaSearch } from 'react-icons/fa';
@@ -9,6 +9,8 @@ import useAxiosPrivate from '../hooks/useAxiosPrivate';
 import { MdClose } from 'react-icons/md';
 import { ChatState } from '../types/chats.types';
 import { User, UserStatus } from '../types/users.types';
+import { getLastMessageFromIndexedDB } from '../utils/indexedDB';
+import { Message } from '../types/messages.types';
 
 type ChatLeftPanelProps = {
     chatState: ChatState;
@@ -25,16 +27,21 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
     conversationId,
     setChatState,
 }) => {
-    const [filteredUsers, setFilteredUsers] = useState([]);
+    const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [createChat, setCreateChat] = useState({
         createGroupChat: false,
         createPrivateChat: false,
     });
 
+    const [lastMessages, setLastMessages] = useState<
+        Record<string, Message | null>
+    >({});
+
     const [isCreateChatModalOpen, setCreateChatModalOpen] = useState(false);
 
     const axiosPrivate = useAxiosPrivate();
+    const navigate = useNavigate();
 
     const searchUsers = async (
         searchTerm: string,
@@ -54,7 +61,100 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
             console.log(error);
         }
     };
-    const navigate = useNavigate();
+
+    const getSenderName = (convParticipants: any[], senderId: number) => {
+        const sender = convParticipants?.find(
+            (participant) => participant?.userId === senderId,
+        )?.user;
+        return sender ? `${sender.firstName} ${sender.lastName}` : 'Unknown';
+    };
+
+    const handleNavigateToChat = useCallback(
+        (convId: string) => {
+            navigate(`/chat/${convId}`);
+        },
+        [navigate],
+    );
+
+    // Fetch last messages when conversations change
+    useEffect(() => {
+        const fetchLastMessages = async () => {
+            const results: Record<string, Message | null> = {};
+            if (chatState.conversations) {
+                for (const conv of chatState.conversations) {
+                    results[conv.conversationId] =
+                        await getLastMessageFromIndexedDB(conv.conversationId);
+                }
+            }
+
+            setLastMessages(results);
+        };
+        fetchLastMessages();
+    }, [chatState.conversations]);
+
+    useEffect(() => {
+        if (searchTerm) {
+            searchUsers(searchTerm, setFilteredUsers);
+        } else {
+            setFilteredUsers([]);
+        }
+        console.log('Filtered Users:', filteredUsers);
+    }, [searchTerm]);
+
+    const processedConversations = useMemo(() => {
+        return (
+            chatState.conversations?.map((conv) => {
+                const { conversation } = conv;
+                const { convParticipants, isGroup, title, avatar } =
+                    conversation;
+
+                const otherUser = convParticipants[0]?.user;
+
+                const displayName = isGroup
+                    ? title
+                    : otherUser
+                      ? `${otherUser.firstName} ${otherUser.lastName}`
+                      : 'Unknown User';
+
+                const lastMessage = lastMessages[conv.conversationId];
+
+                let messageContent = 'No message yet';
+                if (lastMessage) {
+                    if (lastMessage.senderId === user.id) {
+                        messageContent = `You: ${lastMessage.content}`;
+                    } else if (isGroup) {
+                        const senderName = getSenderName(
+                            convParticipants,
+                            lastMessage.senderId,
+                        );
+                        messageContent = `${senderName}: ${lastMessage.content}`;
+                    } else {
+                        messageContent = lastMessage.content;
+                    }
+                }
+
+                const isOtherUserOnline =
+                    !isGroup &&
+                    otherUser?.id &&
+                    userStatus?.onlineUsers.hasOwnProperty(otherUser.id);
+
+                return {
+                    ...conv,
+                    otherUser,
+                    displayName,
+                    messageContent,
+                    isOtherUserOnline,
+                    avatarSrc: isGroup ? avatar : otherUser?.avatar,
+                    isGroup,
+                };
+            }) || []
+        );
+    }, [
+        chatState.conversations,
+        lastMessages,
+        user.id,
+        userStatus?.onlineUsers,
+    ]);
 
     return (
         <div className="rounded-lg p-2 bg-white me-4 w-3/12">
@@ -127,59 +227,38 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
                         </div>
                     </div>
                     <div className="flex flex-col">
-                        {chatState.conversations?.map((conv) => {
-                            const { conversation } = conv;
-                            const { convParticipants, isGroup } = conversation;
-
-                            // Safely get the first participant and message
-                            const otherUser = convParticipants[0]?.user;
-                            //   const lastMessage = messages[0];
-
-                            // Determine the display name
-                            const displayName = isGroup
-                                ? conversation.title
-                                : otherUser
-                                  ? `${otherUser.firstName} ${otherUser.lastName}`
-                                  : 'Unknown User';
-
-                            // Determine the message content
-                            //   const messageContent = lastMessage
-                            //     ? lastMessage.senderId === user.id
-                            //       ? `You: ${lastMessage.content}`
-                            //       : lastMessage.content
-                            //     : "No message yet";
-                            return (
-                                <div
-                                    key={conv.conversationId}
-                                    className={`p-3 flex items-center cursor-pointer hover:bg-gray-100 rounded-md ${conversationId === conv.conversationId ? 'bg-gray-100' : ''}`}
-                                    onClick={() =>
-                                        navigate(`/chat/${conv.conversationId}`)
-                                    }
-                                >
-                                    <div className="relative flex items-center">
-                                        <img
-                                            className="inline-block size-10 rounded-full ring-0"
-                                            src={`${isGroup ? conversation?.avatar : otherUser?.avatar}`}
-                                            alt={displayName}
-                                        />
-                                        {!isGroup &&
-                                            userStatus?.onlineUsers.hasOwnProperty(
-                                                otherUser?.id,
-                                            ) && (
-                                                <span className="absolute bottom-0 right-0 block size-3 bg-green-500 border-2 border-white rounded-full"></span>
-                                            )}
-                                    </div>
-                                    <div className="flex flex-col ms-2 flex-1 min-w-0">
-                                        <p className="text-base font-bold">
-                                            {displayName}
-                                        </p>
-                                        {/* <p className="text-sm text-gray-500 overflow-hidden text-ellipsis whitespace-nowrap break-all">
-                      {messageContent}
-                    </p> */}
-                                    </div>
+                        {processedConversations.map((conv) => (
+                            <div
+                                key={conv.conversationId}
+                                className={`p-3 flex items-center cursor-pointer hover:bg-gray-100 rounded-md ${
+                                    conversationId === conv.conversationId
+                                        ? 'bg-gray-100'
+                                        : ''
+                                }`}
+                                onClick={() =>
+                                    handleNavigateToChat(conv.conversationId)
+                                }
+                            >
+                                <div className="relative flex items-center">
+                                    <img
+                                        className="inline-block size-10 rounded-full ring-0"
+                                        src={conv.avatarSrc}
+                                        alt={conv.displayName}
+                                    />
+                                    {conv.isOtherUserOnline && (
+                                        <span className="absolute bottom-0 right-0 block size-3 bg-green-500 border-2 border-white rounded-full" />
+                                    )}
                                 </div>
-                            );
-                        })}
+                                <div className="flex flex-col ms-2 flex-1 min-w-0">
+                                    <p className="text-base font-bold">
+                                        {conv.displayName}
+                                    </p>
+                                    <p className="text-sm text-gray-500 overflow-hidden text-ellipsis whitespace-nowrap break-all">
+                                        {conv.messageContent}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
