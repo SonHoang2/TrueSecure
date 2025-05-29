@@ -148,3 +148,40 @@ export const getMessagesFromIndexedDB = async (
         return [];
     }
 };
+
+export const getLastMessageFromIndexedDB = async (
+    conversationId: string,
+): Promise<any | null> => {
+    try {
+        const db = await openDatabase();
+        const tx = db.transaction('messages', 'readonly');
+        const store = tx.objectStore('messages');
+        const index = store.index('conversationId_createdAt');
+
+        return await new Promise<any | null>((resolve, reject) => {
+            // Lower and upper bound for the compound index
+            const range = IDBKeyRange.bound(
+                [conversationId, ''],
+                [conversationId, '\uffff'],
+            );
+            const request = index.openCursor(range, 'prev'); // Descending order
+
+            request.onsuccess = (event) => {
+                const cursor = (event.target as IDBRequest<IDBCursorWithValue>)
+                    .result;
+                if (cursor) {
+                    resolve(cursor.value);
+                } else {
+                    resolve(null); // No messages found
+                }
+            };
+
+            request.onerror = (event) => {
+                reject((event.target as IDBRequest).error);
+            };
+        });
+    } catch (err) {
+        console.error('IndexedDB error:', err);
+        return null;
+    }
+};
