@@ -7,7 +7,6 @@
 This real-time messaging application enables users to seamlessly connect with friends, family, and colleagues through instant text messaging, group chats, voice calls, and video calls. Designed for fast and secure communication, it leverages Socket.IO for real-time messaging, WebRTC for peer-to-peer media streaming, and end-to-end encryption (E2EE) to protect user privacy. The system also integrates deepfake detection to analyze video streams in real time, enhancing security and trust during video communication.
 
 ## Technologies
-
 - Front End: React, HTML, CSS, Tailwindcss, Typescript
 - Back End: NodeJS, NestJS, Typescript, Python, FastAPI
 - Deepfake Detection: OpenCV, PyTorch, Facenet-PyTorch, Grad-CAM
@@ -16,11 +15,19 @@ This real-time messaging application enables users to seamlessly connect with fr
 - Messaging Queue: RabbitMQ
 
 ## Features
-
 - **User Authentication:** Users can securely sign up, log in, and log out using either email and password or social accounts.
 - **Real-Time Messaging:** Users can send messages in private and group chats.
 - **Voice & Video Calls:** Supports real-time audio and video communication.
 - **Token Management:** Automatically refreshes access tokens upon expiration to enhance user experience.
+- **Deepfake Detection:** Analyzes video streams in real time to detect deepfakes using deep learning models, helping prevent scam calls.
+- **Notifications:** Real-time notifications for events like new messages, calls, and status updates.
+- **User-friendly Interface:** Intuitive and easy-to-use design.
+- **Group Management:** Create and manage group chats with administrative options.
+- **Cloud Storage:** Upload and share files with secure cloud storage capabilities using Cloudinary.
+- **OAuth Support:** Login with Google, Facebook, and GitHub accounts.
+- **WebRTC Support:** Real-time communication with video and audio streaming capabilities.
+- **WebSocket Support:** Real-time connection to the server for instant notifications and updates.
+
 
 ## Security
 
