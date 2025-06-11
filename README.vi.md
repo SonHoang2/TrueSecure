@@ -6,6 +6,9 @@
 
 Ứng dụng nhắn tin thời gian thực này cho phép người dùng kết nối dễ dàng với bạn bè, gia đình và đồng nghiệp thông qua nhắn tin văn bản tức thời, trò chuyện nhóm, cuộc gọi thoại và video. Được thiết kế để truyền thông nhanh chóng và an toàn, ứng dụng sử dụng Socket.IO cho nhắn tin thời gian thực, WebRTC cho phát trực tiếp media peer-to-peer và mã hóa đầu cuối (E2EE) để bảo vệ quyền riêng tư của người dùng. Hệ thống cũng tích hợp phát hiện deepfake để phân tích luồng video trong thời gian thực, nâng cao bảo mật và sự tin cậy trong quá trình giao tiếp video.
 
+## Kiến trúc hệ thống
+- **Microservices:** Hệ thống được thiết kế theo kiến trúc microservices, cho phép từng dịch vụ được triển khai độc lập, dễ dàng mở rộng và bảo trì.
+
 ## Công nghệ
 - Front End: React, HTML, CSS, Tailwindcss, Typescript
 - Back End: NodeJS, NestJS, Typescript, Python, FastAPI
