@@ -6,6 +6,9 @@
 
 This real-time messaging application enables users to seamlessly connect with friends, family, and colleagues through instant text messaging, group chats, voice calls, and video calls. Designed for fast and secure communication, it leverages Socket.IO for real-time messaging, WebRTC for peer-to-peer media streaming, and end-to-end encryption (E2EE) to protect user privacy. The system also integrates deepfake detection to analyze video streams in real time, enhancing security and trust during video communication.
 
+## Architectural Pattern
+- **Microservices:** The system is designed using a microservices architecture, allowing independent deployment, scalability, and maintainability of each service.
+
 ## Technologies
 - Front End: React, HTML, CSS, Tailwindcss, Typescript
 - Back End: NodeJS, NestJS, Typescript, Python, FastAPI
