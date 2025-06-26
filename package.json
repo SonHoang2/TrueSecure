@@ -1,6 +1,11 @@
 {
   "scripts": {
     "server": "cd server && npm run dev",
-    "client": "cd client && npm run dev"
+    "client": "cd client && npm run dev",
+    "df_server": "cd df_server && python main.py",
+    "dev": "concurrently --names \"🖥️ SERVER,⚛️ CLIENT,🤖 DF_SERVER\" --prefix-colors \"blue,green,yellow\" \"npm run server\" \"npm run client\" \"npm run df_server\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
   }
 }
