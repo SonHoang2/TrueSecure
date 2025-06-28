@@ -77,11 +77,6 @@ async def detect_base64(request: Base64ImageRequest):
         else:
             confidence_rounded = 0.0
             print("Not see face in the image, setting confidence to 0.0")
-
-        # Encode processed image back to base64
-        _, buffer = cv2.imencode('.jpg', frame)
-        processed_image_base64 = base64.b64encode(buffer).decode('utf-8')
-        print(processed_image_base64)
         
         return {
             "status": "success",

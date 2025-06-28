@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { Socket } from 'socket.io-client';
 import { User } from '../types/users.types';
+import { DEEPFAKE_URL } from '../config/config';
+import { AxiosInstance } from 'axios';
 
 interface UseWebRTCProps {
     receiverId: number;
     socket: Socket;
     user: User;
+    axiosPrivate: AxiosInstance;
 }
 
 interface CallState {
@@ -25,12 +28,14 @@ interface UseWebRTCResult {
     endCall: (shouldNotifyPeer?: boolean) => void;
     localStream: MediaStream | null;
     remoteStream: MediaStream | null;
+    capturedImages: String[];
 }
 
 export const useWebRTC = ({
     receiverId,
     socket,
     user,
+    axiosPrivate,
 }: UseWebRTCProps): UseWebRTCResult => {
     const [callState, setCallState] = useState<CallState>({
         isCalling: false,
@@ -47,6 +52,89 @@ export const useWebRTC = ({
     const peer = useRef<RTCPeerConnection | null>(null);
 
     const candidateQueue = useRef<RTCIceCandidateInit[]>([]);
+
+    const [capturedImages, setCapturedImages] = useState<String[]>([]);
+    const captureIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    const captureFrame = (stream: MediaStream): Promise<String | null> => {
+        if (!stream) return Promise.resolve(null);
+
+        // Create canvas if it doesn't exist
+        if (!canvasRef.current) {
+            canvasRef.current = document.createElement('canvas');
+        }
+
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+
+        // Create a video element to draw the stream
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.muted = true;
+
+        return new Promise<string | null>((resolve) => {
+            video.onloadedmetadata = () => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                video.play();
+
+                video.ontimeupdate = () => {
+                    if (ctx && video.readyState >= 2) {
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const base64 = canvas.toDataURL('image/jpeg', 1);
+                        video.remove();
+                        resolve(base64);
+                    }
+                };
+            };
+        });
+    };
+
+    // Start capturing images every 5 seconds
+    const startImageCapture = (stream: MediaStream) => {
+        if (captureIntervalRef.current) {
+            clearInterval(captureIntervalRef.current);
+        }
+
+        captureIntervalRef.current = setInterval(async () => {
+            try {
+                const base64Image = await captureFrame(stream);
+                if (base64Image) {
+                    setCapturedImages((prev) => [...prev, base64Image]);
+
+                    console.log('base64Image:', base64Image);
+
+                    const res = await axiosPrivate.post(
+                        DEEPFAKE_URL + '/analyze-base64',
+                        {
+                            image: base64Image,
+                            callId: `${user.id}_${receiverId}`,
+                            timestamp: Date.now().toString(),
+                        },
+                        {
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                        },
+                    );
+
+                    console.log('Image uploaded successfully:', res.data);
+                }
+            } catch (error) {
+                console.error('Error capturing frame:', error);
+            }
+        }, 5000); // Capture every 5 seconds
+    };
+
+    // Stop capturing images
+    const stopImageCapture = () => {
+        if (captureIntervalRef.current) {
+            clearInterval(captureIntervalRef.current);
+            captureIntervalRef.current = null;
+        }
+        setCapturedImages([]);
+    };
 
     const createPeerConnection = () => {
         console.log('Creating new peer connection...');
@@ -93,7 +181,11 @@ export const useWebRTC = ({
             const stream: MediaStream =
                 await navigator.mediaDevices.getUserMedia({
                     audio: true,
-                    video: isVideo,
+                    video: {
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        facingMode: 'user',
+                    },
                 });
 
             setLocalStream(stream);
@@ -176,6 +268,11 @@ export const useWebRTC = ({
                 offer: null,
                 isVideoCall: prev.isVideoCall,
             }));
+
+            // Start image capture if it's a video call
+            if (callState.isVideoCall) {
+                startImageCapture(stream);
+            }
         } catch (error) {
             console.error('Error accepting call:', error);
         }
@@ -215,6 +312,8 @@ export const useWebRTC = ({
                 setLocalStream(null);
             }
 
+            stopImageCapture();
+
             if (shouldNotifyPeer) {
                 socket.emit('call-ended', { receiverId });
             }
@@ -249,6 +348,15 @@ export const useWebRTC = ({
             console.error('Error flushing ICE candidate queue:', error);
         }
     };
+
+    useEffect(() => {
+        return () => {
+            stopImageCapture();
+            if (canvasRef.current) {
+                canvasRef.current = null;
+            }
+        };
+    }, []);
 
     useEffect(() => {
         peer.current = new RTCPeerConnection({
@@ -288,14 +396,30 @@ export const useWebRTC = ({
                         new RTCSessionDescription(answer),
                     );
 
-                    setCallState((prev) => ({
-                        isConnected: true,
-                        isCalling: false,
-                        sender: null,
-                        offer: null,
-                        isRinging: false,
-                        isVideoCall: prev.isVideoCall,
-                    }));
+                    setCallState((prev) => {
+                        console.log('Previous state:', prev); // Log previous state
+
+                        const newState = {
+                            isConnected: true,
+                            isCalling: false,
+                            sender: null,
+                            offer: null,
+                            isRinging: false,
+                            isVideoCall: prev.isVideoCall,
+                        };
+
+                        console.log('New state:', newState); // Log new state
+
+                        // Start image capture when call is connected and it's a video call
+                        if (prev.isVideoCall && localStreamRef.current) {
+                            console.log(
+                                'Starting image capture for video call',
+                            );
+                            startImageCapture(localStreamRef.current);
+                        }
+
+                        return newState;
+                    });
                 } catch (error) {
                     console.error('Error handling answer:', error);
                 }
@@ -354,5 +478,6 @@ export const useWebRTC = ({
         endCall,
         localStream,
         remoteStream,
+        capturedImages,
     };
 };
