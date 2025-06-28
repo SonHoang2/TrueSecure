@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConversationModule } from './conversation/conversation.module';
 import { SocketModule } from './socket/socket.module';
 import { RabbitmqModule } from './rabbitmq/rabbitmq.module';
+import { DeepfakeModule } from './deepfake/deepfake.module';
 import config from './config';
 
 @Module({
@@ -34,6 +35,7 @@ import config from './config';
         ConversationModule,
         SocketModule,
         RabbitmqModule,
+        DeepfakeModule,
     ],
 })
 export class AppModule {}

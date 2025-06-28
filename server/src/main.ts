@@ -7,6 +7,7 @@ import * as cookieParser from 'cookie-parser';
 import * as fs from 'fs';
 import { ConfigService } from '@nestjs/config';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import * as bodyParser from 'body-parser';
 
 async function bootstrap() {
     // Create a temporary module to access config before app creation
@@ -24,6 +25,8 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule, { httpsOptions });
 
     app.setGlobalPrefix('api/v1');
+    app.use(bodyParser.json({ limit: '5mb' }));
+    app.use(bodyParser.urlencoded({ limit: '5mb', extended: true }));
     app.use(cookieParser());
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
     app.useGlobalFilters(new AllExceptionsFilter());
