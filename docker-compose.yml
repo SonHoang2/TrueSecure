@@ -1,36 +1,28 @@
-version: "3.8"
-
 services:
-  # client:
-  #   build:
-  #     context: ./client
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - server
-  #   env_file:
-  #     - ./client/.env
-  #   volumes:
-  #     - ./client:/app
-  #     - /app/node_modules
-  #     - ./localhost.pem:/app/localhost.pem
-  #     - ./localhost-key.pem:/app/localhost-key.pem
-  #   networks:
-  #     - chat-network
-  #   restart: unless-stopped
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    env_file:
+      - ./client/.env.docker
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+      - ./localhost.pem:/app/localhost.pem
+      - ./localhost-key.pem:/app/localhost-key.pem
+    networks:
+      - chat-network
+    restart: unless-stopped
+    depends_on:
+      - server
 
   server:
     build:
       context: ./server
       dockerfile: Dockerfile
-    ports:
-      - "5000:5000"
     env_file:
       - ./server/.env.docker
     volumes:
-      - ./server:/app
-      - /app/node_modules
       - ./localhost.pem:/app/localhost.pem
       - ./localhost-key.pem:/app/localhost-key.pem
     networks:
@@ -39,7 +31,45 @@ services:
     depends_on:
       - postgres
       - redis
+      - rabbitmq
 
+  df_server:
+    build:
+      context: ./df_server
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    networks:
+      - chat-network
+    restart: unless-stopped
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - RABBITMQ_URL=amqp://admin:guest@guest:5672/
+    depends_on:
+      - rabbitmq
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./localhost.pem:/etc/nginx/ssl/localhost.pem
+      - ./localhost-key.pem:/etc/nginx/ssl/localhost-key.pem
+    networks:
+      - chat-network
+    restart: unless-stopped
+    depends_on:
+      - client
+      - server
+      - df_server
+
+  # PostgreSQL Database
   postgres:
     image: postgres:14-alpine
     ports:
@@ -51,7 +81,13 @@ services:
     networks:
       - chat-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
+  # Redis Cache
   redis:
     image: redis:7.4.2-alpine
     ports:
@@ -61,6 +97,43 @@ services:
     networks:
       - chat-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # RabbitMQ Message Queue
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI port
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+      - RABBITMQ_DEFAULT_VHOST=/
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - chat-network
+    restart: unless-stopped
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+# cloudflared:
+#   image: cloudflare/cloudflared:latest
+#   command: tunnel --no-autoupdate --url http://nginx:80
+#   networks:
+#     - chat-network
+#   depends_on:
+#     - nginx
+#   restart: unless-stopped
+#   profiles:
+#     - tunnel
 
 networks:
   chat-network:
@@ -69,3 +142,4 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  rabbitmq_data:
