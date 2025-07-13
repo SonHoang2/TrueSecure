@@ -7,6 +7,7 @@ import { ConversationModule } from './conversation/conversation.module';
 import { SocketModule } from './socket/socket.module';
 import { RabbitmqModule } from './rabbitmq/rabbitmq.module';
 import { DeepfakeModule } from './deepfake/deepfake.module';
+import { RedisModule } from './redis/redis.module';
 import config from './config';
 
 @Module({
@@ -36,6 +37,7 @@ import config from './config';
         SocketModule,
         RabbitmqModule,
         DeepfakeModule,
+        RedisModule,
     ],
 })
 export class AppModule {}
