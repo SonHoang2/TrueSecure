@@ -11,8 +11,10 @@ import { RedisService } from './redis.service';
             inject: [ConfigService],
             useFactory: (configService: ConfigService) => ({
                 type: 'single',
-                host: configService.get<string>('redis.host'),
-                port: configService.get<number>('redis.port'),
+                options: {
+                    host: configService.get<string>('redis.host'),
+                    port: configService.get<number>('redis.port'),
+                },
             }),
         }),
     ],
