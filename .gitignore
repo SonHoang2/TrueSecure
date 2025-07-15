@@ -7,3 +7,6 @@ localhost-key.pem
 node_modules/
 .env.postgres
 server/.env.docker
+test_images/
+client/.env.docker
+config.yml
