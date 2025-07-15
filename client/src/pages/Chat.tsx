@@ -55,6 +55,7 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
         receiverId: chatState.receiver?.id,
         socket,
         user,
+        axiosPrivate,
     });
 
     useEffect(() => {

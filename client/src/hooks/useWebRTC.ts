@@ -57,7 +57,7 @@ export const useWebRTC = ({
     const captureIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-    const captureFrame = (stream: MediaStream): Promise<String | null> => {
+    const captureFrame = (stream: MediaStream): Promise<Blob | null> => {
         if (!stream) return Promise.resolve(null);
 
         // Create canvas if it doesn't exist
@@ -73,7 +73,7 @@ export const useWebRTC = ({
         video.srcObject = stream;
         video.muted = true;
 
-        return new Promise<string | null>((resolve) => {
+        return new Promise<Blob | null>((resolve) => {
             video.onloadedmetadata = () => {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
@@ -82,9 +82,10 @@ export const useWebRTC = ({
                 video.ontimeupdate = () => {
                     if (ctx && video.readyState >= 2) {
                         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        const base64 = canvas.toDataURL('image/jpeg', 1);
-                        video.remove();
-                        resolve(base64);
+                        canvas.toBlob((blob) => {
+                            video.remove();
+                            resolve(blob);
+                        }, 'image/jpeg', 1);
                     }
                 };
             };
@@ -99,22 +100,20 @@ export const useWebRTC = ({
 
         captureIntervalRef.current = setInterval(async () => {
             try {
-                const base64Image = await captureFrame(stream);
-                if (base64Image) {
-                    setCapturedImages((prev) => [...prev, base64Image]);
+                const imageBlob = await captureFrame(stream);
+                if (imageBlob) {
+                    setCapturedImages((prev) => [...prev, 'blob']);
 
-                    console.log('base64Image:', base64Image);
+                    const formData = new FormData();
+                    formData.append('image', imageBlob, `frame_${Date.now()}.jpg`);
+                    formData.append('callId', `${user.id}_${receiverId}`);
 
                     const res = await axiosPrivate.post(
-                        DEEPFAKE_URL + '/analyze-base64',
-                        {
-                            image: base64Image,
-                            callId: `${user.id}_${receiverId}`,
-                            timestamp: Date.now().toString(),
-                        },
+                        DEEPFAKE_URL + '/upload',
+                        formData,
                         {
                             headers: {
-                                'Content-Type': 'application/json',
+                                'Content-Type': 'multipart/form-data',
                             },
                         },
                     );

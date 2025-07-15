@@ -25,9 +25,9 @@ async def root():
 
 
 @app.post("/detect")
-async def detect(file: UploadFile = File(...)):
+async def detect(imageFile: UploadFile = File(...)):
     try:
-        contents = await file.read()
+        contents = await imageFile.read()
         npimg = np.frombuffer(contents, np.uint8)
         frame = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
 
@@ -38,58 +38,11 @@ async def detect(file: UploadFile = File(...)):
             "status": "success",
             "is_deepfake": is_deepfake,
             "confidence": round(confidence, 3),
-            "message": "Detection complete"
         }
     except Exception as e:
         print(f"Error processing image: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Error processing image: {str(e)}")
-
-
-@app.post("/detect-base64")
-async def detect_base64(request: Base64ImageRequest):
-    try:
-        if request.image.startswith('data:image/'):
-            base64_data = request.image.split(',')[1]
-        else:
-            base64_data = request.image
-
-        # Decode base64 to bytes
-        image_bytes = base64.b64decode(base64_data)
-
-        # Convert bytes to numpy array
-        npimg = np.frombuffer(image_bytes, np.uint8)
-
-        # Decode image
-        frame = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
-
-        if frame is None:
-            raise HTTPException(status_code=400, detail="Invalid image format")
-
-        print(f"Image decoded successfully. Shape: {frame.shape}")
-
-        # Get prediction result
-        is_deepfake, confidence, frame = predict(frame)
-
-        # Handle case where confidence might be None
-        if confidence is not None:
-            confidence_rounded = round(confidence, 3)
-        else:
-            confidence_rounded = 0.0
-            print("Not see face in the image, setting confidence to 0.0")
-        
-        return {
-            "status": "success",
-            "is_deepfake": is_deepfake,
-            "confidence": confidence_rounded,
-            "message": "Detection complete",
-        }
-
-    except Exception as e:
-        print(f"Error processing base64 image: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Error processing image: {str(e)}")
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
