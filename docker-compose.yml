@@ -124,17 +124,6 @@ services:
       timeout: 30s
       retries: 3
 
-# cloudflared:
-#   image: cloudflare/cloudflared:latest
-#   command: tunnel --no-autoupdate --url http://nginx:80
-#   networks:
-#     - chat-network
-#   depends_on:
-#     - nginx
-#   restart: unless-stopped
-#   profiles:
-#     - tunnel
-
 networks:
   chat-network:
     driver: bridge
