@@ -35,10 +35,13 @@ async function bootstrap() {
     // Enable WebSockets with Socket.io
     app.useWebSocketAdapter(new IoAdapter(app));
 
-    const clientUrl = configService.get<string>('client');
+    const corsOrigins = configService
+        .get<string>('CORS_ORIGINS')
+        ?.split(',')
+        .map((origin) => origin.trim());
 
     app.enableCors({
-        origin: clientUrl,
+        origin: corsOrigins,
         credentials: true,
     });
 

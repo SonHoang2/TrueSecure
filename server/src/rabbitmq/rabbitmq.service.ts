@@ -1,4 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Channel, Connection, connect, ConsumeMessage } from 'amqplib';
 import { Server } from 'socket.io';
 
@@ -12,6 +13,13 @@ export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
     private io: Server;
     private reconnectAttempts = 0;
     private maxReconnectAttempts = 5;
+    private rabbitmqUrl: string;
+
+    constructor(private configService: ConfigService) {
+        this.rabbitmqUrl =
+            this.configService.get<string>('RABBITMQ_URL') ||
+            'amqp://localhost:5672';
+    }
 
     setSocketServer(io: Server) {
         this.io = io;
@@ -19,7 +27,7 @@ export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
 
     async onModuleInit() {
         try {
-            this.connection = await connect('amqp://localhost');
+            this.connection = await connect(this.rabbitmqUrl);
             this.channel = await this.connection.createChannel();
 
             await this.channel.prefetch(1);
@@ -49,7 +57,7 @@ export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
                 `🔄 Attempting to reconnect to RabbitMQ (${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
             );
 
-            this.connection = await connect('amqp://localhost');
+            this.connection = await connect(this.rabbitmqUrl);
             this.channel = await this.connection.createChannel();
 
             await this.channel.prefetch(1);
