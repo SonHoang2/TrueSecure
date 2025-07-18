@@ -90,7 +90,7 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
             <SidebarNavigation />
-            <div className="flex-1 md:min-w-[400px] md:flex-none md:w-auto">
+            <div className={`hidden md:min-w-[400px] md:flex md:w-auto me-4`}>
                 <ChatLeftPanel
                     chatState={chatState}
                     user={user}
@@ -99,51 +99,53 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
                     setChatState={setChatState}
                 />
             </div>
-            {
-                <div className="hidden md:flex rounded-lg bg-white w-4/5 me-4 flex-col">
-                    <ChatHeader
-                        conversation={chatState.conversation}
-                        userStatus={userStatus}
-                        receiver={chatState.receiver}
-                        startCall={startCall}
-                        onMoreClick={() => setShowChatInfo(!showChatInfo)}
-                        showChatInfo={showChatInfo}
-                    />
-                    <MessageList
-                        messages={chatState.messages}
-                        userId={user?.id}
-                        conversation={chatState.conversation}
-                        lastSeenStatus={lastSeenStatus}
-                        receiver={chatState.receiver}
-                        convParticipants={chatState.convParticipants}
-                    />
-                    <div className="flex p-1 items-center mb-2">
-                        <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                            <MdImage className="text-blue-500 text-2xl" />
-                        </button>
-                        <input
-                            type="text"
-                            className="flex-grow ms-2 bg-gray-100 px-3 py-2 rounded-3xl focus:outline-none caret-blue-500 me-2"
-                            placeholder="Aa"
-                            value={chatState.message}
-                            onChange={(e) =>
-                                setChatState((prevState) => ({
-                                    ...prevState,
-                                    message: e.target.value,
-                                }))
+            <div
+                className={`rounded-lg bg-white me-4 flex-col flex ${
+                    showChatInfo ? 'lg:w-4/6 hidden lg:flex' : 'flex w-full'
+                }`}
+            >
+                <ChatHeader
+                    conversation={chatState.conversation}
+                    userStatus={userStatus}
+                    receiver={chatState.receiver}
+                    startCall={startCall}
+                    onMoreClick={() => setShowChatInfo(!showChatInfo)}
+                    showChatInfo={showChatInfo}
+                />
+                <MessageList
+                    messages={chatState.messages}
+                    userId={user?.id}
+                    conversation={chatState.conversation}
+                    lastSeenStatus={lastSeenStatus}
+                    receiver={chatState.receiver}
+                    convParticipants={chatState.convParticipants}
+                />
+                <div className="flex p-1 items-center mb-2">
+                    <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
+                        <MdImage className="text-blue-500 text-2xl" />
+                    </button>
+                    <input
+                        type="text"
+                        className="flex-grow ms-2 bg-gray-100 px-3 py-2 rounded-3xl focus:outline-none caret-blue-500 me-2"
+                        placeholder="Aa"
+                        value={chatState.message}
+                        onChange={(e) =>
+                            setChatState((prevState) => ({
+                                ...prevState,
+                                message: e.target.value,
+                            }))
+                        }
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                sendMessage();
                             }
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    sendMessage();
-                                }
-                            }}
-                        />
-                        <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                            <MdThumbUp className="text-blue-500 text-2xl" />
-                        </button>
-                    </div>
+                        }}
+                    />
+                    <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
+                        <MdThumbUp className="text-blue-500 text-2xl" />
+                    </button>
                 </div>
-            }
+            </div>
             <ChatInfoSidebar
                 isOpen={showChatInfo}
                 onClose={() => setShowChatInfo(false)}

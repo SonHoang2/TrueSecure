@@ -10,7 +10,7 @@ import {
     MdAttachFile,
     MdPrivacyTip,
 } from 'react-icons/md';
-import { FaRegEdit } from 'react-icons/fa';
+import { FaArrowLeft, FaRegEdit } from 'react-icons/fa';
 
 interface ChatInfoSidebarProps {
     isOpen: boolean;
@@ -29,8 +29,14 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
 
     return (
         <div
-            className="rounded-lg p-2 bg-white me-4 w-3/12 overflow-y-auto"
+            className={`rounded-lg p-2 bg-white me-4 overflow-y-auto lg:w-2/6 w-full relative`}
         >
+            <button
+                onClick={onClose}
+                className="absolute top-4 left-4 z-10 p-2 hover:bg-gray-100 rounded-full md:hidden"
+            >
+                <FaArrowLeft size={20} className="text-gray-600" />
+            </button>
             {/* Profile Section */}
             <div className="flex flex-col items-center p-4 border-b">
                 <div className="w-24 h-24 rounded-full overflow-hidden mb-3">
