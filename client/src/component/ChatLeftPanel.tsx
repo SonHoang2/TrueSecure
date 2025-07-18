@@ -157,7 +157,7 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
     ]);
 
     return (
-        <div className="rounded-lg p-2 bg-white me-4 h-full">
+        <div className="rounded-lg p-2 bg-white h-full w-full">
             {!createChat.createGroupChat && !createChat.createPrivateChat && (
                 <div>
                     <div className="flex justify-between items-center">

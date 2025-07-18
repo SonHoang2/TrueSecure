@@ -5,7 +5,6 @@ import useAxiosPrivate from '../hooks/useAxiosPrivate';
 import SidebarNavigation from '../component/SidebarNavigation';
 import { useChatMessages } from '../hooks/useChatMessages';
 import { useEncryptionContext } from '../contexts/EncryptionContext';
-import { useState } from 'react';
 import { UserStatus } from '../types/users.types';
 
 type ChatRouterProps = {
@@ -40,7 +39,7 @@ const ChatRouter: React.FC<ChatRouterProps> = ({ userStatus }) => {
     return (
         <div className="py-4 flex bg-neutral-100 h-full w-full">
             <SidebarNavigation />
-            <div className="flex-1 md:min-w-[400px] md:flex-none md:w-auto">
+            <div className="flex-1 md:min-w-[400px] md:flex md:w-auto me-4">
                 <ChatLeftPanel
                     chatState={chatState}
                     user={user}

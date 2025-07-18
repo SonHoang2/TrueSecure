@@ -1,8 +1,9 @@
 import React from 'react';
-import { FaPhoneAlt } from 'react-icons/fa';
+import { FaArrowLeft, FaPhoneAlt } from 'react-icons/fa';
 import { IoIosVideocam, IoIosMore } from 'react-icons/io';
 import { Conversation } from '../types/conversations.types';
 import { Receiver, UserStatus } from '../types/users.types';
+import { useNavigate } from 'react-router-dom';
 
 type ChatHeaderProps = {
     conversation: Conversation;
@@ -38,9 +39,19 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         return `last seen ${Math.floor(diffInSeconds / 604800)} weeks ago`;
     };
 
+    const navigate = useNavigate();
+
     return (
         <div className="flex justify-between p-3 shadow-md">
             <div className="flex">
+                <div className="flex items-center md:hidden">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="p-2 w-10 h-10 hover:bg-gray-100 rounded-full me-4"
+                    >
+                        <FaArrowLeft size={20} className="text-gray-600" />
+                    </button>
+                </div>
                 <div className="relative flex items-center">
                     <img
                         className="inline-block size-10 rounded-full ring-0"
