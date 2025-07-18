@@ -15,7 +15,7 @@ import { AxiosInstance } from 'axios';
 import { UserKeys } from '../types/users.types';
 
 export type UseChatMessagesProps = {
-    conversationId: string;
+    conversationId?: string;
     userId: number;
     socket: Socket;
     axiosPrivate: AxiosInstance;
@@ -284,6 +284,7 @@ export const useChatMessages = ({
     }, [chatState.convParticipants, chatState.messages]);
 
     useEffect(() => {
+        if (!conversationId) return;
         getMessages();
     }, [conversationId]);
 

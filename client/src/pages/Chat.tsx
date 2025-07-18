@@ -90,15 +90,17 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
             <SidebarNavigation />
-            <ChatLeftPanel
-                chatState={chatState}
-                user={user}
-                userStatus={userStatus}
-                conversationId={conversationId}
-                setChatState={setChatState}
-            />
+            <div className="flex-1 md:min-w-[400px] md:flex-none md:w-auto">
+                <ChatLeftPanel
+                    chatState={chatState}
+                    user={user}
+                    userStatus={userStatus}
+                    conversationId={conversationId}
+                    setChatState={setChatState}
+                />
+            </div>
             {
-                <div className="rounded-lg bg-white w-4/5 me-4 flex flex-col">
+                <div className="hidden md:flex rounded-lg bg-white w-4/5 me-4 flex-col">
                     <ChatHeader
                         conversation={chatState.conversation}
                         userStatus={userStatus}
