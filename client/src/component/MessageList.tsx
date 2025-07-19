@@ -1,8 +1,12 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { MessageStatus } from '../enums/messageStatus.enum';
 import { Message } from '../types/messages.types';
-import { Conversation, ConversationParticipant } from '../types/conversations.types';
+import {
+    Conversation,
+    ConversationParticipant,
+} from '../types/conversations.types';
 import { User } from '../types/users.types';
+import { MdThumbUp } from 'react-icons/md';
 
 interface LastSeenStatus {
     userId: string;
@@ -46,6 +50,23 @@ export const MessageList: React.FC<MessageListProps> = ({
         });
         return map;
     }, [convParticipants]);
+
+    const renderMessageContent = (content: string, isSentByUser: boolean) => {
+        if (content === ':thumbsup:') {
+            return <MdThumbUp className="text-blue-500 text-2xl" size={40} />;
+        }
+        return (
+            <p
+                className={`rounded-3xl px-3 py-2 break-all text-s ${
+                    isSentByUser
+                        ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white'
+                        : 'bg-gray-100 text-black'
+                }`}
+            >
+                {content}
+            </p>
+        );
+    };
 
     const lastSeenMap = useMemo(() => {
         if (!Array.isArray(lastSeenStatus)) return null;
@@ -125,15 +146,10 @@ export const MessageList: React.FC<MessageListProps> = ({
                                     </div>
                                 )}
                                 <div className="flex-grow flex flex-col">
-                                    <p
-                                        className={`rounded-3xl px-3 py-2 break-all text-s ${
-                                            isSentByUser
-                                                ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white'
-                                                : 'bg-gray-100 text-black'
-                                        }`}
-                                    >
-                                        {msg.content}
-                                    </p>
+                                    {renderMessageContent(
+                                        msg.content,
+                                        isSentByUser,
+                                    )}
                                     <div className="flex justify-end">
                                         {isLastMessage &&
                                             isSentByUser &&

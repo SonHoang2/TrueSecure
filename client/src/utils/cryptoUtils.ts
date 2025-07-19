@@ -264,7 +264,7 @@ async function encryptAES(key, data) {
     );
 
     return {
-        content: arrayBufferToBase64(encryptedContent),
+        encryptedContent: arrayBufferToBase64(encryptedContent),
         iv: arrayBufferToBase64(iv.buffer),
     };
 }

@@ -79,6 +79,8 @@ export const useChatMessages = ({
 
     const getMessages = async () => {
         try {
+            if (!conversationId) return;
+
             const res = await axiosPrivate.get(
                 CONVERSATIONS_URL + `/${conversationId}`,
             );
@@ -117,31 +119,36 @@ export const useChatMessages = ({
         }
     };
 
-    const sendPrivateMessage = async () => {
+    const sendPrivateMessage = async (message?: string) => {
         try {
             if (!userKeys.publicKey) {
                 console.error('Public key is not available!');
                 return;
             }
 
-            const { content, iv, ephemeralPublicKey } =
+            let content = chatState.message;
+            if (message) {
+                content = message;
+            }
+
+            const { encryptedContent, iv, ephemeralPublicKey } =
                 await cryptoUtils.encryptPrivateMessage(
                     userKeys.publicKey,
-                    chatState.message,
+                    content,
                 );
 
             const messageData = {
                 id: uuidv4(),
                 senderId: userId,
                 conversationId: conversationId,
-                content: chatState.message,
+                content: content,
                 status: MessageStatus.SENDING,
                 createdAt: new Date().toISOString(),
             };
 
             const encryptedMessage = {
                 ...messageData,
-                content: content,
+                content: encryptedContent,
                 iv: iv,
                 ephemeralPublicKey: ephemeralPublicKey,
                 receiverId: chatState.receiver?.id,
@@ -154,7 +161,7 @@ export const useChatMessages = ({
         }
     };
 
-    const sendGroupMessage = async () => {
+    const sendGroupMessage = async (message?: string) => {
         try {
             const groupkey = await getGroupKey({
                 conversationId,
@@ -168,10 +175,13 @@ export const useChatMessages = ({
                 return;
             }
 
-            const { content, iv } = await cryptoUtils.encryptGroupMessage(
-                groupkey,
-                chatState.message,
-            );
+            let content = chatState.message;
+            if (message) {
+                content = message;
+            }
+
+            const { encryptedContent, iv } =
+                await cryptoUtils.encryptGroupMessage(groupkey, content);
 
             const messageData = {
                 id: uuidv4(),
@@ -184,7 +194,7 @@ export const useChatMessages = ({
 
             const encryptedMessage = {
                 ...messageData,
-                content: content,
+                content: encryptedContent,
                 iv: iv,
                 receiverId: chatState.receiver?.id,
             };
@@ -222,6 +232,27 @@ export const useChatMessages = ({
             }));
         } catch (error) {
             console.error(error);
+        }
+    };
+
+    const sendQuickReaction = async () => {
+        try {
+            let message = ':thumbsup:';
+            let messageData;
+
+            if (chatState.conversation.isGroup) {
+                messageData = await sendGroupMessage(message);
+            } else {
+                messageData = await sendPrivateMessage(message);
+            }
+
+            setChatState((prevState) => ({
+                ...prevState,
+                messages: [...prevState.messages, messageData],
+                message: '',
+            }));
+        } catch (error) {
+            console.error('Failed to send quick reaction:', error);
         }
     };
 
@@ -543,5 +574,11 @@ export const useChatMessages = ({
         getConversations();
     }, [conversationId]);
 
-    return { chatState, setChatState, sendMessage, lastSeenStatus };
+    return {
+        chatState,
+        setChatState,
+        sendMessage,
+        lastSeenStatus,
+        sendQuickReaction,
+    };
 };

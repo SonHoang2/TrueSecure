@@ -12,7 +12,7 @@ import InCallModal from '../component/InCallModal';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useChatMessages } from '../hooks/useChatMessages';
 import SidebarNavigation from '../component/SidebarNavigation';
-import { MdImage, MdThumbUp } from 'react-icons/md';
+import { MdImage, MdSend, MdThumbUp } from 'react-icons/md';
 import { useEncryptionContext } from '../contexts/EncryptionContext';
 import {
     getAdminPublicKey,
@@ -34,14 +34,19 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
 
     const axiosPrivate = useAxiosPrivate();
 
-    const { sendMessage, chatState, setChatState, lastSeenStatus } =
-        useChatMessages({
-            conversationId,
-            userId: user?.id,
-            socket,
-            axiosPrivate,
-            userKeys,
-        });
+    const {
+        sendMessage,
+        chatState,
+        setChatState,
+        lastSeenStatus,
+        sendQuickReaction,
+    } = useChatMessages({
+        conversationId,
+        userId: user?.id,
+        socket,
+        axiosPrivate,
+        userKeys,
+    });
 
     const {
         callState,
@@ -141,9 +146,21 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
                             }
                         }}
                     />
-                    <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                        <MdThumbUp className="text-blue-500 text-2xl" />
-                    </button>
+                    {chatState.message.length > 0 ? (
+                        <button
+                            className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
+                            onClick={sendMessage}
+                        >
+                            <MdSend className="text-blue-500 text-2xl" />
+                        </button>
+                    ) : (
+                        <button
+                            className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
+                            onClick={sendQuickReaction}
+                        >
+                            <MdThumbUp className="text-blue-500 text-2xl" />
+                        </button>
+                    )}
                 </div>
             </div>
             <ChatInfoSidebar
