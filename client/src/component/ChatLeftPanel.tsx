@@ -11,28 +11,28 @@ import { ChatState } from '../types/chats.types';
 import { User, UserStatus } from '../types/users.types';
 import { getLastMessageFromIndexedDB } from '../utils/indexedDB';
 import { Message } from '../types/messages.types';
+import { useConversations } from '../store/hooks';
+import { useAuthUser } from '../hooks/useAuthUser';
 
 type ChatLeftPanelProps = {
-    chatState: ChatState;
-    user: User;
     userStatus: UserStatus;
-    conversationId?: string;
-    setChatState: React.Dispatch<React.SetStateAction<ChatState>>;
+    conversationId?: number;
 };
 
 export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
-    chatState,
-    user,
     userStatus,
     conversationId,
-    setChatState,
 }) => {
+    const user = useAuthUser();
+
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [createChat, setCreateChat] = useState({
         createGroupChat: false,
         createPrivateChat: false,
     });
+
+    const { conversations } = useConversations();
 
     const [lastMessages, setLastMessages] = useState<
         Record<string, Message | null>
@@ -62,16 +62,16 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
         }
     };
 
-    const getSenderName = (convParticipants: any[], senderId: number) => {
-        const sender = convParticipants?.find(
+    const getSenderName = (participants: any[], senderId: number) => {
+        const sender = participants?.find(
             (participant) => participant?.userId === senderId,
         )?.user;
         return sender ? `${sender.firstName} ${sender.lastName}` : 'Unknown';
     };
 
     const handleNavigateToChat = useCallback(
-        (convId: string) => {
-            navigate(`/chat/${convId}`);
+        (id: number) => {
+            navigate(`/chat/${id}`);
         },
         [navigate],
     );
@@ -80,17 +80,18 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
     useEffect(() => {
         const fetchLastMessages = async () => {
             const results: Record<string, Message | null> = {};
-            if (chatState.conversations) {
-                for (const conv of chatState.conversations) {
-                    results[conv.conversationId] =
-                        await getLastMessageFromIndexedDB(conv.conversationId);
+            if (conversations) {
+                for (const conv of conversations) {
+                    results[conv.id] = await getLastMessageFromIndexedDB(
+                        conv.id,
+                    );
                 }
             }
 
             setLastMessages(results);
         };
         fetchLastMessages();
-    }, [chatState.conversations]);
+    }, [conversations]);
 
     useEffect(() => {
         if (searchTerm) {
@@ -98,17 +99,14 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
         } else {
             setFilteredUsers([]);
         }
-        console.log('Filtered Users:', filteredUsers);
     }, [searchTerm]);
 
     const processedConversations = useMemo(() => {
         return (
-            chatState.conversations?.map((conv) => {
-                const { conversation } = conv;
-                const { convParticipants, isGroup, title, avatar } =
-                    conversation;
+            conversations?.map((conv) => {
+                const { participants, isGroup, title, avatar } = conv;
 
-                const otherUser = convParticipants[0]?.user;
+                const otherUser = participants[0];
 
                 const displayName = isGroup
                     ? title
@@ -116,7 +114,7 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
                       ? `${otherUser.firstName} ${otherUser.lastName}`
                       : 'Unknown User';
 
-                const lastMessage = lastMessages[conv.conversationId];
+                const lastMessage = lastMessages[conv.id];
 
                 let messageContent = 'No message yet';
                 if (lastMessage) {
@@ -124,7 +122,7 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
                         messageContent = `You: ${lastMessage.content}`;
                     } else if (isGroup) {
                         const senderName = getSenderName(
-                            convParticipants,
+                            participants,
                             lastMessage.senderId,
                         );
                         messageContent = `${senderName}: ${lastMessage.content}`;
@@ -149,12 +147,7 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
                 };
             }) || []
         );
-    }, [
-        chatState.conversations,
-        lastMessages,
-        user.id,
-        userStatus?.onlineUsers,
-    ]);
+    }, [conversations, lastMessages, user.id, userStatus?.onlineUsers]);
 
     return (
         <div className="rounded-lg p-2 bg-white h-full w-full">
@@ -229,15 +222,13 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
                     <div className="flex flex-col">
                         {processedConversations.map((conv) => (
                             <div
-                                key={conv.conversationId}
+                                key={conv.id}
                                 className={`p-3 flex items-center cursor-pointer hover:bg-gray-100 rounded-md ${
-                                    conversationId === conv.conversationId
+                                    conversationId === conv.id
                                         ? 'bg-gray-100'
                                         : ''
                                 }`}
-                                onClick={() =>
-                                    handleNavigateToChat(conv.conversationId)
-                                }
+                                onClick={() => handleNavigateToChat(conv.id)}
                             >
                                 <div className="relative flex items-center">
                                     <img
@@ -262,7 +253,7 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
                     </div>
                 </div>
             )}
-            {createChat.createGroupChat && (
+            {/* {createChat.createGroupChat && (
                 <CreateGroupChat
                     setCreateChat={setCreateChat}
                     onSearch={searchUsers}
@@ -276,7 +267,7 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
                     onSearch={searchUsers}
                     setChatState={setChatState}
                 />
-            )}
+            )} */}
         </div>
     );
 };

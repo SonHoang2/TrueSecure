@@ -156,18 +156,46 @@ export class ConversationService {
                 'conversation.convParticipants',
                 'conversation.convParticipants.user',
             ],
+            order: {
+                conversation: {
+                    updatedAt: 'DESC',
+                },
+            },
         });
 
-        for (const participation of userParticipations) {
-            // Filter other participants to exclude current user
-            participation.conversation.convParticipants =
-                participation.conversation.convParticipants.filter(
-                    (p) => p.userId !== userId,
-                );
-        }
+        const conversations = userParticipations.map((participation) => {
+            const conversation = participation.conversation;
+
+            const participants = [];
+            for (const p of conversation.convParticipants) {
+                if (p.userId !== userId) {
+                    participants.push({
+                        id: p.user.id,
+                        firstName: p.user.firstName,
+                        lastName: p.user.lastName,
+                        email: p.user.email,
+                        avatar: p.user.avatar,
+                        publicKey: p.user.publicKey,
+                        role: p.role,
+                    });
+                }
+            }
+
+            return {
+                id: conversation.id,
+                title: conversation.title,
+                isGroup: conversation.isGroup,
+                avatar: conversation.avatar,
+                participants,
+                myRole: participation.role,
+                myGroupKey: participation.groupKey,
+                createdAt: conversation.createdAt,
+                updatedAt: conversation.updatedAt,
+            };
+        });
 
         return {
-            conversations: userParticipations,
+            conversations,
         };
     }
 
