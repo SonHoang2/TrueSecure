@@ -5,6 +5,7 @@ import {
     clearAuth,
     setUser,
     signupUser,
+    refreshToken,
 } from '../store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { useCallback } from 'react';
@@ -16,6 +17,7 @@ import {
 } from '../config/config';
 import queryString from 'query-string';
 import { axiosPrivate } from '../api/axios';
+import { Routes } from '../enums/routes.enum';
 
 interface LoginCredentials {
     email: string;
@@ -34,9 +36,14 @@ export const useAuth = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
-    const { user, isAuthenticated, isLoading, error } = useAppSelector(
-        (state) => state.auth,
-    );
+    const {
+        user,
+        isAuthenticated,
+        isLoading,
+        error,
+        userKeys,
+        isKeysInitialized,
+    } = useAppSelector((state) => state.auth);
 
     const login = useCallback(
         async (credentials: LoginCredentials) => {
@@ -67,7 +74,7 @@ export const useAuth = () => {
     const logout = useCallback(async () => {
         try {
             await dispatch(logoutUser()).unwrap();
-            navigate('/');
+            navigate(Routes.LOGIN);
         } catch (error) {
             console.error('Logout failed:', error);
         }
@@ -107,18 +114,8 @@ export const useAuth = () => {
 
     const refreshTokens = useCallback(async () => {
         try {
-            // This should be implemented as a Redux async thunk
-            // For now, keeping the original logic
-            if (!user) {
-                throw new Error('not logged in');
-            }
-
-            const res = await axiosPrivate.get(USERS_URL + '/me');
-            const refreshedUser = res.data.data.user;
-
-            if (refreshedUser) {
-                dispatch(setUser(refreshedUser));
-            }
+            const result = await dispatch(refreshToken()).unwrap();
+            return result;
         } catch (error) {
             console.log('Token Refresh Failed', error);
             dispatch(clearAuth());
@@ -131,6 +128,8 @@ export const useAuth = () => {
         isAuthenticated,
         isLoading,
         error,
+        userKeys,
+        isKeysInitialized,
 
         // Actions
         login,
@@ -138,6 +137,6 @@ export const useAuth = () => {
         logout,
         getGoogleCode,
         sendGoogleCode,
-        refreshTokens,
+        refreshTokens
     };
 };
