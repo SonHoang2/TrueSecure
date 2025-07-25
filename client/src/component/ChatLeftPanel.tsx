@@ -7,7 +7,6 @@ import { FaEdit, FaSearch } from 'react-icons/fa';
 
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
 import { MdClose } from 'react-icons/md';
-import { ChatState } from '../types/chats.types';
 import { User, UserStatus } from '../types/users.types';
 import { getLastMessageFromIndexedDB } from '../utils/indexedDB';
 import { Message } from '../types/messages.types';
@@ -253,21 +252,18 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
                     </div>
                 </div>
             )}
-            {/* {createChat.createGroupChat && (
+            {createChat.createGroupChat && (
                 <CreateGroupChat
                     setCreateChat={setCreateChat}
                     onSearch={searchUsers}
-                    setChatState={setChatState}
-                    user={user}
                 />
             )}
             {createChat.createPrivateChat && (
                 <CreatePrivateChat
                     setCreateChat={setCreateChat}
                     onSearch={searchUsers}
-                    setChatState={setChatState}
                 />
-            )} */}
+            )}
         </div>
     );
 };
