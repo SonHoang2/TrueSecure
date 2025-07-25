@@ -6,7 +6,9 @@ import { CONVERSATIONS_URL, USERS_URL } from '../config/config';
 import debounce from '../utils/debounce';
 import * as cryptoUtils from '../utils/cryptoUtils';
 import { User } from '../types/users.types';
-import { ChatState } from '../types/chats.types';
+import { useAuthUser } from '../hooks/useAuthUser';
+import { useAppDispatch } from '../store/hooks';
+import { loadConversations } from '../store/slices/conversationSlice';
 
 type CreateChatState = {
     createGroupChat: boolean;
@@ -19,19 +21,18 @@ interface CreateGroupChatProps {
         searchTerm: string,
         setUsers: Dispatch<SetStateAction<User[]>>,
     ) => Promise<void>;
-    setChatState: Dispatch<SetStateAction<ChatState>>;
-    user: User;
 }
 
 export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
     setCreateChat,
     onSearch,
-    setChatState,
-    user,
 }) => {
+    const user = useAuthUser();
+    const dispatch = useAppDispatch();
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isNewGroupChat, setNewGroupChat] = useState<boolean | null>(null);
+
 
     interface User {
         id: string;
@@ -141,16 +142,8 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
             await handleCrypto(conversation.id);
             console.log('Conversations:', conversation);
 
-            const {
-                data: {
-                    data: { conversations },
-                },
-            } = await axiosPrivate.get(`${CONVERSATIONS_URL}/me`);
-
-            setChatState((prevState) => ({
-                ...prevState,
-                conversations,
-            }));
+            // Reload conversations
+            dispatch(loadConversations());
 
             setNewGroupChat(false);
             setCreateChat((prev) => ({ ...prev, createGroupChat: false }));
