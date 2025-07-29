@@ -4,7 +4,6 @@ import { ChatLeftPanel } from '../component/ChatLeftPanel';
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
 import SidebarNavigation from '../component/SidebarNavigation';
 import { useChatMessages } from '../hooks/useChatMessages';
-import { useEncryptionContext } from '../contexts/EncryptionContext';
 import { UserStatus } from '../types/users.types';
 
 type ChatRouterProps = {
@@ -12,25 +11,29 @@ type ChatRouterProps = {
 };
 
 const ChatRouter: React.FC<ChatRouterProps> = ({ userStatus }) => {
-    const { user } = useAuth();
+    const { user, isLoading, userKeys, isKeysInitialized } = useAuth();
 
     const axiosPrivate = useAxiosPrivate();
-    const { userKeys } = useEncryptionContext();
 
-    const { chatState, setChatState } = useChatMessages({
+    const { chatState } = useChatMessages({
         userId: user?.id || 0,
         socket,
         axiosPrivate,
         userKeys,
     });
 
-    // Don't render if user is not loaded yet
-    if (!user || !userKeys) {
+    if (!user || !isKeysInitialized || !userKeys) {
         return (
             <div className="flex items-center justify-center h-full bg-neutral-100">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                    <p className="text-gray-600">Loading your secure chat...</p>
+                    <p className="text-gray-600">
+                        {!user
+                            ? 'Authenticating...'
+                            : isLoading
+                              ? 'Initializing encryption...'
+                              : 'Loading your secure chat...'}
+                    </p>
                 </div>
             </div>
         );
@@ -44,7 +47,6 @@ const ChatRouter: React.FC<ChatRouterProps> = ({ userStatus }) => {
                     chatState={chatState}
                     user={user}
                     userStatus={userStatus}
-                    setChatState={setChatState}
                 />
             </div>
             <div className="hidden md:flex rounded-lg bg-white w-4/5 me-4 flex-col">

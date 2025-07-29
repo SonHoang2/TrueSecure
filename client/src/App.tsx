@@ -8,9 +8,10 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import { useAuth } from './hooks/useAuth';
 import useAxiosPrivate from './hooks/useAxiosPrivate';
-import { EncryptionProvider } from './contexts/EncryptionContext';
 import { AppRole } from './enums/roles.enum';
 import Profile from './pages/Profile';
+import { useAppDispatch, useAppSelector } from './store/hooks';
+import { initializeEncryption } from './store/slices/authSlice';
 
 const App = () => {
     const [userStatus, setUserStatus] = useState({
@@ -19,8 +20,21 @@ const App = () => {
     });
 
     const { user } = useAuth();
-
+    const dispatch = useAppDispatch();
+    const { isKeysInitialized } = useAppSelector((state) => state.auth);
     const axiosPrivate = useAxiosPrivate();
+
+    // Initialize encryption keys when user is available
+    useEffect(() => {
+        if (user && !isKeysInitialized) {
+            dispatch(
+                initializeEncryption({
+                    userId: user.id.toString(),
+                    axiosPrivate,
+                }),
+            );
+        }
+    }, [user, isKeysInitialized, dispatch, axiosPrivate]);
 
     useEffect(() => {
         if (!user) {
@@ -50,14 +64,7 @@ const App = () => {
         <Routes>
             <Route
                 path="/"
-                element={
-                    <EncryptionProvider
-                        userId={user?.id}
-                        axiosPrivate={axiosPrivate}
-                    >
-                        <ProtectedRoute allowedRole={AppRole.USER} />
-                    </EncryptionProvider>
-                }
+                element={<ProtectedRoute allowedRole={AppRole.USER} />}
             >
                 <Route
                     path=""

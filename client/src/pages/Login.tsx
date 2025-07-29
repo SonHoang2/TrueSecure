@@ -39,7 +39,7 @@ export default function Login() {
             event.preventDefault();
             await login(formData);
         } catch (err) {
-            let message = extractErrorMessage(err, "Login failed.")
+            let message = extractErrorMessage(err, 'Login failed.');
             setError(message);
             console.log(err);
         }

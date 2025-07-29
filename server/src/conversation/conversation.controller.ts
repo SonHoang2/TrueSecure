@@ -6,6 +6,7 @@ import {
     Param,
     UseGuards,
     Req,
+    Delete,
 } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
@@ -45,6 +46,17 @@ export class ConversationController {
     findOne(@Param('id') id: string, @Req() req: RequestWithUser) {
         const userId = req.user.id;
         return this.conversationService.getConversation(+id, userId);
+    }
+
+    @Delete(':id')
+    deleteConversation(@Param('id') id: string, @Req() req: RequestWithUser) {
+        const userId = req.user.id;
+
+        console.log(
+            `Deleting conversation with ID: ${id} for user ID: ${userId}`,
+        );
+
+        return this.conversationService.deleteConversation(+id, userId);
     }
 
     @Post()

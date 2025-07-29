@@ -133,19 +133,63 @@ export class ConversationService {
             throw new NotFoundException('Conversation not found');
         }
 
-        const user = conversation.convParticipants.find(
+        const currentUserParticipation = conversation.convParticipants.find(
             (participant) => participant.userId === userId,
         );
 
-        if (!user) {
+        if (!currentUserParticipation) {
             throw new ForbiddenException(
                 'You are not a participant of this conversation',
             );
         }
 
-        return {
-            conversation,
+        const baseResponse = {
+            id: conversation.id,
+            title: conversation.title,
+            isGroup: conversation.isGroup,
+            avatar: conversation.avatar,
+            myRole: currentUserParticipation.role,
+            myGroupKey: currentUserParticipation.groupKey,
+            createdAt: conversation.createdAt,
+            updatedAt: conversation.updatedAt,
         };
+
+        if (conversation.isGroup) {
+            // For group chats, include all participants
+            const participants = conversation.convParticipants.map((p) => ({
+                id: p.user.id,
+                firstName: p.user.firstName,
+                lastName: p.user.lastName,
+                email: p.user.email,
+                avatar: p.user.avatar,
+                role: p.role,
+            }));
+
+            return {
+                ...baseResponse,
+                participants,
+            };
+        } else {
+            // For private chats, just include the other user as receiver
+            const otherParticipant = conversation.convParticipants.find(
+                (p) => p.userId !== userId,
+            );
+
+            if (!otherParticipant) {
+                throw new NotFoundException('Other participant not found');
+            }
+
+            return {
+                ...baseResponse,
+                receiver: {
+                    id: otherParticipant.user.id,
+                    firstName: otherParticipant.user.firstName,
+                    lastName: otherParticipant.user.lastName,
+                    email: otherParticipant.user.email,
+                    avatar: otherParticipant.user.avatar,
+                },
+            };
+        }
     }
 
     async getUserConversations(userId: number) {
@@ -166,32 +210,57 @@ export class ConversationService {
         const conversations = userParticipations.map((participation) => {
             const conversation = participation.conversation;
 
-            const participants = [];
-            for (const p of conversation.convParticipants) {
-                if (p.userId !== userId) {
-                    participants.push({
-                        id: p.user.id,
-                        firstName: p.user.firstName,
-                        lastName: p.user.lastName,
-                        email: p.user.email,
-                        avatar: p.user.avatar,
-                        publicKey: p.user.publicKey,
-                        role: p.role,
-                    });
-                }
-            }
-
-            return {
+            const baseResponse = {
                 id: conversation.id,
                 title: conversation.title,
                 isGroup: conversation.isGroup,
                 avatar: conversation.avatar,
-                participants,
                 myRole: participation.role,
                 myGroupKey: participation.groupKey,
                 createdAt: conversation.createdAt,
                 updatedAt: conversation.updatedAt,
             };
+
+            if (conversation.isGroup) {
+                // For group chats, include all other participants
+                const participants = conversation.convParticipants
+                    .filter((p) => p.userId !== userId)
+                    .map((p) => ({
+                        id: p.user.id,
+                        firstName: p.user.firstName,
+                        lastName: p.user.lastName,
+                        email: p.user.email,
+                        avatar: p.user.avatar,
+                        role: p.role,
+                    }));
+
+                return {
+                    ...baseResponse,
+                    participants,
+                };
+            } else {
+                // For private chats, just include the other user as receiver
+                const otherParticipant = conversation.convParticipants.find(
+                    (p) => p.userId !== userId,
+                );
+
+                if (!otherParticipant) {
+                    throw new NotFoundException(
+                        `Invalid private conversation ${conversation.id}: missing other participant`,
+                    );
+                }
+
+                return {
+                    ...baseResponse,
+                    receiver: {
+                        id: otherParticipant.user.id,
+                        firstName: otherParticipant.user.firstName,
+                        lastName: otherParticipant.user.lastName,
+                        email: otherParticipant.user.email,
+                        avatar: otherParticipant.user.avatar,
+                    },
+                };
+            }
         });
 
         return {
@@ -234,10 +303,7 @@ export class ConversationService {
         };
     }
 
-    async getOtherParticipantsInConversation(
-        conversationId: number,
-        userId: number,
-    ) {
+    async getOtherParticipants(conversationId: number, userId: number) {
         const participants = await this.convParticipantRepo.find({
             where: {
                 conversationId,
@@ -253,7 +319,7 @@ export class ConversationService {
         return participants;
     }
 
-    async getAllParticipantsInConversation(conversationId: number) {
+    async getAllParticipants(conversationId: number) {
         const participants = await this.convParticipantRepo.find({
             where: {
                 conversationId,
@@ -266,5 +332,39 @@ export class ConversationService {
         }
 
         return participants;
+    }
+
+    async deleteConversation(conversationId: number, userId: number) {
+        const conversation = await this.conversationRepo.findOne({
+            where: { id: conversationId },
+            relations: ['convParticipants'],
+        });
+
+        if (!conversation) {
+            throw new NotFoundException('Conversation not found');
+        }
+
+        const participant = conversation.convParticipants.find(
+            (p) => p.userId === userId,
+        );
+
+        if (!participant) {
+            throw new ForbiddenException(
+                'You are not a participant of this conversation',
+            );
+        }
+
+        // If the user is an admin, they can delete the conversation
+        if (participant.role !== ChatGroupRole.ADMIN) {
+            throw new ForbiddenException(
+                'Only admins can delete this conversation',
+            );
+        }
+
+        await this.conversationRepo.remove(conversation);
+
+        return {
+            message: 'Conversation deleted successfully',
+        };
     }
 }

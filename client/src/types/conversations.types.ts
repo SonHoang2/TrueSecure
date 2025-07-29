@@ -1,16 +1,19 @@
-import { User } from './users.types';
+import { User } from "./users.types";
 
-export type Conversation = {
+export interface Conversation {
+    id: number;
     title: string;
     isGroup: boolean | null;
     avatar: string;
-};
-
-export type ConversationParticipant = {
-    id: number;
-    userId: number;
-    conversationId: number;
-    role: string;
-    groupKey: string | null;
-    user: Partial<User>;
-};
+    lastMessage?: {
+        content: string;
+        senderId: number;
+        createdAt: string;
+        type: 'text' | 'image' | 'file';
+    };
+    unreadCount: number;
+    participants: User[];
+    receiver?: User;
+    createdAt: string;
+    updatedAt: string;
+}

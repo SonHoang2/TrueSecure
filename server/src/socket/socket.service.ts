@@ -50,7 +50,7 @@ export class SocketService {
 
         // Find all participants except sender
         const participants =
-            await this.conversationService.getOtherParticipantsInConversation(
+            await this.conversationService.getOtherParticipants(
                 conversationId,
                 +senderId,
             );
@@ -93,9 +93,7 @@ export class SocketService {
 
         // Notify all participants in the group
         const participants =
-            await this.conversationService.getAllParticipantsInConversation(
-                conversationId,
-            );
+            await this.conversationService.getAllParticipants(conversationId);
 
         for (const participant of participants) {
             await this.socketManagerService.emitToUser(

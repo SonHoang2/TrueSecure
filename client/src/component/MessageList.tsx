@@ -1,26 +1,18 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { MessageStatus } from '../enums/messageStatus.enum';
 import { Message } from '../types/messages.types';
-import {
-    Conversation,
-    ConversationParticipant,
-} from '../types/conversations.types';
+import { Conversation } from '../types/conversations.types';
 import { User } from '../types/users.types';
 import { MdThumbUp } from 'react-icons/md';
-
-interface LastSeenStatus {
-    userId: string;
-    messageId: string;
-    avatar: string;
-}
+import { LastSeenStatus } from '../types/messages.types';
 
 interface MessageListProps {
     messages: Message[];
     userId: number;
     conversation: Conversation;
-    lastSeenStatus: LastSeenStatus[] | LastSeenStatus;
+    lastSeenStatus: LastSeenStatus[] | LastSeenStatus | null;
     receiver: User;
-    convParticipants: ConversationParticipant[];
+    convParticipants: User[] | null;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -45,8 +37,8 @@ export const MessageList: React.FC<MessageListProps> = ({
 
     const participantMap = useMemo(() => {
         const map = new Map();
-        convParticipants.forEach((participant) => {
-            map.set(participant.userId, participant.user);
+        convParticipants?.forEach((participant) => {
+            map.set(participant.id, participant);
         });
         return map;
     }, [convParticipants]);
