@@ -255,12 +255,18 @@ export async function decryptAESKeys({
     return new TextDecoder().decode(decrypted);
 }
 
-async function encryptAES(key, data) {
-    const iv = crypto.getRandomValues(new Uint8Array(12)); // Generate a random IV
+// Unified encryption function that handles both text and binary data
+async function encryptData(key, data) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+
+    // Handle both string and ArrayBuffer/binary data
+    const dataToEncrypt =
+        typeof data === 'string' ? new TextEncoder().encode(data) : data;
+
     const encryptedContent = await crypto.subtle.encrypt(
         { name: 'AES-GCM', iv },
         key,
-        new TextEncoder().encode(data),
+        dataToEncrypt,
     );
 
     return {
@@ -269,17 +275,19 @@ async function encryptAES(key, data) {
     };
 }
 
-async function decryptAES(key, encryptedData) {
+// Unified decryption function - returns ArrayBuffer (caller decides if text or binary)
+async function decryptData(key, encryptedData) {
     const decrypted = await crypto.subtle.decrypt(
         { name: 'AES-GCM', iv: base64ToArrayBuffer(encryptedData.iv) },
         key,
         base64ToArrayBuffer(encryptedData.content),
     );
 
-    return new TextDecoder().decode(decrypted);
+    return decrypted; // Return ArrayBuffer - caller converts to string if needed
 }
 
-export async function encryptPrivateMessage(recipientPublicKey, message) {
+// Unified private message encryption that handles both text and binary data
+export async function encryptPrivateData(recipientPublicKey, data) {
     const ephemeralKeyPair = await window.crypto.subtle.generateKey(
         { name: 'ECDH', namedCurve: 'P-256' },
         true,
@@ -291,7 +299,7 @@ export async function encryptPrivateMessage(recipientPublicKey, message) {
         recipientPublicKey,
     );
 
-    const encryptedData = await encryptAES(sharedSecret, message);
+    const encryptedData = await encryptData(sharedSecret, data);
 
     const exportedEphemeralPublicKey = await crypto.subtle.exportKey(
         'raw',
@@ -299,12 +307,13 @@ export async function encryptPrivateMessage(recipientPublicKey, message) {
     );
 
     return {
-        ...encryptedData, // Includes content and iv
+        ...encryptedData, // Includes encryptedContent and iv
         ephemeralPublicKey: arrayBufferToBase64(exportedEphemeralPublicKey),
     };
 }
 
-export async function decryptPrivateMessage(privateKey, encryptedData) {
+// Unified private message decryption - returns ArrayBuffer
+export async function decryptPrivateData(privateKey, encryptedData) {
     const ephemeralPublicKey = await crypto.subtle.importKey(
         'raw',
         base64ToArrayBuffer(encryptedData.ephemeralPublicKey),
@@ -315,13 +324,51 @@ export async function decryptPrivateMessage(privateKey, encryptedData) {
 
     const sharedSecret = await deriveSharedKey(privateKey, ephemeralPublicKey);
 
-    return await decryptAES(sharedSecret, encryptedData);
+    return await decryptData(sharedSecret, encryptedData);
+}
+
+// Unified group message encryption that handles both text and binary data
+export async function encryptGroupData(groupKey, data) {
+    return await encryptData(groupKey, data);
+}
+
+// Unified group message decryption - returns ArrayBuffer
+export async function decryptGroupData(groupKey, encryptedData) {
+    return await decryptData(groupKey, encryptedData);
+}
+
+// Legacy wrappers for backward compatibility
+export async function encryptPrivateMessage(recipientPublicKey, message) {
+    return await encryptPrivateData(recipientPublicKey, message);
+}
+
+export async function decryptPrivateMessage(privateKey, encryptedData) {
+    const decrypted = await decryptPrivateData(privateKey, encryptedData);
+    return new TextDecoder().decode(decrypted);
 }
 
 export async function encryptGroupMessage(groupKey, message) {
-    return await encryptAES(groupKey, message);
+    return await encryptGroupData(groupKey, message);
 }
 
 export async function decryptGroupMessage(groupKey, encryptedData) {
-    return await decryptAES(groupKey, encryptedData);
+    const decrypted = await decryptGroupData(groupKey, encryptedData);
+    return new TextDecoder().decode(decrypted);
+}
+
+// File-specific aliases (same as unified functions)
+export async function encryptPrivateFile(recipientPublicKey, arrayBuffer) {
+    return await encryptPrivateData(recipientPublicKey, arrayBuffer);
+}
+
+export async function decryptPrivateFile(privateKey, encryptedData) {
+    return await decryptPrivateData(privateKey, encryptedData);
+}
+
+export async function encryptGroupFile(groupKey, arrayBuffer) {
+    return await encryptGroupData(groupKey, arrayBuffer);
+}
+
+export async function decryptGroupFile(groupKey, encryptedData) {
+    return await decryptGroupData(groupKey, encryptedData);
 }

@@ -15,6 +15,11 @@ export type User = {
 };
 
 export type UserKeys = {
+    publicKey: CryptoKey | null;
+    privateKey: CryptoKey | null;
+};
+
+export type UserKeysExported = {
     publicKey: string;
     privateKey: string;
 };

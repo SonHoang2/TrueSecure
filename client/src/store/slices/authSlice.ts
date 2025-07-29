@@ -9,9 +9,9 @@ export interface User {
     id: number;
     username: string;
     email: string;
-    avatar?: string;
-    isOnline?: boolean;
-    role?: string;
+    avatar: string;
+    isOnline: boolean;
+    role: string;
 }
 
 export interface AuthState {
@@ -112,7 +112,7 @@ export const logoutUser = createAsyncThunk(
     'auth/logout',
     async (_, { rejectWithValue }) => {
         try {
-            await axiosPrivate.post(AUTH_URL + '/logout');
+            await axiosPrivate.get(AUTH_URL + '/logout');
             return true;
         } catch (error: any) {
             return rejectWithValue(
@@ -128,7 +128,7 @@ export const refreshToken = createAsyncThunk(
     'auth/refreshToken',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await axiosPrivate.post(AUTH_URL + '/refresh');
+            const response = await axiosPrivate.get(AUTH_URL + '/refresh');
             return response.data;
         } catch (error: any) {
             return rejectWithValue(
@@ -173,12 +173,12 @@ const authSlice = createSlice({
         setUserKeys: (state, action: PayloadAction<UserKeys>) => {
             state.userKeys = action.payload;
         },
-
         clearAuth: (state) => {
             state.user = null;
             state.userKeys = null;
             state.isAuthenticated = false;
             state.error = null;
+            state.isKeysInitialized = false;
         },
         clearError: (state) => {
             state.error = null;
@@ -193,7 +193,10 @@ const authSlice = createSlice({
         },
         updateRecipientPublicKey: (state, action: PayloadAction<CryptoKey>) => {
             if (state.userKeys) {
-                state.userKeys.publicKey = action.payload;
+                state.userKeys = {
+                    ...state.userKeys,
+                    publicKey: action.payload,
+                };
             }
         },
     },
@@ -250,7 +253,15 @@ const authSlice = createSlice({
             })
             .addCase(initializeEncryption.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.userKeys = action.payload;
+                // Handle the case where action.payload is a CryptoKey (privateKey)
+                if (action.payload) {
+                    state.userKeys = {
+                        privateKey: action.payload,
+                        publicKey: null, // Will be set later when needed
+                    };
+                } else {
+                    state.userKeys = null;
+                }
                 state.isKeysInitialized = true;
                 state.error = null;
             })

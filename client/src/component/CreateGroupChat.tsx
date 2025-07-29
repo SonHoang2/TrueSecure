@@ -33,14 +33,6 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const [isNewGroupChat, setNewGroupChat] = useState<boolean | null>(null);
 
-
-    interface User {
-        id: string;
-        firstName: string;
-        lastName: string;
-        avatar: string;
-    }
-
     interface GroupFormData {
         groupName: string;
         groupMembers: User[];
@@ -71,7 +63,7 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
         setSearchTerm('');
     };
 
-    const handleRemoveUser = (userId: string) => {
+    const handleRemoveUser = (userId: number) => {
         setFormData((prev) => ({
             ...prev,
             groupMembers: prev.groupMembers.filter(

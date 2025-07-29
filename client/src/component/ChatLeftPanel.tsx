@@ -103,9 +103,9 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
     const processedConversations = useMemo(() => {
         return (
             conversations?.map((conv) => {
-                const { participants, isGroup, title, avatar } = conv;
+                const { participants, isGroup, title, avatar, receiver } = conv;
 
-                const otherUser = participants[0];
+                const otherUser = receiver;
 
                 const displayName = isGroup
                     ? title

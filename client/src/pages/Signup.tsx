@@ -32,7 +32,7 @@ export default function Signup() {
         try {
             await signup(formData);
         } catch (err) {
-            let message = extractErrorMessage(err, "Signup failed")
+            let message = extractErrorMessage(err, 'Signup failed');
             setError(message);
             console.log(err);
         }
