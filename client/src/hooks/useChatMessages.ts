@@ -2,7 +2,7 @@ import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { Socket } from 'socket.io-client';
 import { AxiosInstance } from 'axios';
 import { v4 as uuidv4 } from 'uuid';
-import * as cryptoUtils from '../utils/cryptoUtils';
+import * as cryptoUtils from '../crypto/cryptoUtils';
 import { getGroupKey } from '../services/encryptionService';
 import { MessageStatus } from '../enums/messageStatus.enum';
 import { CONVERSATIONS_URL } from '../config/config';
@@ -18,6 +18,8 @@ import {
     addTypingUser,
     removeTypingUser,
     loadMessages,
+    persistStatusUpdate,
+    persistGroupStatusUpdate,
 } from '../store/slices/chatSlice';
 import {
     updateConversationLastMessage,
@@ -47,7 +49,9 @@ export const useChatMessages = ({
         new Audio('/assets/sound/notification-sound.mp3'),
     );
 
-    const { currentMessage, messages } = useAppSelector((state) => state.chat);
+    const { currentMessage, messages, typingUsers } = useAppSelector(
+        (state) => state.chat,
+    );
     const {
         conversations,
         selectedConversationId,
@@ -130,8 +134,9 @@ export const useChatMessages = ({
         }, [participants, messages]);
 
     const sendMessage = useCallback(
-        async (message: string) => {
-            if (!message?.trim() && !currentMessage?.trim()) {
+        async (message?: string) => {
+
+            if (!message && !currentMessage?.trim()) {
                 return;
             }
 
@@ -524,7 +529,7 @@ export const useChatMessages = ({
         socket.on(
             'private-message-status-update',
             (data: { messageId: string; status: MessageStatus }) => {
-                dispatch(updateMessageStatus(data));
+                dispatch(persistStatusUpdate(data));
             },
         );
 
@@ -535,14 +540,17 @@ export const useChatMessages = ({
                 userId: number;
                 status: MessageStatus;
             }) => {
-                dispatch(updateGroupMessageStatus(data));
+                dispatch(persistGroupStatusUpdate(data));
             },
         );
 
         socket.on(
             'user-typing',
-            (data: { userId: string; conversationId: string }) => {
-                if (data.conversationId === selectedConversationId) {
+            (data: { userId: number; conversationId: number }) => {
+                if (
+                    data.conversationId === selectedConversationId &&
+                    data.userId !== user.id
+                ) {
                     dispatch(addTypingUser(data.userId));
                 }
             },
@@ -550,7 +558,7 @@ export const useChatMessages = ({
 
         socket.on(
             'user-stopped-typing',
-            (data: { userId: string; conversationId: string }) => {
+            (data: { userId: number; conversationId: number }) => {
                 if (data.conversationId === selectedConversationId) {
                     dispatch(removeTypingUser(data.userId));
                 }
@@ -575,6 +583,22 @@ export const useChatMessages = ({
     ]);
 
     useEffect(() => {
+        if (!socket || !currentConversation || !user) return;
+
+        if (currentMessage.length > 0) {
+            socket.emit('user-typing', {
+                userId: user.id,
+                conversationId: currentConversation.id,
+            });
+        } else {
+            socket.emit('user-stopped-typing', {
+                userId: user.id,
+                conversationId: currentConversation.id,
+            });
+        }
+    }, [currentMessage, socket, currentConversation, user]);
+
+    useEffect(() => {
         getConversations();
     }, [getConversations]);
 
@@ -595,8 +619,8 @@ export const useChatMessages = ({
         sendMessage,
         lastSeenStatus,
         sendQuickReaction,
-
         messages,
+        typingUsers,
         currentMessage,
         setCurrentMessage: (message: string) =>
             dispatch(setCurrentMessage(message)),

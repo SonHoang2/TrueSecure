@@ -56,6 +56,12 @@ export default function Signup() {
             placeholder: 'Doe',
         },
         {
+            id: 'username',
+            label: 'Username',
+            type: 'text',
+            placeholder: 'username',
+        },
+        {
             id: 'email',
             label: 'Email address',
             type: 'email',
