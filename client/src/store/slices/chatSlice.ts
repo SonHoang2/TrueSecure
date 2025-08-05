@@ -11,8 +11,7 @@ export interface ChatState {
     messages: Message[];
     isLoading: boolean;
     error: string | null;
-    isTyping: boolean;
-    typingUsers: string[];
+    typingUsers: number[];
 }
 
 const initialState: ChatState = {
@@ -20,7 +19,6 @@ const initialState: ChatState = {
     messages: [],
     isLoading: false,
     error: null,
-    isTyping: false,
     typingUsers: [],
 };
 
@@ -45,6 +43,41 @@ export const storeMessage = createAsyncThunk(
     async (message: Message, { dispatch }) => {
         await storeMessagesInIndexedDB(message);
         dispatch(addMessage(message));
+    },
+);
+
+export const persistStatusUpdate = createAsyncThunk(
+    'chat/persistStatusUpdate',
+    async (
+        { messageId, status }: { messageId: string; status: MessageStatus },
+        { dispatch, getState },
+    ) => {
+        dispatch(updateMessageStatus({ messageId, status }));
+
+        const state = getState() as { chat: ChatState };
+        const message = state.chat.messages.find((msg) => msg.id === messageId);
+        if (message) {
+            await storeMessagesInIndexedDB(message);
+        }
+    },
+);
+
+export const persistGroupStatusUpdate = createAsyncThunk(
+    'chat/persistGroupStatusUpdate',
+    async (
+        {
+            messageId,
+            userId,
+            status,
+        }: { messageId: string; userId: number; status: MessageStatus },
+        { dispatch, getState },
+    ) => {
+        dispatch(updateGroupMessageStatus({ messageId, userId, status }));
+        const state = getState() as { chat: ChatState };
+        const message = state.chat.messages.find((msg) => msg.id === messageId);
+        if (message) {
+            await storeMessagesInIndexedDB(message);
+        }
     },
 );
 
@@ -91,8 +124,6 @@ const chatSlice = createSlice({
                 state.messages[messageIndex].status = action.payload.status;
                 state.messages[messageIndex].id = action.payload.messageId;
             }
-
-            
         },
         updateGroupMessageStatus: (
             state,
@@ -138,15 +169,12 @@ const chatSlice = createSlice({
         clearMessages: (state) => {
             state.messages = [];
         },
-        setTyping: (state, action: PayloadAction<boolean>) => {
-            state.isTyping = action.payload;
-        },
-        addTypingUser: (state, action: PayloadAction<string>) => {
+        addTypingUser: (state, action: PayloadAction<number>) => {
             if (!state.typingUsers.includes(action.payload)) {
                 state.typingUsers.push(action.payload);
             }
         },
-        removeTypingUser: (state, action: PayloadAction<string>) => {
+        removeTypingUser: (state, action: PayloadAction<number>) => {
             state.typingUsers = state.typingUsers.filter(
                 (userId) => userId !== action.payload,
             );

@@ -61,7 +61,7 @@ export const initializeEncryption = createAsyncThunk(
 export const loginUser = createAsyncThunk(
     'auth/login',
     async (
-        credentials: { email: string; password: string },
+        credentials: { username: string; password: string },
         { rejectWithValue },
     ) => {
         try {
@@ -84,6 +84,7 @@ export const signupUser = createAsyncThunk(
     'auth/signup',
     async (
         credentials: {
+            username: string;
             email: string;
             password: string;
             passwordConfirm: string;
