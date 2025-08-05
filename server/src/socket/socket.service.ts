@@ -107,4 +107,27 @@ export class SocketService {
             );
         }
     }
+
+    async emitTypingEvent(
+        conversationId: number,
+        userId: string,
+        event: 'user-typing' | 'user-stopped-typing',
+    ) {
+        const participants =
+            await this.conversationService.getOtherParticipants(
+                conversationId,
+                +userId,
+            );
+
+        for (const participant of participants) {
+            await this.socketManagerService.emitToUser(
+                participant.userId,
+                event,
+                {
+                    userId,
+                    conversationId,
+                },
+            );
+        }
+    }
 }

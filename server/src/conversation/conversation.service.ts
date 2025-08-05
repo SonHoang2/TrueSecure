@@ -286,20 +286,56 @@ export class ConversationService {
             throw new BadRequestException('Conversation ID is required');
         }
 
-        const participant = await this.convParticipantRepo.findOne({
-            where: {
-                userId,
-                conversationId,
-            },
-            select: ['id', 'groupKey'],
+        // Check if conversation exists first
+        const conversation = await this.conversationRepo.findOne({
+            where: { id: conversationId },
         });
 
-        if (!participant) {
+        if (!conversation) {
             throw new NotFoundException('Conversation not found');
         }
 
+        const participants = await this.convParticipantRepo
+            .createQueryBuilder('participant')
+            .leftJoinAndSelect('participant.user', 'user')
+            .select([
+                'participant.id as id',
+                'participant.userId as userId',
+                'participant.role as role',
+                'participant.groupKey as groupKey',
+                'user.publicKey as publicKey',
+            ])
+            .where('participant.conversationId = :conversationId', {
+                conversationId,
+            })
+            .getRawMany();
+
+        console.log(
+            `Participants for conversation ${conversationId}:`,
+            participants,
+        );
+
+        const adminPublicKey = participants.find(
+            (p) => p.role === ChatGroupRole.ADMIN,
+        ).publickey;
+
+        const groupKey = participants.find((p) => p.userid === userId).groupkey;
+
+        if (!groupKey) {
+            throw new NotFoundException(
+                'You are not a participant of this conversation or group key not found',
+            );
+        }
+
+        if (!adminPublicKey) {
+            throw new NotFoundException(
+                'Admin public key not found for this conversation',
+            );
+        }
+
         return {
-            groupKey: participant.groupKey,
+            groupKey,
+            adminPublicKey,
         };
     }
 
@@ -363,8 +399,6 @@ export class ConversationService {
 
         await this.conversationRepo.remove(conversation);
 
-        return {
-            message: 'Conversation deleted successfully',
-        };
+        return;
     }
 }

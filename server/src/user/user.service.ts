@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
@@ -43,7 +43,7 @@ export class UserService {
     async findOne(id: number) {
         const user = await this.userRepo.findOne({ where: { id } });
         if (!user) {
-            throw new Error(`User with ID ${id} not found`);
+            throw new NotFoundException(`User with ID ${id} not found`);
         }
         return {
             user,
@@ -56,6 +56,24 @@ export class UserService {
             select: [
                 'id',
                 'email',
+                'username',
+                'password',
+                'active',
+                'firstName',
+                'lastName',
+                'avatar',
+                'role',
+            ],
+        });
+    }
+
+    async findByUserNameWithPassword(username: string) {
+        return this.userRepo.findOne({
+            where: { username },
+            select: [
+                'id',
+                'email',
+                'username',
                 'password',
                 'active',
                 'firstName',
@@ -91,6 +109,10 @@ export class UserService {
     }
 
     async updatePublicKey(userId: number, publicKey: string) {
+        const user = await this.userRepo.findOne({ where: { id: userId } });
+        if (!user) {
+            throw new NotFoundException(`User with ID ${userId} not found`);
+        }
         await this.userRepo.update(userId, { publicKey });
         return { success: true };
     }
@@ -98,46 +120,31 @@ export class UserService {
     async getPublicKeyById(userId: number) {
         const user = await this.userRepo.findOne({
             where: { id: userId },
-            select: ['publicKey'],
+            select: ['id', 'publicKey'],
         });
 
         if (!user) {
-            throw new Error(`User with ID ${userId} not found`);
+            throw new NotFoundException(`User with ID ${userId} not found`);
+        }
+
+        if (!user.publicKey) {
+            throw new NotFoundException(
+                `Public key not found for user with ID ${userId}. User needs to complete security setup.`,
+            );
         }
 
         return { publicKey: user.publicKey };
     }
 
-    async searchUsersByName(name: string, currentUserId: number) {
-        // Handle search for full name (first + last)
-        const nameParts = name.split(' ');
-        const firstName = nameParts[0];
-        const lastName = nameParts.length > 1 ? nameParts[1] : '';
-
+    async searchUsername(username: string, currentUserId: number) {
         const queryBuilder = this.userRepo.createQueryBuilder('user');
 
         queryBuilder
             .where('user.id != :currentUserId', { currentUserId })
-            .andWhere(
-                '(user.firstName LIKE :firstNameTerm OR ' +
-                    'user.lastName LIKE :lastNameTerm' +
-                    (lastName
-                        ? ' OR (user.firstName LIKE :firstName AND user.lastName LIKE :lastName)'
-                        : '') +
-                    ')',
-                {
-                    firstNameTerm: `%${name}%`,
-                    lastNameTerm: `%${name}%`,
-                    firstName: firstName ? `%${firstName}%` : '',
-                    lastName: lastName ? `%${lastName}%` : '',
-                },
-            )
-            .select([
-                'user.id',
-                'user.firstName',
-                'user.lastName',
-                'user.avatar',
-            ]);
+            .andWhere('user.username LIKE :username', {
+                username: `%${username}%`,
+            })
+            .select(['user.id', 'user.username', 'user.avatar']);
 
         return {
             users: await queryBuilder.getMany(),
