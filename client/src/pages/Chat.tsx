@@ -20,10 +20,7 @@ import {
 } from '../store/slices/conversationSlice';
 import SidebarNavigation from '../component/SidebarNavigation';
 import { MdImage, MdSend, MdThumbUp } from 'react-icons/md';
-import {
-    getAdminPublicKey,
-    getUserPublicKey,
-} from '../services/encryptionService';
+import { getUserPublicKey } from '../services/encryptionService';
 import { UserStatus } from '../types/users.types';
 import ChatInfoSidebar from '../component/ChatInfoSidebar';
 import { useAuthUser } from '../hooks/useAuthUser';
@@ -52,6 +49,7 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
         lastSeenStatus,
         messages,
         currentMessage,
+        typingUsers,
     } = useChatMessages({
         userId: user?.id,
         socket,
@@ -86,17 +84,15 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
         }
 
         const init = async () => {
-            let publicKey;
-
-            if (currentConversation.isGroup && participants.length > 0) {
-                publicKey = await getAdminPublicKey(participants, axiosPrivate);
-            } else {
-                publicKey = await getUserPublicKey(
-                    currentReceiver.id,
-                    axiosPrivate,
-                );
+            if (currentConversation.isGroup) {
+                return;
             }
 
+            let publicKey;
+            publicKey = await getUserPublicKey(
+                currentReceiver.id,
+                axiosPrivate,
+            );
             if (publicKey) {
                 dispatch(updateRecipientPublicKey(publicKey));
             }
@@ -166,6 +162,7 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
                         lastSeenStatus={lastSeenStatus}
                         receiver={currentReceiver}
                         convParticipants={participants}
+                        typingUsers={typingUsers}
                     />
                     <div className="flex p-1 items-center mb-2">
                         <input
