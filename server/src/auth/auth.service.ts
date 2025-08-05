@@ -31,6 +31,31 @@ export class AuthService {
         this.env = this.configService.get<string>('env');
     }
 
+    private parseTimeToMilliseconds(timeString: string): number {
+        const regex = /^(\d+)([hmsd])$/;
+        const match = timeString.match(regex);
+
+        if (!match) {
+            throw new Error(`Invalid time format: ${timeString}`);
+        }
+
+        const value = parseInt(match[1]);
+        const unit = match[2];
+
+        switch (unit) {
+            case 'm': // minutes
+                return value * 60 * 1000;
+            case 'h': // hours
+                return value * 60 * 60 * 1000;
+            case 'd': // days
+                return value * 24 * 60 * 60 * 1000;
+            case 's': // seconds
+                return value * 1000;
+            default:
+                throw new Error(`Unsupported time unit: ${unit}`);
+        }
+    }
+
     private setCookies(
         res: Response,
         accessToken: string,
@@ -39,7 +64,9 @@ export class AuthService {
         const ATOptions = {
             expires: new Date(
                 Date.now() +
-                    this.jwtConfig.accessToken.cookieExpiresIn * 60 * 60 * 1000,
+                    this.parseTimeToMilliseconds(
+                        this.jwtConfig.accessToken.cookieExpiresIn,
+                    ),
             ),
             httpOnly: true,
             secure: true,
@@ -49,11 +76,9 @@ export class AuthService {
         const RTOptions = {
             expires: new Date(
                 Date.now() +
-                    this.jwtConfig.refreshToken.cookieExpiresIn *
-                        24 *
-                        60 *
-                        60 *
-                        1000,
+                    this.parseTimeToMilliseconds(
+                        this.jwtConfig.refreshToken.cookieExpiresIn,
+                    ),
             ),
             httpOnly: true,
             path: '/api/v1/auth/',
@@ -93,9 +118,10 @@ export class AuthService {
     }
 
     async login(LoginDto: LoginDto, res: Response) {
-        const { email, password } = LoginDto;
+        const { username, password } = LoginDto;
 
-        const user = await this.userService.findByEmailWithPassword(email);
+        const user =
+            await this.userService.findByUserNameWithPassword(username);
         if (!user || !(await bcrypt.compare(password, user.password))) {
             throw new UnauthorizedException('Invalid email or password');
         }

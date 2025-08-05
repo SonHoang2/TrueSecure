@@ -18,6 +18,14 @@ export class SignupDto {
     @IsNotEmpty()
     lastName: string;
 
+    @IsNotEmpty()
+    @IsString()
+    @Length(3, 20)
+    @Matches(/^[a-zA-Z0-9_]+$/, {
+        message: 'Username must be alphanumeric and can include underscores',
+    })
+    username: string;
+
     @IsDefined()
     @IsEmail()
     @IsNotEmpty()
