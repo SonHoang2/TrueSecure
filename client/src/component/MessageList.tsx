@@ -5,6 +5,7 @@ import { Conversation } from '../types/conversations.types';
 import { User } from '../types/users.types';
 import { MdThumbUp } from 'react-icons/md';
 import { LastSeenStatus } from '../types/messages.types';
+import { useChat } from '../store/hooks';
 
 interface MessageListProps {
     messages: Message[];
@@ -13,6 +14,7 @@ interface MessageListProps {
     lastSeenStatus: LastSeenStatus[] | LastSeenStatus | null;
     receiver: User;
     convParticipants: User[] | null;
+    typingUsers?: number[];
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -22,6 +24,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     lastSeenStatus,
     receiver,
     convParticipants,
+    typingUsers,
 }) => {
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -184,6 +187,32 @@ export const MessageList: React.FC<MessageListProps> = ({
                 ),
             )}
             <div ref={messagesEndRef} />
+            {Array.isArray(typingUsers) &&
+                typingUsers.includes(receiver?.id) &&
+                receiver && (
+                    <div className="flex w-full px-2 py-1 justify-start animate-fade-in">
+                        <div className="flex max-w-md items-end">
+                            <div className="flex-none pe-2 items-end">
+                                <img
+                                    className="size-8 rounded-full"
+                                    src={
+                                        receiver.avatar || '/default-avatar.png'
+                                    }
+                                    alt="avatar"
+                                />
+                            </div>
+                            <div className="flex-grow flex flex-col">
+                                <div className="bg-gray-100 rounded-3xl ps-3 pe-2 pt-3 pb-2 flex items-center ">
+                                    <div className="flex space-x-1 mr-2">
+                                        <span className="block p-1 bg-gray-500 rounded-full animate-bounce [animation-delay:0s]"></span>
+                                        <span className="block p-1 bg-gray-500 rounded-full animate-bounce [animation-delay:0.15s]"></span>
+                                        <span className="block p-1 bg-gray-500 rounded-full animate-bounce [animation-delay:0.3s]"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
         </div>
     );
 };

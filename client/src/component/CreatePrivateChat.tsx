@@ -27,7 +27,7 @@ export const CreatePrivateChat: React.FC<CreatePrivateChatProps> = ({
 }) => {
     const user = useAuthUser();
     const dispatch = useAppDispatch();
-    
+
     const [searchTerm, setSearchTerm] = useState('');
     const [filteredUsers, setFilteredUsers] = useState([]);
 
@@ -110,12 +110,12 @@ export const CreatePrivateChat: React.FC<CreatePrivateChatProps> = ({
                                 <div>
                                     <img
                                         src={user.avatar}
-                                        alt={user.firstName}
+                                        alt={user.username}
                                         className="w-10 h-10 rounded-full"
                                     />
                                 </div>
                                 <span className="text-gray-700 font-medium">
-                                    {`${user.firstName} ${user.lastName}`}
+                                    {user.username}
                                 </span>
                             </button>
                         ))

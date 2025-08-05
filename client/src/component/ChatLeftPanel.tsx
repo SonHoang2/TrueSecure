@@ -52,7 +52,12 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
             }
 
             const res = await axiosPrivate.get(
-                USERS_URL + `/search?name=${searchTerm}`,
+                USERS_URL + `/search?username=${searchTerm}`,
+            );
+
+            console.log(
+                `Search results for "${searchTerm}":`,
+                res.data.data.users,
             );
 
             setUsers(res.data.data.users);
