@@ -15,6 +15,7 @@ import { User } from 'src/user/entities/user.entity';
 import { cleanDto } from 'src/common/utils/cleanDto';
 import { GoogleLoginDto } from './dto/googleLogin.dto';
 import { RedisService } from 'src/redis/redis.service';
+import { parseTimeToMilliseconds } from 'src/common/utils/time.utils';
 
 @Injectable()
 export class AuthService {
@@ -31,31 +32,6 @@ export class AuthService {
         this.env = this.configService.get<string>('env');
     }
 
-    private parseTimeToMilliseconds(timeString: string): number {
-        const regex = /^(\d+)([hmsd])$/;
-        const match = timeString.match(regex);
-
-        if (!match) {
-            throw new Error(`Invalid time format: ${timeString}`);
-        }
-
-        const value = parseInt(match[1]);
-        const unit = match[2];
-
-        switch (unit) {
-            case 'm': // minutes
-                return value * 60 * 1000;
-            case 'h': // hours
-                return value * 60 * 60 * 1000;
-            case 'd': // days
-                return value * 24 * 60 * 60 * 1000;
-            case 's': // seconds
-                return value * 1000;
-            default:
-                throw new Error(`Unsupported time unit: ${unit}`);
-        }
-    }
-
     private setCookies(
         res: Response,
         accessToken: string,
@@ -64,7 +40,7 @@ export class AuthService {
         const ATOptions = {
             expires: new Date(
                 Date.now() +
-                    this.parseTimeToMilliseconds(
+                    parseTimeToMilliseconds(
                         this.jwtConfig.accessToken.cookieExpiresIn,
                     ),
             ),
@@ -76,7 +52,7 @@ export class AuthService {
         const RTOptions = {
             expires: new Date(
                 Date.now() +
-                    this.parseTimeToMilliseconds(
+                    parseTimeToMilliseconds(
                         this.jwtConfig.refreshToken.cookieExpiresIn,
                     ),
             ),
