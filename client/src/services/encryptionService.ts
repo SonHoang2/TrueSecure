@@ -28,37 +28,18 @@ class PublicKeyNotFoundError extends EncryptionError {
     }
 }
 
-class AdminNotFoundError extends EncryptionError {
-    constructor() {
-        super('Admin participant not found in conversation');
-        this.name = 'AdminNotFoundError';
-    }
-}
-
-export const initialize = async (
-    userId: number,
-    axiosPrivate: AxiosInstance,
-): Promise<CryptoKey> => {
+export const initializeUserKeys = async (): Promise<{
+    privateKey: CryptoKey;
+    publicKey: string ;
+}> => {
     try {
-        let privateKey = await cryptoUtils.importPrivateKey(userId);
+        const { privateKey, publicKey } = await cryptoUtils.generateECDHKeys();
 
-        if (!privateKey) {
-            const { privateKey: newPrivateKey, publicKey } =
-                await cryptoUtils.generateECDHKeys();
+        const exportedPublicKey = await cryptoUtils.exportPublicKey(publicKey);
 
-            const exportedPublicKey =
-                await cryptoUtils.exportPublicKey(publicKey);
+        await cryptoUtils.storePrivateKey(privateKey);
 
-            await cryptoUtils.storePrivateKey(newPrivateKey, userId);
-
-            await axiosPrivate.post(USERS_URL + '/public-key', {
-                publicKey: exportedPublicKey,
-            });
-
-            privateKey = newPrivateKey;
-        }
-
-        return privateKey;
+        return { privateKey, publicKey: exportedPublicKey };
     } catch (error) {
         throw new EncryptionError(
             'Failed to initialize encryption keys',
