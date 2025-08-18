@@ -43,16 +43,16 @@ export async function importPublicKey(base64Key) {
     );
 }
 
-export async function storePrivateKey(privateKey, userId) {
-    if (!userId) {
-        console.error('User ID is required to store private key');
-        return;
-    }
-
-    const storageKey = cryptoStorage.getPrivateKeyId(userId);
+export async function storePrivateKey(privateKey) {
+    const storageKey = cryptoStorage.getPrivateKeyId();
     const exportedKey = await window.crypto.subtle.exportKey('jwk', privateKey);
 
     await cryptoStorage.setItem(storageKey, exportedKey);
+}
+
+export async function removePrivateKey() {
+    const storageKey = cryptoStorage.getPrivateKeyId();
+    await cryptoStorage.removeItem(storageKey);
 }
 
 export async function exportAESKey(key) {
@@ -102,13 +102,8 @@ export async function storeGroupKey({ conversationId, userId, groupKey }) {
     await cryptoStorage.setItem(storageKey, exportedKey);
 }
 
-export async function importPrivateKey(userId) {
-    if (!userId) {
-        console.error('User ID is required to import private key');
-        return;
-    }
-
-    const storageKey = cryptoStorage.getPrivateKeyId(userId);
+export async function importPrivateKey() {
+    const storageKey = cryptoStorage.getPrivateKeyId();
     const exportedKey = await cryptoStorage.getItem(storageKey);
 
     if (!exportedKey) {
@@ -116,7 +111,6 @@ export async function importPrivateKey(userId) {
         return;
     }
 
-    // Import the private key
     const privateKey = await window.crypto.subtle.importKey(
         'jwk', // Format of the key
         exportedKey,
@@ -355,7 +349,6 @@ export async function decryptGroupMessage(groupKey, encryptedData) {
     return new TextDecoder().decode(decrypted);
 }
 
-// File-specific aliases (same as unified functions)
 export async function encryptPrivateFile(recipientPublicKey, arrayBuffer) {
     return await encryptPrivateData(recipientPublicKey, arrayBuffer);
 }
@@ -370,4 +363,8 @@ export async function encryptGroupFile(groupKey, arrayBuffer) {
 
 export async function decryptGroupFile(groupKey, encryptedData) {
     return await decryptGroupData(groupKey, encryptedData);
+}
+
+export async function getDeviceUuid(): Promise<string | null> {
+    return await cryptoStorage.getItem('deviceUuid');
 }

@@ -6,7 +6,9 @@ class CryptoStorage {
             await storage.setItem(key, JSON.stringify(value));
         } catch (error) {
             console.error('Failed to store crypto data:', error);
-            throw new Error(`Storage failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            throw new Error(
+                `Storage failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            );
         }
     }
 
@@ -37,13 +39,12 @@ class CryptoStorage {
         }
     }
 
-    // Generate storage keys consistently
-    getPrivateKeyId(userId: number): string {
-        return `privateKey_${userId}`;
+    getPrivateKeyId(): string {
+        return `privateKey`;
     }
 
-    getGroupKeyId(userId: number, conversationId: string): string {
-        return `groupKey_${userId}_${conversationId}`;
+    getGroupKeyId(conversationId: string): string {
+        return `groupKey_${conversationId}`;
     }
 }
 
