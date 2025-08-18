@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UserModule } from 'src/user/user.module';
 import { RedisModule } from 'src/redis/redis.module';
+import { DeviceModule } from 'src/device/device.module';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Module({
@@ -25,6 +26,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
         }),
         forwardRef(() => UserModule),
         RedisModule,
+        forwardRef(() => DeviceModule),
     ],
     exports: [JwtAuthGuard, JwtModule],
 })
