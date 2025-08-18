@@ -8,19 +8,22 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { Conversation } from './entities/conversation.entity';
-import { ConvParticipant } from './entities/convParticipant.entity';
+import { Participant } from './entities/participant.entity';
 import { CreateGroupKeyDto } from './dto/create-group-key.dto';
 import { UserService } from 'src/user/user.service';
 import { ChatGroupRole } from 'src/common/enum/chat-role.enum';
+import { ParticipantDevice } from './entities/participant-device.entity';
 
 @Injectable()
 export class ConversationService {
     constructor(
         @InjectRepository(Conversation)
         private conversationRepo: Repository<Conversation>,
-        @InjectRepository(ConvParticipant)
-        private convParticipantRepo: Repository<ConvParticipant>,
+        @InjectRepository(Participant)
+        private participantRepo: Repository<Participant>,
         private userService: UserService,
+        @InjectRepository(ParticipantDevice)
+        private participantDeviceRepo: Repository<ParticipantDevice>,
     ) {}
 
     async createConversation(
@@ -56,7 +59,7 @@ export class ConversationService {
 
         // Check if this exact conversation already exists
         // First, find conversations where all users participate
-        const participantsByConversationQb = this.convParticipantRepo
+        const participantsByConversation = this.participantRepo
             .createQueryBuilder('participant')
             .select('participant.conversationId')
             .addSelect('COUNT(participant.userId)', 'userCount')
@@ -67,7 +70,7 @@ export class ConversationService {
             });
 
         const potentialConversations =
-            await participantsByConversationQb.getRawMany();
+            await participantsByConversation.getRawMany();
 
         let existingConversation = null;
 
@@ -75,7 +78,7 @@ export class ConversationService {
         for (const conv of potentialConversations) {
             const conversationId = conv.participant_conversationId;
 
-            const totalParticipants = await this.convParticipantRepo.count({
+            const totalParticipants = await this.participantRepo.count({
                 where: { conversationId },
             });
 
@@ -108,13 +111,13 @@ export class ConversationService {
                     role = ChatGroupRole.ADMIN;
                 }
 
-                const participant = this.convParticipantRepo.create({
+                const participant = this.participantRepo.create({
                     userId,
                     conversationId: conversation.id,
                     role: role,
                 });
 
-                await this.convParticipantRepo.save(participant);
+                await this.participantRepo.save(participant);
             }
         }
 
@@ -124,24 +127,29 @@ export class ConversationService {
     }
 
     async getConversation(id: number, userId: number) {
-        const conversation = await this.conversationRepo.findOne({
-            where: { id },
-            relations: ['convParticipants', 'convParticipants.user'],
-        });
+        const conversation = await this.conversationRepo
+            .createQueryBuilder('conversation')
+            .leftJoinAndSelect('conversation.participants', 'participants')
+            .leftJoinAndSelect('participants.user', 'user')
+            .leftJoinAndSelect(
+                'participants.participantDevices',
+                'participantDevices',
+            )
+            .where('conversation.id = :id', { id })
+            .andWhere('participants.userId = :userId', { userId })
+            .getOne();
 
         if (!conversation) {
-            throw new NotFoundException('Conversation not found');
-        }
-
-        const currentUserParticipation = conversation.convParticipants.find(
-            (participant) => participant.userId === userId,
-        );
-
-        if (!currentUserParticipation) {
-            throw new ForbiddenException(
-                'You are not a participant of this conversation',
+            throw new NotFoundException(
+                'Conversation not found or you are not a participant',
             );
         }
+
+        console.log('conversation', conversation);
+
+        const currentUserParticipation = conversation.participants.find(
+            (participant) => participant.userId === userId,
+        );
 
         const baseResponse = {
             id: conversation.id,
@@ -149,14 +157,14 @@ export class ConversationService {
             isGroup: conversation.isGroup,
             avatar: conversation.avatar,
             myRole: currentUserParticipation.role,
-            myGroupKey: currentUserParticipation.groupKey,
+            // myGroupKey: currentUserParticipation.groupKey,
             createdAt: conversation.createdAt,
             updatedAt: conversation.updatedAt,
         };
 
         if (conversation.isGroup) {
             // For group chats, include all participants
-            const participants = conversation.convParticipants.map((p) => ({
+            const participants = conversation.participants.map((p) => ({
                 id: p.user.id,
                 firstName: p.user.firstName,
                 lastName: p.user.lastName,
@@ -171,7 +179,7 @@ export class ConversationService {
             };
         } else {
             // For private chats, just include the other user as receiver
-            const otherParticipant = conversation.convParticipants.find(
+            const otherParticipant = conversation.participants.find(
                 (p) => p.userId !== userId,
             );
 
@@ -193,12 +201,12 @@ export class ConversationService {
     }
 
     async getUserConversations(userId: number) {
-        const userParticipations = await this.convParticipantRepo.find({
+        const userParticipations = await this.participantRepo.find({
             where: { userId },
             relations: [
                 'conversation',
-                'conversation.convParticipants',
-                'conversation.convParticipants.user',
+                'conversation.participants',
+                'conversation.participants.user',
             ],
             order: {
                 conversation: {
@@ -216,14 +224,14 @@ export class ConversationService {
                 isGroup: conversation.isGroup,
                 avatar: conversation.avatar,
                 myRole: participation.role,
-                myGroupKey: participation.groupKey,
+                // myGroupKey: participation.groupKey,
                 createdAt: conversation.createdAt,
                 updatedAt: conversation.updatedAt,
             };
 
             if (conversation.isGroup) {
                 // For group chats, include all other participants
-                const participants = conversation.convParticipants
+                const participants = conversation.participants
                     .filter((p) => p.userId !== userId)
                     .map((p) => ({
                         id: p.user.id,
@@ -240,7 +248,7 @@ export class ConversationService {
                 };
             } else {
                 // For private chats, just include the other user as receiver
-                const otherParticipant = conversation.convParticipants.find(
+                const otherParticipant = conversation.participants.find(
                     (p) => p.userId !== userId,
                 );
 
@@ -269,12 +277,26 @@ export class ConversationService {
     }
 
     async createGroupKey(createGroupKeyDto: CreateGroupKeyDto) {
-        const { groupKey, userId, conversationId } = createGroupKeyDto;
+        const { groupKey, deviceUuid, conversationId } = createGroupKeyDto;
 
-        await this.convParticipantRepo.update(
-            { userId, conversationId },
-            { groupKey },
-        );
+        if (!groupKey || !deviceUuid || !conversationId) {
+            throw new BadRequestException(
+                'Group key, device UUID and conversation ID are required',
+            );
+        }
+
+        const participantDevice = await this.participantDeviceRepo
+            .createQueryBuilder('participantDevice')
+            .leftJoinAndSelect('participantDevice.participant', 'participant')
+            .where('device.uuid = :deviceUuid', { deviceUuid })
+            .andWhere('participant.conversationId = :conversationId', {
+                conversationId,
+            })
+            .getOne();
+
+        if (!participantDevice) {
+            throw new NotFoundException('Participant device not found');
+        }
 
         return {
             groupKey,
@@ -295,7 +317,7 @@ export class ConversationService {
             throw new NotFoundException('Conversation not found');
         }
 
-        const participants = await this.convParticipantRepo
+        const participants = await this.participantRepo
             .createQueryBuilder('participant')
             .leftJoinAndSelect('participant.user', 'user')
             .select([
@@ -340,7 +362,7 @@ export class ConversationService {
     }
 
     async getOtherParticipants(conversationId: number, userId: number) {
-        const participants = await this.convParticipantRepo.find({
+        const participants = await this.participantRepo.find({
             where: {
                 conversationId,
                 userId: Not(userId),
@@ -356,7 +378,7 @@ export class ConversationService {
     }
 
     async getAllParticipants(conversationId: number) {
-        const participants = await this.convParticipantRepo.find({
+        const participants = await this.participantRepo.find({
             where: {
                 conversationId,
             },
@@ -373,14 +395,14 @@ export class ConversationService {
     async deleteConversation(conversationId: number, userId: number) {
         const conversation = await this.conversationRepo.findOne({
             where: { id: conversationId },
-            relations: ['convParticipants'],
+            relations: ['participants'],
         });
 
         if (!conversation) {
             throw new NotFoundException('Conversation not found');
         }
 
-        const participant = conversation.convParticipants.find(
+        const participant = conversation.participants.find(
             (p) => p.userId === userId,
         );
 

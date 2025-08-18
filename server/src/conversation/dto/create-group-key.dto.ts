@@ -5,9 +5,9 @@ export class CreateGroupKeyDto {
     @IsNotEmpty()
     groupKey: string;
 
-    @IsNumber()
+    @IsString()
     @IsNotEmpty()
-    userId: number;
+    deviceUuid: string;
 
     @IsNumber()
     @IsNotEmpty()
