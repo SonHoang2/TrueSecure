@@ -11,7 +11,7 @@ import useAxiosPrivate from './hooks/useAxiosPrivate';
 import { AppRole } from './enums/roles.enum';
 import Profile from './pages/Profile';
 import { useAppDispatch, useAppSelector } from './store/hooks';
-import { initializeEncryption } from './store/slices/authSlice';
+import { loadUserKeysFromStorage } from './store/slices/authSlice';
 
 const App = () => {
     const [userStatus, setUserStatus] = useState({
@@ -24,15 +24,9 @@ const App = () => {
     const { isKeysInitialized } = useAppSelector((state) => state.auth);
     const axiosPrivate = useAxiosPrivate();
 
-    // Initialize encryption keys when user is available
     useEffect(() => {
         if (user && !isKeysInitialized) {
-            dispatch(
-                initializeEncryption({
-                    userId: user.id.toString(),
-                    axiosPrivate,
-                }),
-            );
+            dispatch(loadUserKeysFromStorage());
         }
     }, [user, isKeysInitialized, dispatch, axiosPrivate]);
 

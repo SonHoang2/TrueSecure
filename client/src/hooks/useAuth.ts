@@ -9,12 +9,7 @@ import {
 } from '../store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { useCallback } from 'react';
-import {
-    AUTH_URL,
-    CLIENT_URL,
-    USERS_URL,
-    GOOGLE_CLIENT_ID,
-} from '../config/config';
+import { AUTH_URL, CLIENT_URL, GOOGLE_CLIENT_ID } from '../config/config';
 import queryString from 'query-string';
 import { axiosPrivate } from '../api/axios';
 import { Routes } from '../enums/routes.enum';
@@ -137,6 +132,6 @@ export const useAuth = () => {
         logout,
         getGoogleCode,
         sendGoogleCode,
-        refreshTokens
+        refreshTokens,
     };
 };
