@@ -10,6 +10,7 @@ import { SignupDto } from './dto/signup.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/user/user.service';
+import { DeviceService } from 'src/device/device.service';
 import * as bcrypt from 'bcrypt';
 import { User } from 'src/user/entities/user.entity';
 import { cleanDto } from 'src/common/utils/cleanDto';
@@ -27,6 +28,7 @@ export class AuthService {
         private configService: ConfigService,
         private userService: UserService,
         private redisService: RedisService,
+        private deviceService: DeviceService,
     ) {
         this.jwtConfig = this.configService.get('jwt');
         this.env = this.configService.get<string>('env');
@@ -66,18 +68,28 @@ export class AuthService {
         res.cookie('refreshToken', refreshToken, RTOptions);
     }
 
-    private signToken(id: number, expiresIn: string): string {
-        return this.jwtService.sign({ id }, { expiresIn });
+    private signToken(
+        id: number,
+        deviceUuid: string,
+        expiresIn: string,
+    ): string {
+        return this.jwtService.sign({ id, deviceUuid }, { expiresIn });
     }
 
-    private async createSendToken(user: User, res: Response) {
+    private async createSendToken(
+        user: User,
+        res: Response,
+        deviceUuid: string,
+    ) {
         const accessToken = this.signToken(
             user.id,
+            deviceUuid,
             this.jwtConfig.accessToken.expiresIn,
         );
 
         const refreshToken = this.signToken(
             user.id,
+            deviceUuid,
             this.jwtConfig.refreshToken.expiresIn,
         );
 
@@ -90,21 +102,32 @@ export class AuthService {
         this.setCookies(res, accessToken, refreshToken);
 
         const filter = cleanDto(user, ['password']);
-        return { user: filter };
+        return { user: filter, deviceUuid };
     }
 
     async login(LoginDto: LoginDto, res: Response) {
-        const { username, password } = LoginDto;
+        const {
+            username,
+            password,
+            publicKey,
+            deviceUuid: providedDeviceUuid,
+        } = LoginDto;
 
         const user =
             await this.userService.findByUserNameWithPassword(username);
+
         if (!user || !(await bcrypt.compare(password, user.password))) {
             throw new UnauthorizedException('Invalid email or password');
         }
+
         if (!user.active)
             throw new ForbiddenException('Account is deactivated');
 
-        return this.createSendToken(user, res);
+        const deviceUuid =
+            providedDeviceUuid ||
+            (await this.deviceService.create(user.id, { publicKey }));
+
+        return this.createSendToken(user, res, deviceUuid);
     }
 
     async signup(SignupDto: SignupDto, res: Response) {
@@ -112,12 +135,21 @@ export class AuthService {
             throw new BadRequestException('Passwords do not match!');
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { passwordConfirm, ...userDto } = SignupDto;
+        const {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            passwordConfirm,
+            deviceUuid: providedDeviceUuid,
+            publicKey,
+            ...userDto
+        } = SignupDto;
 
         const newUser = await this.userService.create(userDto);
 
-        return this.createSendToken(newUser, res);
+        const deviceUuid =
+            providedDeviceUuid ||
+            (await this.deviceService.create(newUser.id, { publicKey }));
+
+        return this.createSendToken(newUser, res, deviceUuid);
     }
 
     async logout(req: Request, res: Response) {
@@ -190,22 +222,27 @@ export class AuthService {
             );
         }
 
-        // Delete the old token
         await this.redisService.deleteRefreshToken(refreshToken);
         await this.redisService.removeUserToken(userId, refreshToken);
 
-        // Generate new tokens
+        const decoded = this.jwtService.verify(refreshToken) as {
+            id: number;
+            deviceUuid: string;
+        };
+        const deviceUuid = decoded.deviceUuid || '';
+
         const accessToken = this.signToken(
             parseInt(userId),
+            deviceUuid,
             this.jwtConfig.accessToken.expiresIn,
         );
 
         const newRefreshToken = this.signToken(
             parseInt(userId),
+            deviceUuid,
             this.jwtConfig.refreshToken.expiresIn,
         );
 
-        // Store new refresh token and track it
         await this.redisService.storeRefreshTokenWithUserTracking(
             newRefreshToken,
             String(userId),
@@ -266,6 +303,6 @@ export class AuthService {
             });
         }
 
-        return this.createSendToken(user, res);
+        // return this.createSendToken(user, res);
     }
 }

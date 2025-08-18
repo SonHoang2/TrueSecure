@@ -2,6 +2,7 @@ import {
     IsDefined,
     IsEmail,
     IsNotEmpty,
+    IsOptional,
     IsString,
     Length,
     Matches,
@@ -46,4 +47,12 @@ export class SignupDto {
     @IsDefined()
     @IsNotEmpty()
     passwordConfirm: string;
+
+    @IsOptional()
+    @IsString()
+    deviceUuid?: string;
+
+    @IsString()
+    @IsNotEmpty()
+    publicKey: string;
 }
