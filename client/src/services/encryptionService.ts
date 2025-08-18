@@ -1,80 +1,80 @@
-import * as cryptoUtils from '../utils/cryptoUtils';
+import * as cryptoUtils from '../crypto/cryptoUtils';
 import { CONVERSATIONS_URL, USERS_URL } from '../config/config';
 import { ChatGroupRole } from '../enums/chat-role.enum';
+import { AxiosInstance } from 'axios';
+import { User, UserKeys } from '../types/users.types';
 
-export const initialize = async (userId, axiosPrivate) => {
-    try {
-        let privateKey = await cryptoUtils.importPrivateKey(userId);
+interface GetGroupKeyParams {
+    conversationId: number;
+    userKeys: UserKeys;
+    userId: number;
+    axiosPrivate: AxiosInstance;
+}
 
-        if (!privateKey) {
-            const { privateKey, publicKey } =
-                await cryptoUtils.generateECDHKeys();
-
-            const exportedPublicKey =
-                await cryptoUtils.exportPublicKey(publicKey);
-
-            await cryptoUtils.storePrivateKey(privateKey, userId);
-
-            await axiosPrivate.post(USERS_URL + '/public-key', {
-                publicKey: exportedPublicKey,
-            });
-            return privateKey;
-        }
-
-        return privateKey;
-    } catch (error) {
-        console.error('Error initializing key:', error);
+class EncryptionError extends Error {
+    constructor(
+        message: string,
+        public cause?: Error,
+    ) {
+        super(message);
+        this.name = 'EncryptionError';
     }
-};
+}
 
-export const getAdminPublicKey = async (convParticipants, axiosPrivate) => {
+class PublicKeyNotFoundError extends EncryptionError {
+    constructor(userId?: number) {
+        super(`Public key not found${userId ? ` for user ${userId}` : ''}`);
+        this.name = 'PublicKeyNotFoundError';
+    }
+}
+
+export const initializeUserKeys = async (): Promise<{
+    privateKey: CryptoKey;
+    publicKey: string ;
+}> => {
     try {
-        if (!convParticipants) {
-            console.error('Conversation participants not found!');
-            return;
-        }
+        const { privateKey, publicKey } = await cryptoUtils.generateECDHKeys();
 
-        const adminId = convParticipants.find(
-            (participant) => participant.role === ChatGroupRole.ADMIN,
-        ).userId;
+        const exportedPublicKey = await cryptoUtils.exportPublicKey(publicKey);
 
-        const res = await axiosPrivate.get(
-            USERS_URL + `/${adminId}/public-key`,
+        await cryptoUtils.storePrivateKey(privateKey);
+
+        return { privateKey, publicKey: exportedPublicKey };
+    } catch (error) {
+        throw new EncryptionError(
+            'Failed to initialize encryption keys',
+            error instanceof Error ? error : new Error(String(error)),
         );
-        const { publicKey: exportedPublicKey } = res.data.data;
-
-        if (!exportedPublicKey) {
-            console.error('Public key not found!');
-            return;
-        }
-
-        const publicKey = await cryptoUtils.importPublicKey(exportedPublicKey);
-        return publicKey;
-    } catch (error) {
-        console.error('Error getting Admin public key:', error);
     }
 };
 
-export const getUserPublicKey = async (userId, axiosPrivate) => {
-    try {
-        if (!userId) {
-            console.error('userId not found!');
-            return;
-        }
+export const getUserPublicKey = async (
+    userId: number,
+    axiosPrivate: AxiosInstance,
+): Promise<CryptoKey> => {
+    if (!userId) {
+        throw new EncryptionError('User ID is required');
+    }
 
-        const res = await axiosPrivate.get(USERS_URL + `/${userId}/public-key`);
-        const { publicKey: exportedPublicKey } = res.data.data;
+    try {
+        const response = await axiosPrivate.get(
+            `${USERS_URL}/${userId}/public-key`,
+        );
+        const { publicKey: exportedPublicKey } = response.data.data;
 
         if (!exportedPublicKey) {
-            console.error('Public key not found!');
-            return;
+            throw new PublicKeyNotFoundError(userId);
         }
 
-        const publicKey = await cryptoUtils.importPublicKey(exportedPublicKey);
-
-        return publicKey;
+        return await cryptoUtils.importPublicKey(exportedPublicKey);
     } catch (error) {
-        console.error('Error getting User public key:', error);
+        if (error instanceof EncryptionError) {
+            throw error;
+        }
+        throw new EncryptionError(
+            `Failed to get public key for user ${userId}`,
+            error instanceof Error ? error : new Error(String(error)),
+        );
     }
 };
 
@@ -83,29 +83,40 @@ export const getGroupKey = async ({
     userKeys,
     userId,
     axiosPrivate,
-}) => {
-    try {
-        const { publicKey, privateKey } = userKeys;
-        
-        if (!publicKey || !privateKey) {
-            console.error('Public key or private key is missing!');
-            return;
-        }
+}: GetGroupKeyParams): Promise<CryptoKey> => {
+    const { privateKey } = userKeys;
 
+    if (!privateKey) {
+        throw new EncryptionError('User private keys are required');
+    }
+
+    if (!conversationId || !userId) {
+        throw new EncryptionError('Conversation ID and User ID are required');
+    }
+
+    try {
         let groupKey = await cryptoUtils.importGroupKey({
             conversationId,
             userId,
         });
 
         if (!groupKey) {
-            const res = await axiosPrivate.get(
-                CONVERSATIONS_URL + `/${conversationId}/key`,
+            const response = await axiosPrivate.get(
+                `${CONVERSATIONS_URL}/${conversationId}/key`,
             );
 
-            const { groupKey: exportedEncryptedKey } = res.data.data;
+            const { groupKey: exportedEncryptedKey, adminPublicKey } =
+                response.data.data;
 
+            if (!exportedEncryptedKey) {
+                throw new EncryptionError(
+                    'Encrypted group key not found on server',
+                );
+            }
+
+            // Decrypt the group key
             const exportedKey = await cryptoUtils.decryptAESKeys({
-                senderPublicKey: publicKey,
+                senderPublicKey: adminPublicKey,
                 recipientPrivateKey: privateKey,
                 encryptedData: exportedEncryptedKey,
             });
@@ -119,8 +130,18 @@ export const getGroupKey = async ({
             });
         }
 
+        if (!groupKey) {
+            throw new EncryptionError('Failed to obtain or decrypt group key');
+        }
+
         return groupKey;
     } catch (error) {
-        console.error('Error getting group key:', error);
+        if (error instanceof EncryptionError) {
+            throw error;
+        }
+        throw new EncryptionError(
+            `Failed to get group key for conversation ${conversationId}`,
+            error instanceof Error ? error : new Error(String(error)),
+        );
     }
 };

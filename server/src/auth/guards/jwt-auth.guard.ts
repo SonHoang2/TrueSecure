@@ -7,9 +7,11 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { RequestWithUser } from 'src/common/interfaces/request-with-user.interface';
 import { UserService } from 'src/user/user.service';
+import { DeviceService } from 'src/device/device.service';
 
 interface JwtPayload {
     id: number;
+    deviceUuid: string;
     iat: number;
     exp: number;
 }
@@ -19,6 +21,7 @@ export class JwtAuthGuard implements CanActivate {
     constructor(
         private readonly jwtService: JwtService,
         private readonly userService: UserService,
+        private readonly deviceService: DeviceService,
     ) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -54,7 +57,18 @@ export class JwtAuthGuard implements CanActivate {
                 'Password was changed after token issued',
             );
         }
+
+        const deviceUuid = decoded.deviceUuid;
+        if (deviceUuid) {
+            try {
+                await this.deviceService.updateLastSeen(deviceUuid, user.id);
+            } catch (error) {
+                console.log('Failed to update device lastSeen:', error);
+            }
+        }
+
         request.user = user;
+        request.deviceUuid = deviceUuid;
 
         return true;
     }

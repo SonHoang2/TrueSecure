@@ -1,15 +1,15 @@
 import {
-    IsEmail,
     IsString,
     IsNotEmpty,
     Matches,
     Length,
+    IsOptional,
 } from 'class-validator';
 
 export class LoginDto {
-    @IsEmail()
+    @IsString()
     @IsNotEmpty()
-    email: string;
+    username: string;
 
     @IsString()
     @IsNotEmpty()
@@ -22,4 +22,12 @@ export class LoginDto {
         },
     )
     password: string;
+
+    @IsOptional()
+    @IsString()
+    deviceUuid?: string;
+
+    @IsString()
+    @IsNotEmpty()
+    publicKey: string;
 }

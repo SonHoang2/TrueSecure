@@ -2,6 +2,7 @@ export type User = {
     id: number;
     firstName: string;
     lastName: string;
+    username: string;
     email: string;
     password: string;
     avatar: string;
@@ -15,6 +16,11 @@ export type User = {
 };
 
 export type UserKeys = {
+    publicKey: CryptoKey | null;
+    privateKey: CryptoKey | null;
+};
+
+export type UserKeysExported = {
     publicKey: string;
     privateKey: string;
 };

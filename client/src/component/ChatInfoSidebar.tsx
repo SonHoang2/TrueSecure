@@ -1,14 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-    MdClose,
-    MdPushPin,
-    MdEdit,
-    MdPhoto,
-    MdPalette,
-    MdEmojiEmotions,
     MdPeople,
     MdAttachFile,
     MdPrivacyTip,
+    MdExpandLess,
+    MdExpandMore,
+    MdBlock,
+    MdLogout,
 } from 'react-icons/md';
 import { FaArrowLeft, FaRegEdit } from 'react-icons/fa';
 
@@ -27,6 +25,21 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
 }) => {
     if (!isOpen) return null;
 
+    const [openSections, setOpenSections] = useState<{
+        [key: string]: boolean;
+    }>({
+        privacy: false,
+        chatMembers: false,
+        mediaFiles: false,
+    });
+
+    const toggleSection = (section: string) => {
+        setOpenSections((prev) => ({
+            ...prev,
+            [section]: !prev[section],
+        }));
+    };
+
     return (
         <div
             className={`rounded-lg p-2 bg-white me-4 overflow-y-auto lg:w-2/6 w-full relative`}
@@ -38,7 +51,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                 <FaArrowLeft size={20} className="text-gray-600" />
             </button>
             {/* Profile Section */}
-            <div className="flex flex-col items-center p-4 border-b">
+            <div className="flex flex-col items-center p-4">
                 <div className="w-24 h-24 rounded-full overflow-hidden mb-3">
                     <img
                         src={
@@ -68,16 +81,16 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
 
             {/* Options */}
             <div className="flex-1 overflow-y-auto">
-                <div className="py-2 border-b">
+                {/* <div className="py-2 border-b">
                     <button className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left">
                         <span className="mr-3 text-gray-600">
                             <MdPushPin size={20} />
                         </span>
                         <span>View pinned messages</span>
                     </button>
-                </div>
+                </div> */}
 
-                <div className="py-2 border-b">
+                {/* <div className="py-2 border-b">
                     <h3 className="text-sm font-medium px-4 py-2 text-gray-500">
                         Customise chat
                     </h3>
@@ -116,29 +129,86 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                         </span>
                         <span>Edit nicknames</span>
                     </button>
-                </div>
+                </div> */}
 
                 <div className="py-2">
-                    <button className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left">
-                        <span className="mr-3 text-gray-600">
-                            <MdPeople size={20} />
+                    <button
+                        className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left"
+                        onClick={() => toggleSection('chatMembers')}
+                    >
+                        <span className="font-medium flex-1 text-left">
+                            Chat members
                         </span>
-                        <span>Chat members</span>
+                        <span className="ml-2">
+                            {openSections.chatMembers ? (
+                                <MdExpandLess size={20} />
+                            ) : (
+                                <MdExpandMore size={20} />
+                            )}
+                        </span>
                     </button>
+                    {openSections.chatMembers && (
+                        <div className="pl-8 py-2 text-gray-600 text-sm">
+                            {/* Chat members content here */}
+                            Members list...
+                        </div>
+                    )}
 
-                    <button className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left">
-                        <span className="mr-3 text-gray-600">
-                            <MdAttachFile size={20} />
+                    <button
+                        className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left"
+                        onClick={() => toggleSection('mediaFiles')}
+                    >
+                        <span className="font-medium flex-1 text-left">
+                            Media, files and links
                         </span>
-                        <span>Media, files and links</span>
+                        <span className="ml-2">
+                            {openSections.mediaFiles ? (
+                                <MdExpandLess size={20} />
+                            ) : (
+                                <MdExpandMore size={20} />
+                            )}
+                        </span>
                     </button>
+                    {openSections.mediaFiles && (
+                        <div className="pl-8 py-2 text-gray-600 text-sm">
+                            {/* Media/files content here */}
+                            Media and files...
+                        </div>
+                    )}
 
-                    <button className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left">
-                        <span className="mr-3 text-gray-600">
-                            <MdPrivacyTip size={20} />
+                    <button
+                        className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left"
+                        onClick={() => toggleSection('privacy')}
+                    >
+                        <span className="font-medium flex-1 text-left">
+                            Privacy and support
                         </span>
-                        <span>Privacy and support</span>
+                        <span className="ml-2">
+                            {openSections.privacy ? (
+                                <MdExpandLess size={20} />
+                            ) : (
+                                <MdExpandMore size={20} />
+                            )}
+                        </span>
                     </button>
+                    {openSections.privacy && (
+                        <div>
+                            <button className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left">
+                                <span className="mr-3 text-gray-600">
+                                    {conversation?.isGroup ? (
+                                        <MdLogout size={20} />
+                                    ) : (
+                                        <MdBlock size={20} />
+                                    )}
+                                </span>
+                                <span>
+                                    {conversation?.isGroup
+                                        ? 'Leave group'
+                                        : 'Block'}
+                                </span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

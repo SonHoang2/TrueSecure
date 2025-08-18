@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import socket from '../utils/socket';
 import { useAuth } from '../hooks/useAuth';
@@ -11,15 +11,19 @@ import OutgoingCallModal from '../component/OutgoingCallModal';
 import InCallModal from '../component/InCallModal';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useChatMessages } from '../hooks/useChatMessages';
+import { useAppDispatch, useConversations } from '../store/hooks';
+import { updateRecipientPublicKey } from '../store/slices/authSlice';
+import { setCurrentMessage } from '../store/slices/chatSlice';
+import {
+    loadConversationDetails,
+    selectConversation,
+} from '../store/slices/conversationSlice';
 import SidebarNavigation from '../component/SidebarNavigation';
 import { MdImage, MdSend, MdThumbUp } from 'react-icons/md';
-import { useEncryptionContext } from '../contexts/EncryptionContext';
-import {
-    getAdminPublicKey,
-    getUserPublicKey,
-} from '../services/encryptionService';
+import { getUserPublicKey } from '../services/encryptionService';
 import { UserStatus } from '../types/users.types';
 import ChatInfoSidebar from '../component/ChatInfoSidebar';
+import { useAuthUser } from '../hooks/useAuthUser';
 
 interface ChatProps {
     userStatus: UserStatus;
@@ -29,19 +33,24 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
     const conversationId = Number(useParams()?.conversationId);
     const [showChatInfo, setShowChatInfo] = useState(false);
 
-    const { user } = useAuth();
-    const { userKeys, setUserKeys } = useEncryptionContext();
+    const user = useAuthUser();
+    const { userKeys, isKeysInitialized } = useAuth();
+    const dispatch = useAppDispatch();
 
+    const { currentConversation, currentReceiver, participants } =
+        useConversations();
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const axiosPrivate = useAxiosPrivate();
 
     const {
         sendMessage,
-        chatState,
-        setChatState,
-        lastSeenStatus,
         sendQuickReaction,
+        lastSeenStatus,
+        messages,
+        currentMessage,
+        typingUsers,
     } = useChatMessages({
-        conversationId,
         userId: user?.id,
         socket,
         axiosPrivate,
@@ -57,120 +66,160 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
         localStream,
         remoteStream,
     } = useWebRTC({
-        receiverId: chatState.receiver?.id,
+        receiverId: currentReceiver?.id,
         socket,
         user,
         axiosPrivate,
     });
 
     useEffect(() => {
-        if (chatState.conversation.isGroup === null) {
+        if (conversationId) {
+            dispatch(loadConversationDetails(conversationId));
+        }
+    }, [conversationId, dispatch]);
+
+    useEffect(() => {
+        if (!currentConversation || currentConversation.isGroup === null) {
             return;
         }
 
         const init = async () => {
-            let publicKey;
-
-            if (chatState.conversation.isGroup) {
-                publicKey = await getAdminPublicKey(
-                    chatState.convParticipants,
-                    axiosPrivate,
-                );
-            } else {
-                publicKey = await getUserPublicKey(
-                    chatState.receiver?.id,
-                    axiosPrivate,
-                );
+            if (currentConversation.isGroup) {
+                return;
             }
 
-            setUserKeys((prevKeys) => ({
-                ...prevKeys,
-                publicKey,
-            }));
+            let publicKey;
+            publicKey = await getUserPublicKey(
+                currentReceiver.id,
+                axiosPrivate,
+            );
+            if (publicKey) {
+                dispatch(updateRecipientPublicKey(publicKey));
+            }
         };
 
         init();
-    }, [chatState.receiver, chatState.conversation.isGroup]);
+    }, [currentReceiver, currentConversation?.isGroup]);
+
+    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            if (file.size > maxSize) {
+                alert('File size must be less than 5MB');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('conversationId', conversationId.toString());
+
+            console.log('Sending image:', formData);
+        }
+
+        // Reset the input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const triggerImageUpload = () => {
+        fileInputRef.current?.click();
+    };
 
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
             <SidebarNavigation />
             <div className={`hidden md:min-w-[400px] md:flex md:w-auto me-4`}>
                 <ChatLeftPanel
-                    chatState={chatState}
-                    user={user}
                     userStatus={userStatus}
                     conversationId={conversationId}
-                    setChatState={setChatState}
                 />
             </div>
-            <div
-                className={`rounded-lg bg-white me-4 flex-col flex ${
-                    showChatInfo ? 'lg:w-4/6 hidden lg:flex' : 'flex w-full'
-                }`}
-            >
-                <ChatHeader
-                    conversation={chatState.conversation}
-                    userStatus={userStatus}
-                    receiver={chatState.receiver}
-                    startCall={startCall}
-                    onMoreClick={() => setShowChatInfo(!showChatInfo)}
-                    showChatInfo={showChatInfo}
-                />
-                <MessageList
-                    messages={chatState.messages}
-                    userId={user?.id}
-                    conversation={chatState.conversation}
-                    lastSeenStatus={lastSeenStatus}
-                    receiver={chatState.receiver}
-                    convParticipants={chatState.convParticipants}
-                />
-                <div className="flex p-1 items-center mb-2">
-                    <button className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200">
-                        <MdImage className="text-blue-500 text-2xl" />
-                    </button>
-                    <input
-                        type="text"
-                        className="flex-grow ms-2 bg-gray-100 px-3 py-2 rounded-3xl focus:outline-none caret-blue-500 me-2"
-                        placeholder="Aa"
-                        value={chatState.message}
-                        onChange={(e) =>
-                            setChatState((prevState) => ({
-                                ...prevState,
-                                message: e.target.value,
-                            }))
-                        }
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                sendMessage();
-                            }
-                        }}
+            {currentConversation && (
+                <div
+                    className={`rounded-lg bg-white me-4 flex-col flex ${
+                        showChatInfo ? 'lg:w-4/6 hidden lg:flex' : 'flex w-full'
+                    }`}
+                >
+                    <ChatHeader
+                        conversation={currentConversation}
+                        userStatus={userStatus}
+                        receiver={currentReceiver}
+                        startCall={startCall}
+                        onMoreClick={() => setShowChatInfo(!showChatInfo)}
+                        showChatInfo={showChatInfo}
                     />
-                    {chatState.message.length > 0 ? (
+                    <MessageList
+                        messages={messages}
+                        userId={user?.id}
+                        conversation={currentConversation}
+                        lastSeenStatus={lastSeenStatus}
+                        receiver={currentReceiver}
+                        convParticipants={participants}
+                        typingUsers={typingUsers}
+                    />
+                    <div className="flex p-1 items-center mb-2">
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            style={{ display: 'none' }}
+                        />
                         <button
                             className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
-                            onClick={sendMessage}
+                            onClick={triggerImageUpload}
                         >
-                            <MdSend className="text-blue-500 text-2xl" />
+                            <MdImage className="text-blue-500 text-2xl" />
                         </button>
-                    ) : (
-                        <button
-                            className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
-                            onClick={sendQuickReaction}
-                        >
-                            <MdThumbUp className="text-blue-500 text-2xl" />
-                        </button>
-                    )}
+                        <input
+                            type="text"
+                            className="flex-grow ms-2 bg-gray-100 px-3 py-2 rounded-3xl focus:outline-none caret-blue-500 me-2"
+                            placeholder="Aa"
+                            value={currentMessage}
+                            onChange={(e) =>
+                                dispatch(setCurrentMessage(e.target.value))
+                            }
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    sendMessage();
+                                }
+                            }}
+                        />
+                        {currentMessage.length > 0 ? (
+                            <button
+                                className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
+                                onClick={sendMessage}
+                            >
+                                <MdSend className="text-blue-500 text-2xl" />
+                            </button>
+                        ) : (
+                            <button
+                                className="p-2 w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full active:bg-gray-200"
+                                onClick={sendQuickReaction}
+                            >
+                                <MdThumbUp className="text-blue-500 text-2xl" />
+                            </button>
+                        )}
+                    </div>
                 </div>
-            </div>
-            <ChatInfoSidebar
-                isOpen={showChatInfo}
-                onClose={() => setShowChatInfo(false)}
-                conversation={chatState.conversation}
-                receiver={chatState.receiver}
-            />
+            )}
+            {currentConversation && (
+                <ChatInfoSidebar
+                    isOpen={showChatInfo}
+                    onClose={() => setShowChatInfo(false)}
+                    conversation={currentConversation}
+                    receiver={currentReceiver}
+                />
+            )}
             <div>
-                {callState.isRinging && (
+                {callState.isRinging && callState.sender && (
                     <IncomingCallModal
                         onReject={rejectCall}
                         onAccept={acceptCall}
@@ -180,7 +229,7 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
                 {callState.isCalling && (
                     <OutgoingCallModal
                         onEndCall={endCall}
-                        receiver={chatState.receiver}
+                        receiver={currentReceiver}
                         isVideoCall={callState.isVideoCall}
                         localStream={localStream}
                     />
@@ -189,7 +238,7 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
                 {callState.isConnected && (
                     <InCallModal
                         onEndCall={endCall}
-                        receiver={chatState.receiver}
+                        receiver={currentReceiver}
                         isVideoCall={callState.isVideoCall}
                         remoteStream={remoteStream}
                         localStream={localStream}

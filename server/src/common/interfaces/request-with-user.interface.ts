@@ -6,4 +6,5 @@ interface User {
 
 export interface RequestWithUser extends Request {
     user: User;
+    deviceUuid?: string;
 }

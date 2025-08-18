@@ -2,6 +2,7 @@ import {
     IsDefined,
     IsEmail,
     IsNotEmpty,
+    IsOptional,
     IsString,
     Length,
     Matches,
@@ -17,6 +18,14 @@ export class SignupDto {
     @IsString()
     @IsNotEmpty()
     lastName: string;
+
+    @IsNotEmpty()
+    @IsString()
+    @Length(3, 20)
+    @Matches(/^[a-zA-Z0-9_]+$/, {
+        message: 'Username must be alphanumeric and can include underscores',
+    })
+    username: string;
 
     @IsDefined()
     @IsEmail()
@@ -38,4 +47,12 @@ export class SignupDto {
     @IsDefined()
     @IsNotEmpty()
     passwordConfirm: string;
+
+    @IsOptional()
+    @IsString()
+    deviceUuid?: string;
+
+    @IsString()
+    @IsNotEmpty()
+    publicKey: string;
 }

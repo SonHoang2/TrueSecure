@@ -39,8 +39,11 @@ export class UserController {
     }
 
     @Get('search')
-    searchUsers(@Query('name') name: string, @Req() req: RequestWithUser) {
-        return this.userService.searchUsersByName(name, req.user.id);
+    searchUsers(
+        @Query('username') username: string,
+        @Req() req: RequestWithUser,
+    ) {
+        return this.userService.searchUsername(username, req.user.id);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
