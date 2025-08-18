@@ -1,3 +1,5 @@
+import { cryptoStorage } from './cryptoStorage';
+
 // Convert ArrayBuffer to Base64
 function arrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
@@ -41,17 +43,16 @@ export async function importPublicKey(base64Key) {
     );
 }
 
-export async function storePrivateKey(privateKey, userId) {
-    if (!userId) {
-        console.error('User ID is required to store private key');
-        return;
-    }
-
-    const storageKey = `privateKey_${userId}`;
-
+export async function storePrivateKey(privateKey) {
+    const storageKey = cryptoStorage.getPrivateKeyId();
     const exportedKey = await window.crypto.subtle.exportKey('jwk', privateKey);
 
-    localStorage.setItem(storageKey, JSON.stringify(exportedKey));
+    await cryptoStorage.setItem(storageKey, exportedKey);
+}
+
+export async function removePrivateKey() {
+    const storageKey = cryptoStorage.getPrivateKeyId();
+    await cryptoStorage.removeItem(storageKey);
 }
 
 export async function exportAESKey(key) {
@@ -95,31 +96,21 @@ export async function storeGroupKey({ conversationId, userId, groupKey }) {
         return;
     }
 
-    const storageKey = `groupKey_${userId}_${conversationId}`;
-
+    const storageKey = cryptoStorage.getGroupKeyId(userId, conversationId);
     const exportedKey = await window.crypto.subtle.exportKey('jwk', groupKey);
 
-    localStorage.setItem(storageKey, JSON.stringify(exportedKey));
+    await cryptoStorage.setItem(storageKey, exportedKey);
 }
 
-export async function importPrivateKey(userId) {
-    if (!userId) {
-        console.error('User ID is required to store private key');
-        return;
-    }
+export async function importPrivateKey() {
+    const storageKey = cryptoStorage.getPrivateKeyId();
+    const exportedKey = await cryptoStorage.getItem(storageKey);
 
-    const storageKey = `privateKey_${userId}`;
-    const keyData = localStorage.getItem(storageKey);
-
-    if (!keyData) {
+    if (!exportedKey) {
         console.error('No key data found for the user');
         return;
     }
 
-    // Parse the exported key
-    const exportedKey = JSON.parse(keyData);
-
-    // Import the private key
     const privateKey = await window.crypto.subtle.importKey(
         'jwk', // Format of the key
         exportedKey,
@@ -136,21 +127,19 @@ export async function importPrivateKey(userId) {
 
 export async function importGroupKey({ conversationId, userId }) {
     if (!userId || !conversationId) {
-        console.error(
+        console.warn(
             'User ID and conversationId are required to import group key',
         );
         return;
     }
 
-    const storageKey = `groupKey_${userId}_${conversationId}`;
-    const keyData = localStorage.getItem(storageKey);
+    const storageKey = cryptoStorage.getGroupKeyId(userId, conversationId);
+    const exportedKey = await cryptoStorage.getItem(storageKey);
 
-    if (!keyData) {
-        console.error('No key data found for the conversation');
+    if (!exportedKey) {
+        console.warn('No key data found for the conversation');
         return;
     }
-
-    const exportedKey = JSON.parse(keyData);
 
     const groupKey = await window.crypto.subtle.importKey(
         'jwk',
@@ -232,35 +221,45 @@ export async function decryptAESKeys({
     recipientPrivateKey,
     encryptedData,
 }) {
-    // 1. Decode the Base64 string into an ArrayBuffer
-    const combined = base64ToArrayBuffer(encryptedData);
+    try {
+        // 1. Decode the Base64 string into an ArrayBuffer
+        const combined = base64ToArrayBuffer(encryptedData);
 
-    // 2. Extract the IV (first 12 bytes) and the encrypted content (remaining bytes)
-    const iv = combined.slice(0, 12); // IV is 12 bytes for AES-GCM
-    const encryptedContent = combined.slice(12);
+        // 2. Extract the IV (first 12 bytes) and the encrypted content (remaining bytes)
+        const iv = combined.slice(0, 12); // IV is 12 bytes for AES-GCM
+        const encryptedContent = combined.slice(12);
 
-    // 3. Derive shared secret using recipient's private key and sender's public key
-    const sharedSecret = await deriveSharedKey(
-        recipientPrivateKey,
-        senderPublicKey,
-    );
+        // 3. Derive shared secret using recipient's private key and sender's public key
+        const sharedSecret = await deriveSharedKey(
+            recipientPrivateKey,
+            senderPublicKey,
+        );
 
-    // 4. Decrypt the message
-    const decrypted = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv },
-        sharedSecret,
-        encryptedContent,
-    );
+        // 4. Decrypt the message
+        const decrypted = await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv },
+            sharedSecret,
+            encryptedContent,
+        );
 
-    return new TextDecoder().decode(decrypted);
+        return new TextDecoder().decode(decrypted);
+    } catch (error) {
+        console.error('Error decrypting AES keys:', error);
+    }
 }
 
-async function encryptAES(key, data) {
-    const iv = crypto.getRandomValues(new Uint8Array(12)); // Generate a random IV
+// Unified encryption function that handles both text and binary data
+async function encryptData(key, data) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+
+    // Handle both string and ArrayBuffer/binary data
+    const dataToEncrypt =
+        typeof data === 'string' ? new TextEncoder().encode(data) : data;
+
     const encryptedContent = await crypto.subtle.encrypt(
         { name: 'AES-GCM', iv },
         key,
-        new TextEncoder().encode(data),
+        dataToEncrypt,
     );
 
     return {
@@ -269,17 +268,19 @@ async function encryptAES(key, data) {
     };
 }
 
-async function decryptAES(key, encryptedData) {
+// Unified decryption function - returns ArrayBuffer (caller decides if text or binary)
+async function decryptData(key, encryptedData) {
     const decrypted = await crypto.subtle.decrypt(
         { name: 'AES-GCM', iv: base64ToArrayBuffer(encryptedData.iv) },
         key,
         base64ToArrayBuffer(encryptedData.content),
     );
 
-    return new TextDecoder().decode(decrypted);
+    return decrypted; // Return ArrayBuffer - caller converts to string if needed
 }
 
-export async function encryptPrivateMessage(recipientPublicKey, message) {
+// Unified private message encryption that handles both text and binary data
+export async function encryptPrivateData(recipientPublicKey, data) {
     const ephemeralKeyPair = await window.crypto.subtle.generateKey(
         { name: 'ECDH', namedCurve: 'P-256' },
         true,
@@ -291,7 +292,7 @@ export async function encryptPrivateMessage(recipientPublicKey, message) {
         recipientPublicKey,
     );
 
-    const encryptedData = await encryptAES(sharedSecret, message);
+    const encryptedData = await encryptData(sharedSecret, data);
 
     const exportedEphemeralPublicKey = await crypto.subtle.exportKey(
         'raw',
@@ -299,12 +300,13 @@ export async function encryptPrivateMessage(recipientPublicKey, message) {
     );
 
     return {
-        ...encryptedData, // Includes content and iv
+        ...encryptedData, // Includes encryptedContent and iv
         ephemeralPublicKey: arrayBufferToBase64(exportedEphemeralPublicKey),
     };
 }
 
-export async function decryptPrivateMessage(privateKey, encryptedData) {
+// Unified private message decryption - returns ArrayBuffer
+export async function decryptPrivateData(privateKey, encryptedData) {
     const ephemeralPublicKey = await crypto.subtle.importKey(
         'raw',
         base64ToArrayBuffer(encryptedData.ephemeralPublicKey),
@@ -315,13 +317,54 @@ export async function decryptPrivateMessage(privateKey, encryptedData) {
 
     const sharedSecret = await deriveSharedKey(privateKey, ephemeralPublicKey);
 
-    return await decryptAES(sharedSecret, encryptedData);
+    return await decryptData(sharedSecret, encryptedData);
+}
+
+// Unified group message encryption that handles both text and binary data
+export async function encryptGroupData(groupKey, data) {
+    return await encryptData(groupKey, data);
+}
+
+// Unified group message decryption - returns ArrayBuffer
+export async function decryptGroupData(groupKey, encryptedData) {
+    return await decryptData(groupKey, encryptedData);
+}
+
+// Legacy wrappers for backward compatibility
+export async function encryptPrivateMessage(recipientPublicKey, message) {
+    return await encryptPrivateData(recipientPublicKey, message);
+}
+
+export async function decryptPrivateMessage(privateKey, encryptedData) {
+    const decrypted = await decryptPrivateData(privateKey, encryptedData);
+    return new TextDecoder().decode(decrypted);
 }
 
 export async function encryptGroupMessage(groupKey, message) {
-    return await encryptAES(groupKey, message);
+    return await encryptGroupData(groupKey, message);
 }
 
 export async function decryptGroupMessage(groupKey, encryptedData) {
-    return await decryptAES(groupKey, encryptedData);
+    const decrypted = await decryptGroupData(groupKey, encryptedData);
+    return new TextDecoder().decode(decrypted);
+}
+
+export async function encryptPrivateFile(recipientPublicKey, arrayBuffer) {
+    return await encryptPrivateData(recipientPublicKey, arrayBuffer);
+}
+
+export async function decryptPrivateFile(privateKey, encryptedData) {
+    return await decryptPrivateData(privateKey, encryptedData);
+}
+
+export async function encryptGroupFile(groupKey, arrayBuffer) {
+    return await encryptGroupData(groupKey, arrayBuffer);
+}
+
+export async function decryptGroupFile(groupKey, encryptedData) {
+    return await decryptGroupData(groupKey, encryptedData);
+}
+
+export async function getDeviceUuid(): Promise<string | null> {
+    return await cryptoStorage.getItem('deviceUuid');
 }

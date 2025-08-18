@@ -1,7 +1,7 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { ConvParticipant } from './convParticipant.entity';
+import { Participant } from './participant.entity';
 
-@Entity('conversation')
+@Entity('conversations')
 export class Conversation {
     @PrimaryGeneratedColumn()
     id: number;
@@ -21,12 +21,21 @@ export class Conversation {
     })
     avatar: string;
 
-    @OneToMany(
-        () => ConvParticipant,
-        (participant) => participant.conversation,
-        {
-            cascade: true,
-        },
-    )
-    convParticipants: ConvParticipant[];
+    @OneToMany(() => Participant, (participant) => participant.conversation, {
+        cascade: true,
+    })
+    participants: Participant[];
+
+    @Column({
+        type: 'timestamp',
+        default: () => 'CURRENT_TIMESTAMP',
+    })
+    createdAt: Date;
+
+    @Column({
+        type: 'timestamp',
+        default: () => 'CURRENT_TIMESTAMP',
+        onUpdate: 'CURRENT_TIMESTAMP',
+    })
+    updatedAt: Date;
 }

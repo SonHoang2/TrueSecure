@@ -3,16 +3,18 @@ import {
     Entity,
     JoinColumn,
     ManyToOne,
+    OneToMany,
     PrimaryGeneratedColumn,
     Unique,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Conversation } from './conversation.entity';
+import { ParticipantDevice } from './participant-device.entity';
 import { ChatGroupRole } from 'src/common/enum/chat-role.enum';
 
-@Entity('conv_participant')
+@Entity('participants')
 @Unique(['userId', 'conversationId'])
-export class ConvParticipant {
+export class Participant {
     @PrimaryGeneratedColumn()
     id: number;
 
@@ -29,22 +31,23 @@ export class ConvParticipant {
     })
     role: ChatGroupRole;
 
-    @Column({
-        nullable: true,
-    })
-    groupKey: string;
-
     @ManyToOne(() => User)
     @JoinColumn({ name: 'userId' })
     user: User;
 
     @ManyToOne(
         () => Conversation,
-        (conversation) => conversation.convParticipants,
+        (conversation) => conversation.participants,
         {
             onDelete: 'CASCADE',
         },
     )
     @JoinColumn({ name: 'conversationId' })
     conversation: Conversation;
+
+    @OneToMany(
+        () => ParticipantDevice,
+        (participantDevice) => participantDevice.participant,
+    )
+    participantDevices: ParticipantDevice[];
 }

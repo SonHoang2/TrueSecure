@@ -42,12 +42,12 @@ const openDatabase = (): Promise<IDBDatabase> => {
 
 export const storeMessagesInIndexedDB = async (data: {
     id: string;
-    senderId: string;
-    conversationId: string;
+    senderId: number;
+    conversationId: number;
     content: string;
     createdAt: string;
     status: MessageStatus | null;
-    statuses?: Array<{ userId: string; status: MessageStatus }>;
+    statuses?: Array<{ userId: number; status: MessageStatus }>;
 }) => {
     try {
         const {
@@ -110,7 +110,7 @@ export const storeMessagesInIndexedDB = async (data: {
 };
 
 export const getMessagesFromIndexedDB = async (
-    conversationId: string,
+    conversationId: number,
 ): Promise<any[]> => {
     try {
         const db = await openDatabase();
@@ -150,7 +150,7 @@ export const getMessagesFromIndexedDB = async (
 };
 
 export const getLastMessageFromIndexedDB = async (
-    conversationId: string,
+    conversationId: number,
 ): Promise<any | null> => {
     try {
         const db = await openDatabase();

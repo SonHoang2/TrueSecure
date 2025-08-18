@@ -9,7 +9,7 @@ import { extractErrorMessage } from '../utils/errorUtils';
 
 export default function Login() {
     const [formData, setFormData] = useState({
-        email: '',
+        username: '',
         password: '',
     });
     const [error, setError] = useState('');
@@ -39,7 +39,7 @@ export default function Login() {
             event.preventDefault();
             await login(formData);
         } catch (err) {
-            let message = extractErrorMessage(err, "Login failed.")
+            let message = extractErrorMessage(err, 'Login failed.');
             setError(message);
             console.log(err);
         }
@@ -73,18 +73,18 @@ export default function Login() {
                     <div className="flex flex-col mb-4">
                         <label
                             className="font-semibold text-gray-700"
-                            htmlFor="email"
+                            htmlFor="username"
                         >
-                            Email address
+                            Username
                         </label>
                         <input
                             className="form-input py-2 px-4 border rounded-md bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            id="email"
-                            type="email"
-                            placeholder="you@example.com"
+                            id="username"
+                            type="text"
+                            placeholder="username"
                             onChange={(e) =>
                                 setFormData((prev) => {
-                                    return { ...prev, email: e.target.value };
+                                    return { ...prev, username: e.target.value };
                                 })
                             }
                             autoComplete="on"

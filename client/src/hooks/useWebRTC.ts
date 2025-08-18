@@ -82,10 +82,14 @@ export const useWebRTC = ({
                 video.ontimeupdate = () => {
                     if (ctx && video.readyState >= 2) {
                         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        canvas.toBlob((blob) => {
-                            video.remove();
-                            resolve(blob);
-                        }, 'image/jpeg', 1);
+                        canvas.toBlob(
+                            (blob) => {
+                                video.remove();
+                                resolve(blob);
+                            },
+                            'image/jpeg',
+                            1,
+                        );
                     }
                 };
             };
@@ -105,7 +109,11 @@ export const useWebRTC = ({
                     setCapturedImages((prev) => [...prev, 'blob']);
 
                     const formData = new FormData();
-                    formData.append('image', imageBlob, `frame_${Date.now()}.jpg`);
+                    formData.append(
+                        'image',
+                        imageBlob,
+                        `frame_${Date.now()}.jpg`,
+                    );
                     formData.append('callId', `${user.id}_${receiverId}`);
 
                     const res = await axiosPrivate.post(

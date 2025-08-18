@@ -32,7 +32,7 @@ export default function Signup() {
         try {
             await signup(formData);
         } catch (err) {
-            let message = extractErrorMessage(err, "Signup failed")
+            let message = extractErrorMessage(err, 'Signup failed');
             setError(message);
             console.log(err);
         }
@@ -54,6 +54,12 @@ export default function Signup() {
             label: 'Last name',
             type: 'text',
             placeholder: 'Doe',
+        },
+        {
+            id: 'username',
+            label: 'Username',
+            type: 'text',
+            placeholder: 'username',
         },
         {
             id: 'email',

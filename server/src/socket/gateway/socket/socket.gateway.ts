@@ -207,4 +207,38 @@ export class SocketGateway
             );
         }
     }
+
+    @SubscribeMessage('user-typing')
+    async handleUserTyping(
+        @ConnectedSocket() client: SocketUser,
+        @MessageBody() data: { userId: number; conversationId: number },
+    ) {
+        try {
+            await this.socketService.emitTypingEvent(
+                data.conversationId,
+                client.user.id,
+                'user-typing',
+            );
+        } catch (error) {
+            this.logger.error(`Error handling user typing: ${error.message}`);
+        }
+    }
+
+    @SubscribeMessage('user-stopped-typing')
+    async handleUserStoppedTyping(
+        @ConnectedSocket() client: SocketUser,
+        @MessageBody() data: { userId: string; conversationId: number },
+    ) {
+        try {
+            await this.socketService.emitTypingEvent(
+                data.conversationId,
+                client.user.id,
+                'user-stopped-typing',
+            );
+        } catch (error) {
+            this.logger.error(
+                `Error handling user stopped typing: ${error.message}`,
+            );
+        }
+    }
 }

@@ -4,9 +4,11 @@ import { MdClose } from 'react-icons/md';
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
 import { CONVERSATIONS_URL, USERS_URL } from '../config/config';
 import debounce from '../utils/debounce';
-import * as cryptoUtils from '../utils/cryptoUtils';
+import * as cryptoUtils from '../crypto/cryptoUtils';
 import { User } from '../types/users.types';
-import { ChatState } from '../types/chats.types';
+import { useAuthUser } from '../hooks/useAuthUser';
+import { useAppDispatch } from '../store/hooks';
+import { loadConversations } from '../store/slices/conversationSlice';
 
 type CreateChatState = {
     createGroupChat: boolean;
@@ -19,26 +21,17 @@ interface CreateGroupChatProps {
         searchTerm: string,
         setUsers: Dispatch<SetStateAction<User[]>>,
     ) => Promise<void>;
-    setChatState: Dispatch<SetStateAction<ChatState>>;
-    user: User;
 }
 
 export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
     setCreateChat,
     onSearch,
-    setChatState,
-    user,
 }) => {
+    const user = useAuthUser();
+    const dispatch = useAppDispatch();
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isNewGroupChat, setNewGroupChat] = useState<boolean | null>(null);
-
-    interface User {
-        id: string;
-        firstName: string;
-        lastName: string;
-        avatar: string;
-    }
 
     interface GroupFormData {
         groupName: string;
@@ -70,7 +63,7 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
         setSearchTerm('');
     };
 
-    const handleRemoveUser = (userId: string) => {
+    const handleRemoveUser = (userId: number) => {
         setFormData((prev) => ({
             ...prev,
             groupMembers: prev.groupMembers.filter(
@@ -79,17 +72,45 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
         }));
     };
 
-    const handleCrypto = async (conversationId: string) => {
+    const validateUserKeys = async (): Promise<Map<number, string>> => {
+        const publicKeys = new Map<number, string>();
+
+        for (const participant of formData.groupMembers) {
+            try {
+                const res = await axiosPrivate.get(
+                    USERS_URL + `/${participant.id}/public-key`,
+                );
+
+                if (!res.data?.data?.publicKey) {
+                    throw new Error(
+                        `User ${participant.username} doesn't have a public key. They need to complete their security setup first.`,
+                    );
+                }
+
+                publicKeys.set(participant.id, res.data.data.publicKey);
+            } catch (error) {
+                if (error.response?.status === 404) {
+                    throw new Error(
+                        `User ${participant.username} doesn't have a public key. They need to complete their security setup first.`,
+                    );
+                }
+                throw error;
+            }
+        }
+
+        return publicKeys;
+    };
+
+    const handleCrypto = async (
+        conversationId: string,
+        publicKeys: Map<number, string>,
+    ) => {
         try {
             const aesKey = await cryptoUtils.generateAesKey();
 
-            for (const otherUser of formData.groupMembers) {
-                const res = await axiosPrivate.get(
-                    USERS_URL + `/${otherUser.id}/public-key`,
-                );
-
+            for (const participant of formData.groupMembers) {
                 const recipientPublicKey = await cryptoUtils.importPublicKey(
-                    res.data.data.publicKey,
+                    publicKeys.get(participant.id),
                 );
                 const senderPrivateKey = await cryptoUtils.importPrivateKey(
                     user.id,
@@ -105,7 +126,7 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
                 await axiosPrivate.post(CONVERSATIONS_URL + `/key`, {
                     groupKey: encryptedAesKey,
                     conversationId: conversationId,
-                    userId: otherUser.id,
+                    userId: participant.id,
                 });
             }
 
@@ -128,6 +149,8 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
                 return;
             }
 
+            const publicKeys = await validateUserKeys();
+
             const {
                 data: {
                     data: { conversation },
@@ -138,19 +161,11 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
                 avatar: formData.avatar,
             });
 
-            await handleCrypto(conversation.id);
+            await handleCrypto(conversation.id, publicKeys);
             console.log('Conversations:', conversation);
 
-            const {
-                data: {
-                    data: { conversations },
-                },
-            } = await axiosPrivate.get(`${CONVERSATIONS_URL}/me`);
-
-            setChatState((prevState) => ({
-                ...prevState,
-                conversations,
-            }));
+            // Reload conversations
+            dispatch(loadConversations());
 
             setNewGroupChat(false);
             setCreateChat((prev) => ({ ...prev, createGroupChat: false }));
@@ -208,9 +223,7 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
                                 key={user.id}
                                 className="flex items-center gap-2 bg-blue-100 px-2 py-1 rounded-full"
                             >
-                                <span className="text-sm">
-                                    {user.firstName} {user.lastName}
-                                </span>
+                                <span className="text-sm">{user.username}</span>
                                 <MdClose
                                     size={20}
                                     className="text-gray-500 hover:text-gray-700 cursor-pointer"
@@ -245,7 +258,7 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
                                         </div>
                                         <div>
                                             <p className="font-medium">
-                                                {user.firstName} {user.lastName}
+                                                {user.username}
                                             </p>
                                         </div>
                                     </div>

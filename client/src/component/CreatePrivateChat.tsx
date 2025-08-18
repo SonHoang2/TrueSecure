@@ -4,7 +4,9 @@ import { FaArrowLeft, FaSearch } from 'react-icons/fa';
 import debounce from '../utils/debounce';
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
 import { User } from '../types/users.types';
-import { ChatState } from '../types/chats.types';
+import { useAuthUser } from '../hooks/useAuthUser';
+import { useAppDispatch } from '../store/hooks';
+import { loadConversations } from '../store/slices/conversationSlice';
 
 type CreateChatState = {
     createGroupChat: boolean;
@@ -17,14 +19,15 @@ type CreatePrivateChatProps = {
         searchTerm: string,
         setUsers: Dispatch<SetStateAction<User[]>>,
     ) => Promise<void>;
-    setChatState: Dispatch<SetStateAction<ChatState>>;
 };
 
 export const CreatePrivateChat: React.FC<CreatePrivateChatProps> = ({
     setCreateChat,
     onSearch,
-    setChatState,
 }) => {
+    const user = useAuthUser();
+    const dispatch = useAppDispatch();
+
     const [searchTerm, setSearchTerm] = useState('');
     const [filteredUsers, setFilteredUsers] = useState([]);
 
@@ -49,16 +52,7 @@ export const CreatePrivateChat: React.FC<CreatePrivateChatProps> = ({
                 users: [userId],
             });
 
-            const {
-                data: {
-                    data: { conversations },
-                },
-            } = await axiosPrivate.get(`${CONVERSATIONS_URL}/me`);
-
-            setChatState((prevState) => ({
-                ...prevState,
-                conversations,
-            }));
+            dispatch(loadConversations());
 
             setCreateChat((prev) => ({ ...prev, createPrivateChat: false }));
         } catch (error) {
@@ -116,12 +110,12 @@ export const CreatePrivateChat: React.FC<CreatePrivateChatProps> = ({
                                 <div>
                                     <img
                                         src={user.avatar}
-                                        alt={user.firstName}
+                                        alt={user.username}
                                         className="w-10 h-10 rounded-full"
                                     />
                                 </div>
                                 <span className="text-gray-700 font-medium">
-                                    {`${user.firstName} ${user.lastName}`}
+                                    {user.username}
                                 </span>
                             </button>
                         ))
