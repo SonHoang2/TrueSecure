@@ -4,6 +4,8 @@ import * as EncryptionService from '../../services/encryptionService';
 import { AxiosInstance } from 'axios';
 import { axiosPrivate } from '../../api/axios';
 import { AUTH_URL } from '../../config/config';
+import { removePrivateKey } from '../../crypto/cryptoUtils';
+import * as cryptoUtils from '../../crypto/cryptoUtils';
 
 export interface User {
     id: number;
@@ -32,27 +34,20 @@ const initialState: AuthState = {
     isKeysInitialized: false,
 };
 
-// Initialize encryption keys
-export const initializeEncryption = createAsyncThunk(
-    'auth/initializeEncryption',
-    async (
-        {
-            userId,
-            axiosPrivate,
-        }: { userId: string; axiosPrivate: AxiosInstance },
-        { rejectWithValue },
-    ) => {
+export const loadUserKeysFromStorage = createAsyncThunk(
+    'auth/loadUserKeysFromStorage',
+    async (_, { rejectWithValue }) => {
         try {
-            const keys = await EncryptionService.initialize(
-                userId,
-                axiosPrivate,
-            );
-            return keys;
-        } catch (error) {
+            const privateKey = await cryptoUtils.importPrivateKey();
+
+            if (!privateKey) {
+                throw new Error('No private key found in storage');
+            }
+
+            return privateKey;
+        } catch (error: any) {
             return rejectWithValue(
-                error instanceof Error
-                    ? error.message
-                    : 'Failed to initialize encryption',
+                error.message || 'Failed to load private key from storage',
             );
         }
     },
@@ -65,12 +60,29 @@ export const loginUser = createAsyncThunk(
         { rejectWithValue },
     ) => {
         try {
-            const response = await axiosPrivate.post(
-                AUTH_URL + '/login',
-                credentials,
-            );
-            return response.data.data;
+            const { privateKey, publicKey } =
+                await EncryptionService.initializeUserKeys();
+
+            let deviceUuid = await cryptoUtils.getDeviceUuid();
+
+            const response = await axiosPrivate.post(AUTH_URL + '/login', {
+                username: credentials.username,
+                password: credentials.password,
+                publicKey,
+                ...(deviceUuid && { deviceUuid }),
+            });
+
+            return {
+                user: response.data.data.user,
+                privateKey: privateKey,
+            };
         } catch (error: any) {
+            try {
+                await removePrivateKey();
+            } catch (cleanupError) {
+                console.warn('Failed to cleanup private key:', cleanupError);
+            }
+
             return rejectWithValue(
                 error.response?.data?.message ||
                     error.message ||
@@ -211,10 +223,33 @@ const authSlice = createSlice({
             .addCase(loginUser.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.user = action.payload.user;
+                state.userKeys = {
+                    privateKey: action.payload.privateKey,
+                    publicKey: null,
+                };
                 state.isAuthenticated = true;
+                state.isKeysInitialized = true;
                 state.error = null;
             })
             .addCase(loginUser.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload as string;
+                state.isAuthenticated = false;
+            })
+            // Signup cases
+            .addCase(signupUser.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(signupUser.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.user = action.payload.user;
+                state.userKeys = action.payload.userKeys;
+                state.isAuthenticated = true;
+                state.isKeysInitialized = true;
+                state.error = null;
+            })
+            .addCase(signupUser.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
                 state.isAuthenticated = false;
@@ -247,26 +282,21 @@ const authSlice = createSlice({
                 state.error = action.payload as string;
                 state.isAuthenticated = false;
             })
-            // Initialize encryption cases
-            .addCase(initializeEncryption.pending, (state) => {
+            // Load keys from storage cases
+            .addCase(loadUserKeysFromStorage.pending, (state) => {
                 state.isLoading = true;
                 state.error = null;
             })
-            .addCase(initializeEncryption.fulfilled, (state, action) => {
+            .addCase(loadUserKeysFromStorage.fulfilled, (state, action) => {
                 state.isLoading = false;
-                // Handle the case where action.payload is a CryptoKey (privateKey)
-                if (action.payload) {
-                    state.userKeys = {
-                        privateKey: action.payload,
-                        publicKey: null, // Will be set later when needed
-                    };
-                } else {
-                    state.userKeys = null;
-                }
+                state.userKeys = {
+                    privateKey: action.payload,
+                    publicKey: null,
+                };
                 state.isKeysInitialized = true;
                 state.error = null;
             })
-            .addCase(initializeEncryption.rejected, (state, action) => {
+            .addCase(loadUserKeysFromStorage.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
                 state.isKeysInitialized = false;
