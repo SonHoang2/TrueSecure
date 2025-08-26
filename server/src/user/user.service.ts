@@ -108,34 +108,6 @@ export class UserService {
         return existUsers;
     }
 
-    async updatePublicKey(userId: number, publicKey: string) {
-        const user = await this.userRepo.findOne({ where: { id: userId } });
-        if (!user) {
-            throw new NotFoundException(`User with ID ${userId} not found`);
-        }
-        await this.userRepo.update(userId, { publicKey });
-        return { success: true };
-    }
-
-    async getPublicKeyById(userId: number) {
-        const user = await this.userRepo.findOne({
-            where: { id: userId },
-            select: ['id', 'publicKey'],
-        });
-
-        if (!user) {
-            throw new NotFoundException(`User with ID ${userId} not found`);
-        }
-
-        if (!user.publicKey) {
-            throw new NotFoundException(
-                `Public key not found for user with ID ${userId}. User needs to complete security setup.`,
-            );
-        }
-
-        return { publicKey: user.publicKey };
-    }
-
     async searchUsername(username: string, currentUserId: number) {
         const queryBuilder = this.userRepo.createQueryBuilder('user');
 

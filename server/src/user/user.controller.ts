@@ -14,11 +14,15 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { RequestWithUser } from 'src/common/interfaces/request-with-user.interface';
+import { DeviceService } from 'src/device/device.service';
 
-@Controller('users')
 @UseGuards(JwtAuthGuard)
+@Controller('users')
 export class UserController {
-    constructor(private readonly userService: UserService) {}
+    constructor(
+        private readonly userService: UserService,
+        private readonly deviceService: DeviceService,
+    ) {}
 
     @Get('me')
     getMe(@Req() req: RequestWithUser) {
@@ -30,12 +34,15 @@ export class UserController {
         @Req() req: RequestWithUser,
         @Body('publicKey') publicKey: string,
     ) {
-        return this.userService.updatePublicKey(req.user.id, publicKey);
+        return this.deviceService.createOrUpdatePublicKey(
+            req.user.id,
+            publicKey,
+        );
     }
 
-    @Get(':userId/public-key')
-    getPublicKey(@Param('userId') userId: string) {
-        return this.userService.getPublicKeyById(+userId);
+    @Get('/:userId/public-keys')
+    getPublicKeys(@Param('userId') userId: string) {
+        return this.deviceService.getAllPublicKeysByUserId(+userId);
     }
 
     @Get('search')
@@ -46,14 +53,14 @@ export class UserController {
         return this.userService.searchUsername(username, req.user.id);
     }
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
+    @UseGuards(RolesGuard)
     @Roles('admin')
     @Get('admin/users')
     getAllUsers() {
         return this.userService.findAll();
     }
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
+    @UseGuards(RolesGuard)
     @Roles('admin')
     @Post('admin/users')
     createUser(@Body() createUserDto: CreateUserDto) {
