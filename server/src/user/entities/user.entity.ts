@@ -7,10 +7,10 @@ import {
     OneToMany,
 } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
-import * as crypto from 'crypto';
 import { AppRole } from 'src/common/enum/roles.enum';
 import { DEFAULT_AVATAR_URL } from 'src/common/constants/default-avatar';
-import { ConvParticipant } from 'src/conversation/entities/convParticipant.entity';
+import { Participant } from 'src/conversation/entities/participant.entity';
+import { Device } from 'src/device/entities/device.entity';
 
 @Entity('users')
 export class User {
@@ -46,15 +46,6 @@ export class User {
     @Column({ default: true })
     active: boolean;
 
-    @Column({ nullable: true })
-    publicKey: string;
-
-    @Column({ nullable: true })
-    passwordResetToken: string;
-
-    @Column({ nullable: true })
-    passwordResetExpires: Date;
-
     @Column({
         type: 'enum',
         enum: AppRole,
@@ -62,9 +53,11 @@ export class User {
     })
     role: AppRole;
 
-    // Relationships
-    @OneToMany(() => ConvParticipant, (participant) => participant.user)
-    participants: ConvParticipant[];
+    @OneToMany(() => Participant, (participant) => participant.user)
+    participants: Participant[];
+
+    @OneToMany(() => Device, (device) => device.user)
+    devices: Device[];
 
     @BeforeInsert()
     async hashPasswordBeforeInsert() {
@@ -82,19 +75,6 @@ export class User {
 
     async validPassword(password: string): Promise<boolean> {
         return await bcrypt.compare(password, this.password);
-    }
-
-    createPasswordResetToken(): string {
-        const resetToken = crypto.randomBytes(32).toString('hex');
-
-        this.passwordResetToken = crypto
-            .createHash('sha256')
-            .update(resetToken)
-            .digest('hex');
-
-        this.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-        return resetToken;
     }
 
     changedPasswordAfter(JWTTimestamp: number): boolean {
