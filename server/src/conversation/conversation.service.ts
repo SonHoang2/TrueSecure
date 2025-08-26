@@ -136,7 +136,6 @@ export class ConversationService {
                 'participantDevices',
             )
             .where('conversation.id = :id', { id })
-            .andWhere('participants.userId = :userId', { userId })
             .getOne();
 
         if (!conversation) {
@@ -144,8 +143,6 @@ export class ConversationService {
                 'Conversation not found or you are not a participant',
             );
         }
-
-        console.log('conversation', conversation);
 
         const currentUserParticipation = conversation.participants.find(
             (participant) => participant.userId === userId,
@@ -186,7 +183,6 @@ export class ConversationService {
             if (!otherParticipant) {
                 throw new NotFoundException('Other participant not found');
             }
-
             return {
                 ...baseResponse,
                 receiver: {
