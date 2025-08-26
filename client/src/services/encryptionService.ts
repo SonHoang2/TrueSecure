@@ -1,12 +1,10 @@
 import * as cryptoUtils from '../crypto/cryptoUtils';
-import { CONVERSATIONS_URL, USERS_URL } from '../config/config';
-import { ChatGroupRole } from '../enums/chat-role.enum';
+import { CONVERSATIONS_URL } from '../config/config';
 import { AxiosInstance } from 'axios';
-import { User, UserKeys } from '../types/users.types';
 
 interface GetGroupKeyParams {
     conversationId: number;
-    userKeys: UserKeys;
+    userKey: CryptoKey;
     userId: number;
     axiosPrivate: AxiosInstance;
 }
@@ -21,16 +19,9 @@ class EncryptionError extends Error {
     }
 }
 
-class PublicKeyNotFoundError extends EncryptionError {
-    constructor(userId?: number) {
-        super(`Public key not found${userId ? ` for user ${userId}` : ''}`);
-        this.name = 'PublicKeyNotFoundError';
-    }
-}
-
 export const initializeUserKeys = async (): Promise<{
     privateKey: CryptoKey;
-    publicKey: string ;
+    publicKey: string;
 }> => {
     try {
         const { privateKey, publicKey } = await cryptoUtils.generateECDHKeys();
@@ -43,36 +34,6 @@ export const initializeUserKeys = async (): Promise<{
     } catch (error) {
         throw new EncryptionError(
             'Failed to initialize encryption keys',
-            error instanceof Error ? error : new Error(String(error)),
-        );
-    }
-};
-
-export const getUserPublicKey = async (
-    userId: number,
-    axiosPrivate: AxiosInstance,
-): Promise<CryptoKey> => {
-    if (!userId) {
-        throw new EncryptionError('User ID is required');
-    }
-
-    try {
-        const response = await axiosPrivate.get(
-            `${USERS_URL}/${userId}/public-key`,
-        );
-        const { publicKey: exportedPublicKey } = response.data.data;
-
-        if (!exportedPublicKey) {
-            throw new PublicKeyNotFoundError(userId);
-        }
-
-        return await cryptoUtils.importPublicKey(exportedPublicKey);
-    } catch (error) {
-        if (error instanceof EncryptionError) {
-            throw error;
-        }
-        throw new EncryptionError(
-            `Failed to get public key for user ${userId}`,
             error instanceof Error ? error : new Error(String(error)),
         );
     }

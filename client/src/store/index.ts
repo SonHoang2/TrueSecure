@@ -19,31 +19,31 @@ export const store = configureStore({
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
             serializableCheck: {
-                // Ignore these action types
                 ignoredActions: [
                     'persist/PERSIST',
                     'persist/REHYDRATE',
-                    'auth/initializeEncryption/fulfilled', // Ignore encryption key initialization
-                    'auth/updateRecipientPublicKey', // Ignore recipient key updates
-                    'auth/setUserKeys', // Ignore setting user keys
+                    'auth/initializeEncryption/fulfilled',
+                    'auth/loadUserKeyFromStorage/fulfilled',
+                    'auth/loginUser/fulfilled',
+                    'auth/signupUser/fulfilled',
+                    'auth/updateRecipientPublicKey',
+                    'auth/setUserKeys',
                 ],
-                // Ignore these field paths in all actions
                 ignoredActionsPaths: [
                     'meta.arg',
                     'payload.timestamp',
-                    'payload.publicKey', // CryptoKey in action payload
-                    'payload.privateKey', // CryptoKey in action payload
-                    'payload.algorithm', // CryptoKey algorithm property
-                    'payload', // UserKeys object containing CryptoKey
-                    'meta.arg.axiosPrivate', // Ignore axios instance
+                    'payload.publicKey',
+                    'payload.privateKey',
+                    'payload.userKey',
+                    'payload.userKey.privateKey',
+                    'payload.algorithm',
+                    'payload',
+                    'meta.arg.axiosPrivate',
                 ],
-                // Ignore these paths in the state
                 ignoredPaths: [
-                    'auth.userKeys', // Ignore entire userKeys object (contains CryptoKey objects)
-                    'auth.userKeys.publicKey',
-                    'auth.userKeys.privateKey',
-                    'auth.userKeys.publicKey.algorithm',
-                    'auth.userKeys.privateKey.algorithm',
+                    'auth.userKey',
+                    'auth.userKey.privateKey',
+                    'auth.userKey.privateKey.algorithm',
                 ],
             },
         }),

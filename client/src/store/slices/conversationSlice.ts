@@ -3,12 +3,19 @@ import { User } from '../../types/users.types';
 import { axiosPrivate } from '../../api/axios';
 import { CONVERSATIONS_URL } from '../../config/config';
 import { Conversation } from '../../types/conversations.types';
+import { AxiosInstance } from 'axios';
+
+export interface RecipientDevice {
+    deviceUuid: string;
+    publicKey: string;
+}
 
 export interface ConversationState {
     conversations: Conversation[];
     currentConversation: Conversation | null;
     currentReceiver: any | null;
     participants: User[];
+    recipientDevices: RecipientDevice[];
     isLoading: boolean;
     error: string | null;
     selectedConversationId: number | null;
@@ -19,6 +26,7 @@ const initialState: ConversationState = {
     currentConversation: null,
     currentReceiver: null,
     participants: [],
+    recipientDevices: [],
     isLoading: false,
     error: null,
     selectedConversationId: null,
@@ -78,6 +86,28 @@ export const createConversation = createAsyncThunk(
                 error instanceof Error
                     ? error.message
                     : 'Failed to create conversation',
+            );
+        }
+    },
+);
+
+export const fetchRecipientDevices = createAsyncThunk(
+    'conversations/fetchRecipientDevices',
+    async (
+        {
+            receiverId,
+            axiosPrivate,
+        }: { receiverId: number; axiosPrivate: AxiosInstance },
+        { rejectWithValue },
+    ) => {
+        try {
+            const response = await axiosPrivate.get(
+                `/api/users/${receiverId}/public-keys`,
+            );
+            return response.data.data.devices;
+        } catch (error: any) {
+            return rejectWithValue(
+                error.message || 'Failed to fetch recipient devices',
             );
         }
     },
@@ -164,11 +194,21 @@ const conversationSlice = createSlice({
                 state.currentConversation = null;
             }
         },
+        setRecipientDevices: (
+            state,
+            action: PayloadAction<RecipientDevice[]>,
+        ) => {
+            state.recipientDevices = action.payload;
+        },
+        clearRecipientDevices: (state) => {
+            state.recipientDevices = [];
+        },
         clearCurrentConversation: (state) => {
             state.currentConversation = null;
             state.currentReceiver = null;
             state.participants = [];
             state.selectedConversationId = null;
+            state.recipientDevices = [];
         },
         clearError: (state) => {
             state.error = null;
@@ -219,6 +259,13 @@ const conversationSlice = createSlice({
             .addCase(createConversation.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
+            })
+            .addCase(fetchRecipientDevices.fulfilled, (state, action) => {
+                state.recipientDevices = action.payload;
+            })
+            .addCase(fetchRecipientDevices.rejected, (state, action) => {
+                state.recipientDevices = [];
+                state.error = action.payload as string;
             });
     },
 });
@@ -233,6 +280,8 @@ export const {
     resetUnreadCount,
     addConversation,
     removeConversation,
+    setRecipientDevices,
+    clearRecipientDevices,
     clearCurrentConversation,
     clearError,
 } = conversationSlice.actions;
