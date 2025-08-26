@@ -15,8 +15,7 @@ export type User = {
     role: string;
 };
 
-export type UserKeys = {
-    publicKey: CryptoKey | null;
+export type UserKey = {
     privateKey: CryptoKey | null;
 };
 

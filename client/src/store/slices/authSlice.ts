@@ -1,10 +1,9 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { UserKeys } from '../../types/users.types';
+import { UserKey } from '../../types/users.types';
 import * as EncryptionService from '../../services/encryptionService';
 import { AxiosInstance } from 'axios';
 import { axiosPrivate } from '../../api/axios';
-import { AUTH_URL } from '../../config/config';
-import { removePrivateKey } from '../../crypto/cryptoUtils';
+import { AUTH_URL, USERS_URL } from '../../config/config';
 import * as cryptoUtils from '../../crypto/cryptoUtils';
 
 export interface User {
@@ -18,7 +17,7 @@ export interface User {
 
 export interface AuthState {
     user: User | null;
-    userKeys: UserKeys | null;
+    userKey: UserKey | null;
     isAuthenticated: boolean;
     isLoading: boolean;
     error: string | null;
@@ -27,15 +26,15 @@ export interface AuthState {
 
 const initialState: AuthState = {
     user: null,
-    userKeys: null,
+    userKey: null,
     isAuthenticated: false,
     isLoading: false,
     error: null,
     isKeysInitialized: false,
 };
 
-export const loadUserKeysFromStorage = createAsyncThunk(
-    'auth/loadUserKeysFromStorage',
+export const loadUserKeyFromStorage = createAsyncThunk(
+    'auth/loadUserKeyFromStorage',
     async (_, { rejectWithValue }) => {
         try {
             const privateKey = await cryptoUtils.importPrivateKey();
@@ -78,7 +77,7 @@ export const loginUser = createAsyncThunk(
             };
         } catch (error: any) {
             try {
-                await removePrivateKey();
+                await cryptoUtils.removePrivateKey();
             } catch (cleanupError) {
                 console.warn('Failed to cleanup private key:', cleanupError);
             }
@@ -126,6 +125,10 @@ export const logoutUser = createAsyncThunk(
     async (_, { rejectWithValue }) => {
         try {
             await axiosPrivate.get(AUTH_URL + '/logout');
+            await Promise.all([
+                cryptoUtils.removePrivateKey(),
+                cryptoUtils.clearDeviceUuid(),
+            ]);
             return true;
         } catch (error: any) {
             return rejectWithValue(
@@ -175,6 +178,29 @@ export const loginWithGoogle = createAsyncThunk(
     },
 );
 
+export const fetchRecipientPublicKey = createAsyncThunk(
+    'auth/fetchRecipientPublicKey',
+    async (
+        {
+            receiverId,
+            axiosPrivate,
+        }: { receiverId: number; axiosPrivate: AxiosInstance },
+        { rejectWithValue },
+    ) => {
+        try {
+            const response = await axiosPrivate.get(
+                `${USERS_URL}/${receiverId}/public-keys`,
+            );
+
+            return publicKey;
+        } catch (error: any) {
+            return rejectWithValue(
+                error.message || 'Failed to fetch recipient public key',
+            );
+        }
+    },
+);
+
 const authSlice = createSlice({
     name: 'auth',
     initialState,
@@ -183,12 +209,12 @@ const authSlice = createSlice({
             state.user = action.payload;
             state.isAuthenticated = true;
         },
-        setUserKeys: (state, action: PayloadAction<UserKeys>) => {
-            state.userKeys = action.payload;
+        setUserKey: (state, action: PayloadAction<UserKey>) => {
+            state.userKey = action.payload;
         },
         clearAuth: (state) => {
             state.user = null;
-            state.userKeys = null;
+            state.userKey = null;
             state.isAuthenticated = false;
             state.error = null;
             state.isKeysInitialized = false;
@@ -204,14 +230,6 @@ const authSlice = createSlice({
                 state.user.isOnline = action.payload.isOnline;
             }
         },
-        updateRecipientPublicKey: (state, action: PayloadAction<CryptoKey>) => {
-            if (state.userKeys) {
-                state.userKeys = {
-                    ...state.userKeys,
-                    publicKey: action.payload,
-                };
-            }
-        },
     },
     extraReducers: (builder) => {
         builder
@@ -223,9 +241,8 @@ const authSlice = createSlice({
             .addCase(loginUser.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.user = action.payload.user;
-                state.userKeys = {
+                state.userKey = {
                     privateKey: action.payload.privateKey,
-                    publicKey: null,
                 };
                 state.isAuthenticated = true;
                 state.isKeysInitialized = true;
@@ -244,7 +261,7 @@ const authSlice = createSlice({
             .addCase(signupUser.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.user = action.payload.user;
-                state.userKeys = action.payload.userKeys;
+                state.userKey = action.payload.userKey;
                 state.isAuthenticated = true;
                 state.isKeysInitialized = true;
                 state.error = null;
@@ -261,7 +278,7 @@ const authSlice = createSlice({
             .addCase(logoutUser.fulfilled, (state) => {
                 state.isLoading = false;
                 state.user = null;
-                state.userKeys = null;
+                state.userKey = null;
                 state.isAuthenticated = false;
                 state.error = null;
             })
@@ -283,20 +300,19 @@ const authSlice = createSlice({
                 state.isAuthenticated = false;
             })
             // Load keys from storage cases
-            .addCase(loadUserKeysFromStorage.pending, (state) => {
+            .addCase(loadUserKeyFromStorage.pending, (state) => {
                 state.isLoading = true;
                 state.error = null;
             })
-            .addCase(loadUserKeysFromStorage.fulfilled, (state, action) => {
+            .addCase(loadUserKeyFromStorage.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.userKeys = {
+                state.userKey = {
                     privateKey: action.payload,
-                    publicKey: null,
                 };
                 state.isKeysInitialized = true;
                 state.error = null;
             })
-            .addCase(loadUserKeysFromStorage.rejected, (state, action) => {
+            .addCase(loadUserKeyFromStorage.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
                 state.isKeysInitialized = false;
@@ -304,13 +320,7 @@ const authSlice = createSlice({
     },
 });
 
-export const {
-    setUser,
-    setUserKeys,
-    clearAuth,
-    clearError,
-    updateUserStatus,
-    updateRecipientPublicKey,
-} = authSlice.actions;
+export const { setUser, setUserKey, clearAuth, clearError, updateUserStatus } =
+    authSlice.actions;
 
 export default authSlice.reducer;
