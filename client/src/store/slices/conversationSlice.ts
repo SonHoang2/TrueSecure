@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { User } from '../../types/users.types';
 import { axiosPrivate } from '../../api/axios';
-import { CONVERSATIONS_URL } from '../../config/config';
+import { CONVERSATIONS_URL, USERS_URL } from '../../config/config';
 import { Conversation } from '../../types/conversations.types';
 import { AxiosInstance } from 'axios';
 
@@ -101,8 +101,10 @@ export const fetchRecipientDevices = createAsyncThunk(
         { rejectWithValue },
     ) => {
         try {
+            console.log('Fetching recipient devices for user:', receiverId);
+
             const response = await axiosPrivate.get(
-                `/api/users/${receiverId}/public-keys`,
+                `${USERS_URL}/${receiverId}/public-keys`,
             );
             return response.data.data.devices;
         } catch (error: any) {
