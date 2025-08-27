@@ -178,29 +178,6 @@ export const loginWithGoogle = createAsyncThunk(
     },
 );
 
-export const fetchRecipientPublicKey = createAsyncThunk(
-    'auth/fetchRecipientPublicKey',
-    async (
-        {
-            receiverId,
-            axiosPrivate,
-        }: { receiverId: number; axiosPrivate: AxiosInstance },
-        { rejectWithValue },
-    ) => {
-        try {
-            const response = await axiosPrivate.get(
-                `${USERS_URL}/${receiverId}/public-keys`,
-            );
-
-            return publicKey;
-        } catch (error: any) {
-            return rejectWithValue(
-                error.message || 'Failed to fetch recipient public key',
-            );
-        }
-    },
-);
-
 const authSlice = createSlice({
     name: 'auth',
     initialState,
