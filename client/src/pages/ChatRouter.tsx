@@ -11,7 +11,7 @@ type ChatRouterProps = {
 };
 
 const ChatRouter: React.FC<ChatRouterProps> = ({ userStatus }) => {
-    const { user, isLoading, userKeys, isKeysInitialized } = useAuth();
+    const { user, isLoading, userKey, isKeysInitialized } = useAuth();
 
     const axiosPrivate = useAxiosPrivate();
 
@@ -19,10 +19,10 @@ const ChatRouter: React.FC<ChatRouterProps> = ({ userStatus }) => {
         userId: user?.id || 0,
         socket,
         axiosPrivate,
-        userKeys,
+        userKey,
     });
 
-    if (!user || !isKeysInitialized || !userKeys) {
+    if (!user || !isKeysInitialized || !userKey) {
         return (
             <div className="flex items-center justify-center h-full bg-neutral-100">
                 <div className="text-center">

@@ -8,6 +8,8 @@ import { SocketModule } from './socket/socket.module';
 import { RabbitmqModule } from './rabbitmq/rabbitmq.module';
 import { DeepfakeModule } from './deepfake/deepfake.module';
 import { RedisModule } from './redis/redis.module';
+import { DeviceModule } from './device/device.module';
+import { HealthModule } from './health/health.module';
 import config from './config';
 
 @Module({
@@ -38,6 +40,8 @@ import config from './config';
         RabbitmqModule,
         DeepfakeModule,
         RedisModule,
+        DeviceModule,
+        HealthModule,
     ],
 })
 export class AppModule {}

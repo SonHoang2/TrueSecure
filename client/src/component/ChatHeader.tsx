@@ -59,9 +59,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                         alt="avatar"
                     />
                     {!conversation?.isGroup &&
-                        userStatus?.onlineUsers.hasOwnProperty(
-                            receiver?.id,
-                        ) && (
+                        Array.isArray(userStatus?.onlineUsers) &&
+                        userStatus?.onlineUsers?.includes(receiver?.id) && (
                             <span className="absolute bottom-0 right-0 block size-3 bg-green-500 border-2 border-white rounded-full"></span>
                         )}
                 </div>
@@ -75,11 +74,12 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                     </span>
                     <span className="text-sm text-gray-500">
                         {!conversation?.isGroup &&
-                            (userStatus.onlineUsers.hasOwnProperty(receiver?.id)
-                                ? 'Online'
-                                : getLastSeenTime(
-                                      userStatus.lastSeen[receiver?.id],
-                                  ))}
+                        Array.isArray(userStatus?.onlineUsers) &&
+                        userStatus?.onlineUsers?.includes(receiver?.id)
+                            ? 'Online'
+                            : getLastSeenTime(
+                                  userStatus.lastSeen[receiver?.id],
+                              )}
                     </span>
                 </div>
             </div>

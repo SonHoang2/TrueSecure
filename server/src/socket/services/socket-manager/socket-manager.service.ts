@@ -23,47 +23,65 @@ export class SocketManagerService {
     }
 
     async handleConnection(client: SocketUser): Promise<void> {
-        if (!client.user) {
-            this.logger.error('Client connected without user data');
+        try {
+            if (!client.user) {
+                this.logger.error('Client connected without user data');
+                return;
+            }
+
+            const user = client.user;
+            const deviceUuidRaw = client.handshake?.query?.deviceUuid as string;
+
+            const deviceUuid = deviceUuidRaw.replace(/^"|"$/g, '');
+
+            // Add user to online users
+            await this.socketCacheService.addOnlineUser(
+                user.id,
+                deviceUuid,
+                client.id,
+            );
+
+            await this.rabbitmqService.consumeMessages(user.id, client.id);
+
+            // Clean up stale connections
+            await this.cleanupStaleConnections();
+
+            // Broadcast updated online status
+            await this.broadcastOnlineStatus();
+        } catch (error) {
+            this.logger.error(`Error handling connection: ${error.message}`);
+            client.disconnect(true);
             return;
         }
-
-        const user = client.user;
-
-        // Add user to online users
-        await this.socketCacheService.addOnlineUser(user.id, client.id);
-
-        await this.rabbitmqService.consumeMessages(user.id, client.id);
-
-        // Clean up stale connections
-        await this.cleanupStaleConnections();
-
-        // Broadcast updated online status
-        await this.broadcastOnlineStatus();
     }
 
     async handleDisconnect(client: Socket): Promise<void> {
-        const user = (client as any).user as SocketUser;
-        if (!user) return;
+        try {
+            const user = (client as any).user as SocketUser;
+            if (!user) return;
 
-        // Remove user from online users and update last seen
-        await this.socketCacheService.removeOnlineUser(user.id);
-        await this.socketCacheService.updateLastSeen(user.id);
-        await this.rabbitmqService.cancelConsumeMessages(user.id);
-        // Broadcast updated online status
-        await this.broadcastOnlineStatus();
+            const deviceUuid = client.handshake?.query?.deviceUuid as string;
+            // Remove user from online users and update last seen
+            await this.socketCacheService.removeOnlineUser(user.id, deviceUuid);
+            await this.socketCacheService.updateLastSeen(user.id);
+            await this.rabbitmqService.cancelConsumeMessages(user.id);
+            await this.broadcastOnlineStatus();
+        } catch (error) {
+            this.logger.error(`Error handling disconnect: ${error.message}`);
+        }
     }
 
     async cleanupStaleConnections(): Promise<void> {
         try {
             const connectedSockets = await this.server.fetchSockets();
             const activeSocketIds = new Set(connectedSockets.map((s) => s.id));
-
+            const { onlineUsers } =
+                await this.socketCacheService.getOnlineStatus();
             const hasChanges =
                 await this.socketCacheService.checkAndRemoveStaleConnections(
+                    onlineUsers,
                     activeSocketIds,
                 );
-
             if (hasChanges) {
                 await this.broadcastOnlineStatus();
             }
@@ -76,16 +94,27 @@ export class SocketManagerService {
 
     async broadcastOnlineStatus(): Promise<void> {
         const onlineStatus = await this.socketCacheService.getOnlineStatus();
-        console.log('Online users: ', onlineStatus.onlineUsers);
+        console.log('online users: ', onlineStatus.onlineUsers);
         this.server.emit('online-users', onlineStatus);
     }
 
-    async emitToUser(
-        userId: number | string,
-        event: string,
-        data: any,
-    ): Promise<void> {
-        const socketId = await this.socketCacheService.getSocketId(userId);
+    async emitToUser({
+        userId,
+        event,
+        data,
+        deviceUuid,
+    }: {
+        userId: number | string;
+        event: string;
+        data: any;
+        deviceUuid: string;
+    }): Promise<void> {
+        const socketId = await this.socketCacheService.getSocketId(
+            userId,
+            deviceUuid,
+        );
+        console.log('socketId: ', JSON.stringify(socketId), data);
+
         if (socketId) {
             this.server.to(socketId).emit(event, data);
         }

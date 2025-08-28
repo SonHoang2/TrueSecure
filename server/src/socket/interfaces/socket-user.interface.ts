@@ -5,4 +5,5 @@ export interface SocketUser extends Socket {
     user: {
         id: string;
     };
+    deviceUuid: string;
 }

@@ -6,7 +6,11 @@ import * as cryptoUtils from '../crypto/cryptoUtils';
 import { getGroupKey } from '../services/encryptionService';
 import { MessageStatus } from '../enums/messageStatus.enum';
 import { CONVERSATIONS_URL } from '../config/config';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
+import {
+    useAppDispatch,
+    useAppSelector,
+    useConversations,
+} from '../store/hooks';
 import { useAuth } from './useAuth';
 import {
     addMessage,
@@ -44,6 +48,7 @@ export const useChatMessages = ({
     const dispatch = useAppDispatch();
     const user = useAuthUser();
     const { userKeys } = useAuth();
+    const { recipientDevices } = useConversations();
 
     const messageSoundRef = useRef(
         new Audio('/assets/sound/notification-sound.mp3'),
@@ -135,7 +140,6 @@ export const useChatMessages = ({
 
     const sendMessage = useCallback(
         async (message?: string) => {
-
             if (!message && !currentMessage?.trim()) {
                 return;
             }
@@ -186,35 +190,42 @@ export const useChatMessages = ({
 
                     socket.emit('send-group-message', encryptedMessage);
                 } else {
-                    if (!userKeys?.publicKey) {
+                    if (recipientDevices.length === 0) {
                         throw new Error('Public key not available');
                     }
 
-                    const { encryptedContent, iv, ephemeralPublicKey } =
-                        await cryptoUtils.encryptPrivateData(
-                            userKeys.publicKey,
-                            content,
+                    for (const device of recipientDevices) {
+                        const publicKey = await cryptoUtils.importPublicKey(
+                            device.publicKey,
                         );
 
-                    messageData = {
-                        id: messageId,
-                        senderId: user.id,
-                        conversationId: selectedConversationId!,
-                        content: content,
-                        type: 'text' as const,
-                        status: MessageStatus.SENDING,
-                        createdAt: new Date().toISOString(),
-                    };
+                        const { encryptedContent, iv, ephemeralPublicKey } =
+                            await cryptoUtils.encryptPrivateData(
+                                publicKey,
+                                content,
+                            );
 
-                    const encryptedMessage = {
-                        ...messageData,
-                        content: encryptedContent,
-                        iv: iv,
-                        ephemeralPublicKey: ephemeralPublicKey,
-                        receiverId: currentConversation.receiver?.id,
-                    };
+                        messageData = {
+                            id: messageId,
+                            senderId: user.id,
+                            conversationId: selectedConversationId!,
+                            content: content,
+                            type: 'text' as const,
+                            status: MessageStatus.SENDING,
+                            createdAt: new Date().toISOString(),
+                        };
 
-                    socket.emit('send-private-message', encryptedMessage);
+                        const encryptedMessage = {
+                            ...messageData,
+                            content: encryptedContent,
+                            iv: iv,
+                            ephemeralPublicKey: ephemeralPublicKey,
+                            receiverId: currentConversation.receiver?.id,
+                            deviceUuid: device.deviceUuid,
+                        };
+
+                        socket.emit('send-private-message', encryptedMessage);
+                    }
                 }
 
                 dispatch(addMessage(messageData));
@@ -397,6 +408,8 @@ export const useChatMessages = ({
                             console.error('Audio play error:', error),
                         );
 
+                    console.log('new-private-message:', data);
+
                     const decryptedContent =
                         await cryptoUtils.decryptPrivateMessage(
                             userKeys.privateKey!,
@@ -529,6 +542,8 @@ export const useChatMessages = ({
         socket.on(
             'private-message-status-update',
             (data: { messageId: string; status: MessageStatus }) => {
+                console.log("message update");
+
                 dispatch(persistStatusUpdate(data));
             },
         );
