@@ -10,7 +10,7 @@ import { RedisModule } from 'src/redis/redis.module';
 import { ConversationModule } from 'src/conversation/conversation.module';
 import { SocketAuthGuard } from './guards/socket-auth/socket-auth.guard';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConvParticipant } from 'src/conversation/entities/convParticipant.entity';
+import { Participant } from 'src/conversation/entities/participant.entity';
 import { SocketAuthService } from './services/socket-auth/socket-auth.service';
 import { RabbitmqModule } from 'src/rabbitmq/rabbitmq.module';
 
@@ -26,7 +26,7 @@ import { RabbitmqModule } from 'src/rabbitmq/rabbitmq.module';
                 },
             }),
         }),
-        TypeOrmModule.forFeature([ConvParticipant]),
+        TypeOrmModule.forFeature([Participant]),
         UserModule,
         RedisModule,
         ConversationModule,

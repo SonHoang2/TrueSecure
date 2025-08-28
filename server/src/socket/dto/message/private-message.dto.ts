@@ -13,6 +13,10 @@ export class PrivateMessageDto {
     @IsNotEmpty()
     receiverId: string;
 
+    @IsString()
+    @IsNotEmpty()
+    deviceUuid: string;
+
     @IsNumber()
     @IsNotEmpty()
     conversationId: number;

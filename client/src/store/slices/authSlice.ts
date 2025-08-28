@@ -22,6 +22,7 @@ export interface AuthState {
     isLoading: boolean;
     error: string | null;
     isKeysInitialized: boolean;
+    deviceUuid: string | null;
 }
 
 const initialState: AuthState = {
@@ -31,6 +32,7 @@ const initialState: AuthState = {
     isLoading: false,
     error: null,
     isKeysInitialized: false,
+    deviceUuid: null,
 };
 
 export const loadUserKeyFromStorage = createAsyncThunk(
@@ -71,9 +73,12 @@ export const loginUser = createAsyncThunk(
                 ...(deviceUuid && { deviceUuid }),
             });
 
+            await cryptoUtils.setDeviceUuid(response.data.data.deviceUuid);
+
             return {
                 user: response.data.data.user,
                 privateKey: privateKey,
+                deviceUuid: response.data.data.deviceUuid,
             };
         } catch (error: any) {
             try {
@@ -221,6 +226,7 @@ const authSlice = createSlice({
                 state.userKey = {
                     privateKey: action.payload.privateKey,
                 };
+                state.deviceUuid = action.payload.deviceUuid;
                 state.isAuthenticated = true;
                 state.isKeysInitialized = true;
                 state.error = null;
@@ -239,6 +245,7 @@ const authSlice = createSlice({
                 state.isLoading = false;
                 state.user = action.payload.user;
                 state.userKey = action.payload.userKey;
+                state.deviceUuid = action.payload.deviceUuid;
                 state.isAuthenticated = true;
                 state.isKeysInitialized = true;
                 state.error = null;

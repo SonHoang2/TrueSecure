@@ -12,7 +12,6 @@ import InCallModal from '../component/InCallModal';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useChatMessages } from '../hooks/useChatMessages';
 import { useAppDispatch, useConversations } from '../store/hooks';
-import { updateRecipientPublicKey } from '../store/slices/authSlice';
 import { setCurrentMessage } from '../store/slices/chatSlice';
 import {
     loadConversationDetails,
@@ -20,10 +19,10 @@ import {
 } from '../store/slices/conversationSlice';
 import SidebarNavigation from '../component/SidebarNavigation';
 import { MdImage, MdSend, MdThumbUp } from 'react-icons/md';
-import { getUserPublicKey } from '../services/encryptionService';
 import { UserStatus } from '../types/users.types';
 import ChatInfoSidebar from '../component/ChatInfoSidebar';
 import { useAuthUser } from '../hooks/useAuthUser';
+import { fetchRecipientDevices } from '../store/slices/conversationSlice';
 
 interface ChatProps {
     userStatus: UserStatus;
@@ -79,27 +78,19 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
     }, [conversationId, dispatch]);
 
     useEffect(() => {
-        if (!currentConversation || currentConversation.isGroup === null) {
-            return;
-        }
-
-        const init = async () => {
-            if (currentConversation.isGroup) {
-                return;
-            }
-
-            let publicKey;
-            publicKey = await getUserPublicKey(
-                currentReceiver.id,
-                axiosPrivate,
+        if (
+            currentConversation &&
+            currentConversation.isGroup === false &&
+            currentReceiver?.id
+        ) {
+            dispatch(
+                fetchRecipientDevices({
+                    receiverId: currentReceiver.id,
+                    axiosPrivate,
+                }),
             );
-            if (publicKey) {
-                dispatch(updateRecipientPublicKey(publicKey));
-            }
-        };
-
-        init();
-    }, [currentReceiver, currentConversation?.isGroup]);
+        }
+    }, [currentConversation?.id, axiosPrivate, dispatch]);
 
     const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];

@@ -18,116 +18,120 @@ export class SocketService {
     ) {}
 
     async sendPrivateMessage(data: PrivateMessageDto): Promise<void> {
-        const { receiverId, senderId, id } = data;
+        const { receiverId, senderId, id, deviceUuid } = data;
 
-        // Notify receiver if online
-        const receiverSocketId =
-            await this.socketCacheService.getSocketId(receiverId);
+        const receiverSocketId = await this.socketCacheService.getSocketId(
+            receiverId,
+            deviceUuid,
+        );
+
         if (receiverSocketId) {
-            await this.socketManagerService.emitToUser(
-                receiverId,
-                'new-private-message',
+            await this.socketManagerService.emitToUser({
+                userId: receiverId,
+                event: 'new-private-message',
                 data,
-            );
+                deviceUuid,
+            });
         } else {
             // If receiver is offline, store the message in cache
-            await this.rabbitmqService.sendOfflineMessage(receiverId, data);
+            // await this.rabbitmqService.sendOfflineMessage(receiverId, data);
         }
 
         // Notify sender about message status
-        await this.socketManagerService.emitToUser(
-            senderId,
-            'private-message-status-update',
-            {
-                messageId: id,
-                status: MessageStatus.SENT,
-            },
-        );
+        // await this.socketManagerService.emitToUser({
+        //     userId: senderId,
+        //     event: 'private-message-status-update',
+        //     data: {
+        //         messageId: id,
+        //         status: MessageStatus.SENT,
+        //     },
+        //     deviceUuid,
+        // });
     }
 
-    async sendGroupMessage(data: GroupMessageDto): Promise<void> {
-        const { conversationId, senderId, id } = data;
+    // async sendGroupMessage(data: GroupMessageDto): Promise<void> {
+    //     const { conversationId, senderId, id } = data;
 
-        // Find all participants except sender
-        const participants =
-            await this.conversationService.getOtherParticipants(
-                conversationId,
-                +senderId,
-            );
+    //     // Find all participants except sender
+    //     const participants =
+    //         await this.conversationService.getOtherParticipants(
+    //             conversationId,
+    //             +senderId,
+    //         );
 
-        // Notify all participants
-        for (const participant of participants) {
-            await this.socketManagerService.emitToUser(
-                participant.userId,
-                'new-group-message',
-                {
-                    ...data,
-                },
-            );
-        }
+    //     // Notify all participants
+    //     for (const participant of participants) {
+    //         await this.socketManagerService.emitToUser(
+    //             participant.userId,
+    //             'new-group-message',
+    //             {
+    //                 ...data,
+    //             },
+    //         );
+    //     }
 
-        // Notify sender
-        await this.socketManagerService.emitToUser(
-            senderId,
-            'group-message-status-update',
-            {
-                messageId: id,
-                status: MessageStatus.SENT,
-            },
-        );
-    }
+    //     // Notify sender
+    //     await this.socketManagerService.emitToUser(
+    //         senderId,
+    //         'group-message-status-update',
+    //         {
+    //             messageId: id,
+    //             status: MessageStatus.SENT,
+    //         },
+    //     );
+    // }
 
-    async updatePrivateMessageStatus(data: MessageStatusDto): Promise<void> {
-        await this.socketManagerService.emitToUser(
-            data.senderId,
-            'private-message-status-update',
-            {
-                messageId: data.messageId,
-                status: MessageStatus.SEEN,
-            },
-        );
-    }
+    // async updatePrivateMessageStatus(data: MessageStatusDto): Promise<void> {
+    //     await this.socketManagerService.emitToUser(
+    //         data.senderId,
+    //         'private-message-status-update',
+    //         {
+    //             messageId: data.messageId,
+    //             status: MessageStatus.SEEN,
+    //         },
+    //     );
+    // }
 
-    async updateGroupMessageStatus(data: MessageStatusDto): Promise<void> {
-        const { messageId, senderId, conversationId } = data;
+    // async updateGroupMessageStatus(data: MessageStatusDto): Promise<void> {
+    //     const { messageId, senderId, conversationId } = data;
 
-        // Notify all participants in the group
-        const participants =
-            await this.conversationService.getAllParticipants(conversationId);
+    //     // Notify all participants in the group
+    //     const participants =
+    //         await this.conversationService.getAllParticipants(conversationId);
 
-        for (const participant of participants) {
-            await this.socketManagerService.emitToUser(
-                participant.userId,
-                'group-message-status-update',
-                {
-                    messageId: messageId,
-                    status: MessageStatus.SEEN,
-                    userId: senderId,
-                },
-            );
-        }
-    }
+    //     for (const participant of participants) {
+    //         await this.socketManagerService.emitToUser(
+    //             participant.userId,
+    //             'group-message-status-update',
+    //             {
+    //                 messageId: messageId,
+    //                 status: MessageStatus.SEEN,
+    //                 userId: senderId,
+    //             },
+    //         );
+    //     }
+    // }
 
-    async emitTypingEvent(
-        conversationId: number,
-        userId: string,
-        event: 'user-typing' | 'user-stopped-typing',
-    ) {
-        const participants =
-            await this.conversationService.getOtherParticipants(
-                conversationId,
-                +userId,
-            );
+    // async emitTypingEvent(
+    //     conversationId: number,
+    //     userId: string,
+    //     event: 'user-typing' | 'user-stopped-typing',
+    // ) {
+    //     const participants =
+    //         await this.conversationService.getOtherParticipants(
+    //             conversationId,
+    //             +userId,
+    //         );
 
-        for (const participant of participants) {
-            await this.socketManagerService.emitToUser(
-                participant.userId,
-                event,
-                {
-                    userId,
-                    conversationId,
-                },
-            );
-        }
-    }
+    //     for (const participant of participants) {
+    //         await this.socketManagerService.emitToUser(
+    //             participant.userId,
+    //             event,
+    //             {
+    //                 userId,
+    //                 conversationId,
+    //             },
+    //         );
+    //     }
+    // }
 }

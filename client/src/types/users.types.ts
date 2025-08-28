@@ -32,6 +32,6 @@ export type Receiver = {
 };
 
 export type UserStatus = {
-    onlineUsers: Record<string, boolean>;
+    onlineUsers: Array<string>;
     lastSeen: Record<string, string>;
 };

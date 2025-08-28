@@ -101,8 +101,6 @@ export const fetchRecipientDevices = createAsyncThunk(
         { rejectWithValue },
     ) => {
         try {
-            console.log('Fetching recipient devices for user:', receiverId);
-
             const response = await axiosPrivate.get(
                 `${USERS_URL}/${receiverId}/public-keys`,
             );

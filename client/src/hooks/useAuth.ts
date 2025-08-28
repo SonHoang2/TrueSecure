@@ -15,11 +15,12 @@ import { axiosPrivate } from '../api/axios';
 import { Routes } from '../enums/routes.enum';
 
 interface LoginCredentials {
-    email: string;
+    username: string;
     password: string;
 }
 
 interface SignupCredentials {
+    username: string;
     email: string;
     password: string;
     passwordConfirm: string;
@@ -36,7 +37,7 @@ export const useAuth = () => {
         isAuthenticated,
         isLoading,
         error,
-        userKeys,
+        userKey,
         isKeysInitialized,
     } = useAppSelector((state) => state.auth);
 
@@ -123,7 +124,7 @@ export const useAuth = () => {
         isAuthenticated,
         isLoading,
         error,
-        userKeys,
+        userKey,
         isKeysInitialized,
 
         // Actions

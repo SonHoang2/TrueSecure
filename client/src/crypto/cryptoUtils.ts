@@ -300,7 +300,7 @@ export async function encryptPrivateData(recipientPublicKey, data) {
     );
 
     return {
-        ...encryptedData, // Includes encryptedContent and iv
+        ...encryptedData,
         ephemeralPublicKey: arrayBufferToBase64(exportedEphemeralPublicKey),
     };
 }
@@ -367,4 +367,12 @@ export async function decryptGroupFile(groupKey, encryptedData) {
 
 export async function getDeviceUuid(): Promise<string | null> {
     return await cryptoStorage.getItem('deviceUuid');
+}
+
+export async function setDeviceUuid(uuid: string): Promise<void> {
+    await cryptoStorage.setItem('deviceUuid', uuid);
+}
+
+export async function clearDeviceUuid(): Promise<void> {
+    await cryptoStorage.removeItem('deviceUuid');
 }

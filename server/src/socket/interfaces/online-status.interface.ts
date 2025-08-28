@@ -1,4 +1,4 @@
 export interface OnlineStatus {
-    onlineUsers: Record<string, string>;
+    onlineDevices: Record<string, Record<string, string>>;
     lastSeen: Record<string, string>;
 }

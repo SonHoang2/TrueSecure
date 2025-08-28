@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from 'src/redis/redis.service';
-import { OnlineStatus } from '../../interfaces/online-status.interface';
 
 @Injectable()
 export class SocketCacheService {
@@ -10,20 +9,36 @@ export class SocketCacheService {
 
     async addOnlineUser(
         userId: string | number,
+        deviceUuid: string,
         socketId: string,
     ): Promise<void> {
+        if (!userId || !deviceUuid || !socketId) {
+            throw new Error('Invalid parameters to add online user');
+        }
+
+        this.logger.log(
+            `Storing deviceUuid: ${deviceUuid}, type: ${typeof deviceUuid}`,
+        );
+
         await this.redisService.storeValue(
-            'onlineUsers',
-            userId.toString(),
+            `onlineDevices:${userId}`,
+            deviceUuid,
             socketId,
         );
+
         this.logger.log(
-            `User ${userId} added to online users with socket ID ${socketId}`,
+            `User ${userId} device ${deviceUuid} added with socket ID ${socketId}`,
         );
     }
 
-    async removeOnlineUser(userId: string | number): Promise<void> {
-        await this.redisService.deleteValue('onlineUsers', userId.toString());
+    async removeOnlineUser(
+        userId: string | number,
+        deviceUuid: string,
+    ): Promise<void> {
+        await this.redisService.deleteValue(
+            `onlineDevices:${userId}`,
+            deviceUuid,
+        );
     }
 
     async updateLastSeen(userId: string | number): Promise<void> {
@@ -34,33 +49,53 @@ export class SocketCacheService {
         );
     }
 
-    async getSocketId(userId: string | number): Promise<string | null> {
-        return this.redisService.getValue('onlineUsers', userId.toString());
+    async getSocketId(
+        userId: string | number,
+        deviceUuid: string,
+    ): Promise<string | null> {
+        return this.redisService.getValue(
+            `onlineDevices:${userId}`,
+            deviceUuid,
+        );
     }
 
-    async getOnlineStatus(): Promise<OnlineStatus> {
-        const [onlineUsers, lastSeen] = await Promise.all([
-            this.redisService.getAllValues('onlineUsers'),
-            this.redisService.getAllValues('lastSeen'),
-        ]);
+    async getDevicesByUserId(
+        userId: string | number,
+    ): Promise<Record<string, string>> {
+        return this.redisService.getAllValues(`onlineDevices:${userId}`);
+    }
 
-        return { onlineUsers, lastSeen };
+    async getOnlineStatus(): Promise<{
+        onlineUsers: number[];
+        lastSeen: Record<string, string>;
+    }> {
+        const lastSeen = await this.redisService.getAllValues('lastSeen');
+        const onlineUsersSet = new Set<number>();
+        const keys = await this.redisService.scanKeys('onlineDevices:*');
+        for (const key of keys) {
+            const userId = key.split(':')[1];
+            onlineUsersSet.add(Number(userId));
+        }
+        return { onlineUsers: Array.from(onlineUsersSet), lastSeen };
     }
 
     async checkAndRemoveStaleConnections(
+        userIds: Array<string | number>,
         activeSocketIds: Set<string>,
     ): Promise<boolean> {
-        const onlineUsers = await this.redisService.getAllValues('onlineUsers');
         let hasChanges = false;
-
-        for (const [userId, socketId] of Object.entries(onlineUsers)) {
-            if (!activeSocketIds.has(socketId)) {
-                await this.removeOnlineUser(userId);
-                await this.updateLastSeen(userId);
-                hasChanges = true;
+        for (const userId of userIds) {
+            const devices = await this.redisService.getAllValues(
+                `onlineDevices:${userId}`,
+            );
+            for (const [deviceUuid, socketId] of Object.entries(devices)) {
+                if (!activeSocketIds.has(socketId)) {
+                    await this.removeOnlineUser(userId, deviceUuid);
+                    await this.updateLastSeen(userId);
+                    hasChanges = true;
+                }
             }
         }
-
         return hasChanges;
     }
 }
