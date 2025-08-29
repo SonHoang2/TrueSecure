@@ -127,7 +127,7 @@ export const signupUser = createAsyncThunk(
 
 export const logoutUser = createAsyncThunk(
     'auth/logout',
-    async (deviceUuid: string | null, { rejectWithValue }) => {
+    async (deviceUuid: string, { rejectWithValue }) => {
         try {
             await axiosPrivate.post(AUTH_URL + '/logout', { deviceUuid });
             await Promise.all([

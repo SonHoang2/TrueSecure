@@ -163,10 +163,11 @@ export class AuthService {
             await this.redisService.removeUserToken(userId, refreshToken);
         }
 
-        try {
+        if (deviceUuid) {
             await this.deviceService.removeByUuid(deviceUuid, +userId);
-        } catch (error) {
-            console.error('Error occurred while logging out:', error);
+        } else {
+            await this.deviceService.removeAllByUserId(+userId);
+            await this.redisService.deleteUserTokens(userId);
         }
 
         const ATOptions = {
