@@ -86,8 +86,6 @@ export class SocketService {
             data.senderId,
         );
         for (const [deviceUuid, socketId] of Object.entries(deviceMap)) {
-            console.log(deviceUuid, socketId);
-
             await this.socketManagerService.emitToUser({
                 userId: data.senderId,
                 event: 'private-message-status-update',

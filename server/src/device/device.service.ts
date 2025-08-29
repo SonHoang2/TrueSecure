@@ -97,6 +97,10 @@ export class DeviceService {
         await this.deviceRepository.remove(device);
     }
 
+    async removeAllByUserId(userId: number): Promise<void> {
+        await this.deviceRepository.delete({ userId });
+    }
+
     extractOSFromUserAgent(userAgent: string): string {
         if (!userAgent) return 'Unknown';
 

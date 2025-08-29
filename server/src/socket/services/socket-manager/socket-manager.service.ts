@@ -61,7 +61,6 @@ export class SocketManagerService {
             if (!user) return;
 
             const deviceUuid = client.handshake?.query?.deviceUuid as string;
-            // Remove user from online users and update last seen
             await this.socketCacheService.removeOnlineUser(user.id, deviceUuid);
             await this.socketCacheService.updateLastSeen(user.id);
             await this.rabbitmqService.cancelConsumeMessages(user.id);
@@ -123,7 +122,7 @@ export class SocketManagerService {
             this.server.to(resolvedSocketId).emit(event, data);
         } else {
             this.logger.warn(
-                `No socket found for user ${userId} device ${deviceUuid} when emitting "${event}"`,
+                `No socket found for user ${userId} device ${deviceUuid} when emitting "${event}" resolvedSocketId: ${resolvedSocketId}`,
             );
         }
     }
