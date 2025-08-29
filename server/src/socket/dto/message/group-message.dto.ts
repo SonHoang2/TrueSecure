@@ -19,6 +19,10 @@ export class GroupMessageDto {
 
     @IsString()
     @IsNotEmpty()
+    deviceUuid: string;
+
+    @IsString()
+    @IsNotEmpty()
     content: string;
 
     @IsString()

@@ -16,18 +16,14 @@ export class SocketCacheService {
             throw new Error('Invalid parameters to add online user');
         }
 
-        this.logger.log(
-            `Storing deviceUuid: ${deviceUuid}, type: ${typeof deviceUuid}`,
+        console.log(
+            `Storing deviceUuid: ${deviceUuid}, socketId: ${socketId} for userId: ${userId}`,
         );
 
         await this.redisService.storeValue(
             `onlineDevices:${userId}`,
             deviceUuid,
             socketId,
-        );
-
-        this.logger.log(
-            `User ${userId} device ${deviceUuid} added with socket ID ${socketId}`,
         );
     }
 

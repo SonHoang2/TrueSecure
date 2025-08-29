@@ -38,7 +38,7 @@ interface UseChatMessagesProps {
     userId?: number;
     socket: Socket;
     axiosPrivate: AxiosInstance;
-    userKeys?: any;
+    userKey?: any;
 }
 
 export const useChatMessages = ({
@@ -47,7 +47,7 @@ export const useChatMessages = ({
 }: UseChatMessagesProps) => {
     const dispatch = useAppDispatch();
     const user = useAuthUser();
-    const { userKeys } = useAuth();
+    const { userKey } = useAuth();
     const { recipientDevices } = useConversations();
 
     const messageSoundRef = useRef(
@@ -160,7 +160,7 @@ export const useChatMessages = ({
                 if (currentConversation.isGroup) {
                     const groupkey = await getGroupKey({
                         conversationId: selectedConversationId,
-                        userKeys: userKeys,
+                        userKey: userKey,
                         axiosPrivate,
                         userId: user.id,
                     });
@@ -258,7 +258,7 @@ export const useChatMessages = ({
             currentMessage,
             currentConversation,
             user,
-            userKeys,
+            userKey,
             selectedConversationId,
             socket,
             axiosPrivate,
@@ -294,7 +294,7 @@ export const useChatMessages = ({
                 if (currentConversation.isGroup) {
                     const groupkey = await getGroupKey({
                         conversationId: selectedConversationId!,
-                        userKeys: userKeys!,
+                        userKey: userKey!,
                         axiosPrivate,
                         userId: user.id,
                     });
@@ -327,13 +327,13 @@ export const useChatMessages = ({
 
                     socket.emit('send-group-image', encryptedMessage);
                 } else {
-                    if (!userKeys?.publicKey) {
+                    if (!userKey?.publicKey) {
                         throw new Error('Public key not available');
                     }
 
                     const { encryptedContent, iv, ephemeralPublicKey } =
                         await cryptoUtils.encryptPrivateData(
-                            userKeys.publicKey,
+                            userKey.publicKey,
                             fileData,
                         );
 
@@ -387,7 +387,7 @@ export const useChatMessages = ({
         [
             currentConversation,
             user,
-            userKeys,
+            userKey,
             selectedConversationId,
             socket,
             axiosPrivate,
@@ -396,7 +396,10 @@ export const useChatMessages = ({
     );
 
     useEffect(() => {
-        if (!socket || !userKeys?.privateKey) return;
+        if (!socket || !userKey?.privateKey) {
+            console.warn('Socket or userKey is not available');
+            return;
+        }
 
         socket.on(
             'new-private-message',
@@ -412,7 +415,7 @@ export const useChatMessages = ({
 
                     const decryptedContent =
                         await cryptoUtils.decryptPrivateMessage(
-                            userKeys.privateKey!,
+                            userKey.privateKey!,
                             {
                                 content: data.content,
                                 iv: data.iv,
@@ -479,7 +482,7 @@ export const useChatMessages = ({
 
                     const groupkey = await getGroupKey({
                         conversationId: data.conversationId,
-                        userKeys: userKeys,
+                        userKey: userKey,
                         axiosPrivate,
                         userId: user.id,
                     });
@@ -542,7 +545,7 @@ export const useChatMessages = ({
         socket.on(
             'private-message-status-update',
             (data: { messageId: string; status: MessageStatus }) => {
-                console.log("message update");
+                console.log('message update');
 
                 dispatch(persistStatusUpdate(data));
             },
@@ -588,14 +591,7 @@ export const useChatMessages = ({
             socket.off('user-typing');
             socket.off('user-stopped-typing');
         };
-    }, [
-        socket,
-        userKeys,
-        selectedConversationId,
-        user,
-        axiosPrivate,
-        dispatch,
-    ]);
+    }, [socket, userKey, selectedConversationId, user, axiosPrivate, dispatch]);
 
     useEffect(() => {
         if (!socket || !currentConversation || !user) return;

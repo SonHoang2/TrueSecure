@@ -103,20 +103,28 @@ export class SocketManagerService {
         event,
         data,
         deviceUuid,
+        socketId,
     }: {
         userId: number | string;
         event: string;
         data: any;
         deviceUuid: string;
+        socketId?: string;
     }): Promise<void> {
-        const socketId = await this.socketCacheService.getSocketId(
-            userId,
-            deviceUuid,
-        );
-        console.log('socketId: ', JSON.stringify(socketId), data);
+        let resolvedSocketId = socketId;
+        if (!resolvedSocketId) {
+            resolvedSocketId = await this.socketCacheService.getSocketId(
+                userId,
+                deviceUuid,
+            );
+        }
 
-        if (socketId) {
-            this.server.to(socketId).emit(event, data);
+        if (resolvedSocketId) {
+            this.server.to(resolvedSocketId).emit(event, data);
+        } else {
+            this.logger.warn(
+                `No socket found for user ${userId} device ${deviceUuid} when emitting "${event}"`,
+            );
         }
     }
 }
