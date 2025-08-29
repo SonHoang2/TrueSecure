@@ -34,104 +34,134 @@ export class SocketService {
             });
         } else {
             // If receiver is offline, store the message in cache
-            // await this.rabbitmqService.sendOfflineMessage(receiverId, data);
+            await this.rabbitmqService.sendOfflineMessage(receiverId, data);
         }
 
         // Notify sender about message status
-        // await this.socketManagerService.emitToUser({
-        //     userId: senderId,
-        //     event: 'private-message-status-update',
-        //     data: {
-        //         messageId: id,
-        //         status: MessageStatus.SENT,
-        //     },
-        //     deviceUuid,
-        // });
+        await this.socketManagerService.emitToUser({
+            userId: senderId,
+            event: 'private-message-status-update',
+            data: {
+                messageId: id,
+                status: MessageStatus.SENT,
+            },
+            deviceUuid,
+        });
     }
 
-    // async sendGroupMessage(data: GroupMessageDto): Promise<void> {
-    //     const { conversationId, senderId, id } = data;
+    async sendGroupMessage(data: GroupMessageDto): Promise<void> {
+        const { conversationId, senderId, id, deviceUuid } = data;
 
-    //     // Find all participants except sender
-    //     const participants =
-    //         await this.conversationService.getOtherParticipants(
-    //             conversationId,
-    //             +senderId,
-    //         );
+        // Find all participants except sender
+        const participants =
+            await this.conversationService.getOtherParticipants(
+                conversationId,
+                +senderId,
+            );
 
-    //     // Notify all participants
-    //     for (const participant of participants) {
-    //         await this.socketManagerService.emitToUser(
-    //             participant.userId,
-    //             'new-group-message',
-    //             {
-    //                 ...data,
-    //             },
-    //         );
-    //     }
+        // Notify all participants
+        for (const participant of participants) {
+            await this.socketManagerService.emitToUser({
+                userId: participant.userId,
+                event: 'new-group-message',
+                data,
+                deviceUuid,
+            });
+        }
 
-    //     // Notify sender
-    //     await this.socketManagerService.emitToUser(
-    //         senderId,
-    //         'group-message-status-update',
-    //         {
-    //             messageId: id,
-    //             status: MessageStatus.SENT,
-    //         },
-    //     );
-    // }
+        // Notify sender
+        await this.socketManagerService.emitToUser({
+            userId: senderId,
+            event: 'group-message-status-update',
+            data: {
+                messageId: id,
+                status: MessageStatus.SENT,
+            },
+            deviceUuid,
+        });
+    }
 
-    // async updatePrivateMessageStatus(data: MessageStatusDto): Promise<void> {
-    //     await this.socketManagerService.emitToUser(
-    //         data.senderId,
-    //         'private-message-status-update',
-    //         {
-    //             messageId: data.messageId,
-    //             status: MessageStatus.SEEN,
-    //         },
-    //     );
-    // }
+    async updatePrivateMessageStatus(data: MessageStatusDto): Promise<void> {
+        const deviceMap = await this.socketCacheService.getDevicesByUserId(
+            data.senderId,
+        );
+        for (const [deviceUuid, socketId] of Object.entries(deviceMap)) {
+            console.log(deviceUuid, socketId);
 
-    // async updateGroupMessageStatus(data: MessageStatusDto): Promise<void> {
-    //     const { messageId, senderId, conversationId } = data;
+            await this.socketManagerService.emitToUser({
+                userId: data.senderId,
+                event: 'private-message-status-update',
+                data: {
+                    messageId: data.messageId,
+                    status: MessageStatus.SEEN,
+                },
+                deviceUuid,
+                socketId,
+            });
+        }
+    }
 
-    //     // Notify all participants in the group
-    //     const participants =
-    //         await this.conversationService.getAllParticipants(conversationId);
+    async updateGroupMessageStatus(data: MessageStatusDto): Promise<void> {
+        const { messageId, senderId, conversationId } = data;
+        const participants =
+            await this.conversationService.getAllParticipants(conversationId);
 
-    //     for (const participant of participants) {
-    //         await this.socketManagerService.emitToUser(
-    //             participant.userId,
-    //             'group-message-status-update',
-    //             {
-    //                 messageId: messageId,
-    //                 status: MessageStatus.SEEN,
-    //                 userId: senderId,
-    //             },
-    //         );
-    //     }
-    // }
+        const emitPromises: Promise<void>[] = [];
 
-    // async emitTypingEvent(
-    //     conversationId: number,
-    //     userId: string,
-    //     event: 'user-typing' | 'user-stopped-typing',
-    // ) {
-    //     const participants =
-    //         await this.conversationService.getOtherParticipants(
-    //             conversationId,
-    //             +userId,
-    //         );
+        for (const participant of participants) {
+            const deviceMap = await this.socketCacheService.getDevicesByUserId(
+                participant.userId,
+            );
+            for (const deviceUuid of Object.keys(deviceMap)) {
+                emitPromises.push(
+                    this.socketManagerService.emitToUser({
+                        userId: participant.userId,
+                        event: 'group-message-status-update',
+                        data: {
+                            messageId,
+                            status: MessageStatus.SEEN,
+                            userId: senderId,
+                        },
+                        deviceUuid,
+                    }),
+                );
+            }
+        }
 
-    //     for (const participant of participants) {
-    //         await this.socketManagerService.emitToUser(
-    //             participant.userId,
-    //             event,
-    //             {
-    //                 userId,
-    //                 conversationId,
-    //             },
-    //         );
-    //     }
-    // }
+        await Promise.all(emitPromises);
+    }
+
+    async emitTypingEvent(
+        conversationId: number,
+        userId: string,
+        event: 'user-typing' | 'user-stopped-typing',
+    ) {
+        const participants =
+            await this.conversationService.getOtherParticipants(
+                conversationId,
+                +userId,
+            );
+        const emitPromises: Promise<void>[] = [];
+
+        for (const participant of participants) {
+            const deviceMap = await this.socketCacheService.getDevicesByUserId(
+                participant.userId,
+            );
+            for (const deviceUuid of Object.keys(deviceMap)) {
+                emitPromises.push(
+                    this.socketManagerService.emitToUser({
+                        userId: participant.userId,
+                        event,
+                        data: {
+                            userId,
+                            conversationId,
+                        },
+                        deviceUuid,
+                    }),
+                );
+            }
+        }
+
+        await Promise.all(emitPromises);
+    }
 }
