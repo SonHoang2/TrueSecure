@@ -127,9 +127,9 @@ export const signupUser = createAsyncThunk(
 
 export const logoutUser = createAsyncThunk(
     'auth/logout',
-    async (_, { rejectWithValue }) => {
+    async (deviceUuid: string | null, { rejectWithValue }) => {
         try {
-            await axiosPrivate.get(AUTH_URL + '/logout');
+            await axiosPrivate.post(AUTH_URL + '/logout', { deviceUuid });
             await Promise.all([
                 cryptoUtils.removePrivateKey(),
                 cryptoUtils.clearDeviceUuid(),
@@ -149,7 +149,7 @@ export const refreshToken = createAsyncThunk(
     'auth/refreshToken',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await axiosPrivate.get(AUTH_URL + '/refresh');
+            const response = await axiosPrivate.post(AUTH_URL + '/refresh');
             return response.data;
         } catch (error: any) {
             return rejectWithValue(

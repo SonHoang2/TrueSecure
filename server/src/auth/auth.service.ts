@@ -152,14 +152,21 @@ export class AuthService {
         return this.createSendToken(newUser, res, deviceUuid);
     }
 
-    async logout(req: Request, res: Response) {
+    async logout(req: Request, res: Response, deviceUuid: string) {
         const refreshToken = req.cookies.refreshToken;
 
         const userId =
             await this.redisService.getRefreshTokenUserId(refreshToken);
+
         if (userId) {
             await this.redisService.deleteRefreshToken(refreshToken);
             await this.redisService.removeUserToken(userId, refreshToken);
+        }
+
+        try {
+            await this.deviceService.removeByUuid(deviceUuid, +userId);
+        } catch (error) {
+            console.error('Error occurred while logging out:', error);
         }
 
         const ATOptions = {
