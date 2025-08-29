@@ -39,6 +39,7 @@ export const useAuth = () => {
         error,
         userKey,
         isKeysInitialized,
+        deviceUuid,
     } = useAppSelector((state) => state.auth);
 
     const login = useCallback(
@@ -69,12 +70,12 @@ export const useAuth = () => {
 
     const logout = useCallback(async () => {
         try {
-            await dispatch(logoutUser()).unwrap();
+            await dispatch(logoutUser(deviceUuid)).unwrap();
             navigate(Routes.LOGIN);
         } catch (error) {
             console.error('Logout failed:', error);
         }
-    }, [dispatch, navigate]);
+    }, [dispatch, navigate, deviceUuid]);
 
     const getGoogleCode = useCallback(async () => {
         const queryParams = queryString.stringify({

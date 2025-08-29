@@ -127,7 +127,7 @@ export class DeviceService {
     async getAllPublicKeysByUserId(userId: number) {
         const devices = await this.deviceRepository.find({
             where: { userId },
-            select: ['uuid', 'publicKey'], // Select the fields we need
+            select: ['uuid', 'publicKey'],
             order: { lastSeen: 'DESC' },
         });
 
