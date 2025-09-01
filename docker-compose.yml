@@ -1,38 +1,38 @@
 
 services:
-  # client:
-  #   build:
-  #     context: ./client
-  #     dockerfile: Dockerfile
-  #   env_file:
-  #     - ./client/.env.docker
-  #   volumes:
-  #     - ./client:/app
-  #     - /app/node_modules
-  #     - ./localhost.pem:/app/localhost.pem
-  #     - ./localhost-key.pem:/app/localhost-key.pem
-  #   networks:
-  #     - chat-network
-  #   restart: unless-stopped
-  #   depends_on:
-  #     - server
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    env_file:
+      - ./client/.env.docker
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+      - ./localhost.pem:/app/localhost.pem
+      - ./localhost-key.pem:/app/localhost-key.pem
+    networks:
+      - chat-network
+    restart: unless-stopped
+    depends_on:
+      - server
 
-  # server:
-  #   build:
-  #     context: ./server
-  #     dockerfile: Dockerfile
-  #   env_file:
-  #     - ./server/.env.docker
-  #   volumes:
-  #     - ./localhost.pem:/app/localhost.pem
-  #     - ./localhost-key.pem:/app/localhost-key.pem
-  #   networks:
-  #     - chat-network
-  #   restart: unless-stopped
-  #   depends_on:
-  #     - postgres
-  #     - redis
-  #     - rabbitmq
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    env_file:
+      - ./server/.env.docker
+    volumes:
+      - ./localhost.pem:/app/localhost.pem
+      - ./localhost-key.pem:/app/localhost-key.pem
+    networks:
+      - chat-network
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
 
   # df_server:
   #   build:
@@ -51,24 +51,24 @@ services:
   #     - rabbitmq
 
   # Nginx Reverse Proxy
-  # nginx:
-  #   image: nginx:alpine
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-  #     - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-  #     - ./nginx/ssl:/etc/nginx/ssl
-  #     - ./localhost.pem:/etc/nginx/ssl/localhost.pem
-  #     - ./localhost-key.pem:/etc/nginx/ssl/localhost-key.pem
-  #   networks:
-  #     - chat-network
-  #   restart: unless-stopped
-  #   depends_on:
-  #     - client
-  #     - server
-  #     - df_server
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./localhost.pem:/etc/nginx/ssl/localhost.pem
+      - ./localhost-key.pem:/etc/nginx/ssl/localhost-key.pem
+    networks:
+      - chat-network
+    restart: unless-stopped
+    depends_on:
+      - client
+      - server
+      # - df_server
 
   # PostgreSQL Database
   postgres:

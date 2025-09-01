@@ -4,25 +4,13 @@ import { JSendInterceptor } from './common/interceptors/jsend.interceptor';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
-import * as fs from 'fs';
 import { ConfigService } from '@nestjs/config';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import * as bodyParser from 'body-parser';
 
 async function bootstrap() {
-    // Create a temporary module to access config before app creation
-    const configApp = await NestFactory.createApplicationContext(AppModule);
-    const configService = configApp.get(ConfigService);
-
-    const sslKey = configService.get<string>('sslKey');
-    const sslCert = configService.get<string>('sslCert');
-    const httpsOptions = {
-        key: fs.readFileSync(sslKey),
-        cert: fs.readFileSync(sslCert),
-    };
-
-    // Now create the app with HTTPS
-    const app = await NestFactory.create(AppModule, { httpsOptions });
+    const app = await NestFactory.create(AppModule);
+    const configService = app.get(ConfigService);
 
     app.setGlobalPrefix('api/v1');
     app.use(bodyParser.json({ limit: '5mb' }));
