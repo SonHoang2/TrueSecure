@@ -149,7 +149,7 @@ export const useChatMessages = ({
             }
 
             try {
-                let messageData: Message;
+                let messageData: Message | null = null;
                 const messageId = uuidv4();
 
                 let content = currentMessage;
@@ -194,6 +194,16 @@ export const useChatMessages = ({
                         throw new Error('Public key not available');
                     }
 
+                    messageData = {
+                        id: messageId,
+                        senderId: user.id,
+                        conversationId: selectedConversationId!,
+                        content: content,
+                        type: 'text' as const,
+                        status: MessageStatus.SENDING,
+                        createdAt: new Date().toISOString(),
+                    };
+
                     for (const device of recipientDevices) {
                         const publicKey = await cryptoUtils.importPublicKey(
                             device.publicKey,
@@ -204,16 +214,6 @@ export const useChatMessages = ({
                                 publicKey,
                                 content,
                             );
-
-                        messageData = {
-                            id: messageId,
-                            senderId: user.id,
-                            conversationId: selectedConversationId!,
-                            content: content,
-                            type: 'text' as const,
-                            status: MessageStatus.SENDING,
-                            createdAt: new Date().toISOString(),
-                        };
 
                         const encryptedMessage = {
                             ...messageData,
@@ -245,6 +245,18 @@ export const useChatMessages = ({
                 dispatch(setCurrentMessage(''));
             } catch (error) {
                 console.error('Failed to send message:', error);
+                if (
+                    error instanceof DOMException ||
+                    error.name === 'DataError'
+                ) {
+                    console.error('Likely encryption or key error:', {
+                        currentConversation,
+                        user,
+                        userKey,
+                        recipientDevices,
+                        selectedConversationId,
+                    });
+                }
                 dispatch(
                     addNotification({
                         type: 'error',
