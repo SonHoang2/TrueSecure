@@ -1,10 +1,11 @@
 import * as cryptoUtils from '../crypto/cryptoUtils';
 import { CONVERSATIONS_URL } from '../config/config';
 import { AxiosInstance } from 'axios';
+import { UserKey } from '../types/users.types';
 
 interface GetGroupKeyParams {
     conversationId: number;
-    userKey: CryptoKey;
+    userKey: UserKey;
     userId: number;
     axiosPrivate: AxiosInstance;
 }
@@ -19,7 +20,7 @@ class EncryptionError extends Error {
     }
 }
 
-export const initializeUserKeys = async (): Promise<{
+export const initializeUserKey = async (): Promise<{
     privateKey: CryptoKey;
     publicKey: string;
 }> => {
@@ -41,11 +42,11 @@ export const initializeUserKeys = async (): Promise<{
 
 export const getGroupKey = async ({
     conversationId,
-    userKeys,
+    userKey,
     userId,
     axiosPrivate,
 }: GetGroupKeyParams): Promise<CryptoKey> => {
-    const { privateKey } = userKeys;
+    const { privateKey } = userKey;
 
     if (!privateKey) {
         throw new EncryptionError('User private keys are required');
@@ -76,11 +77,10 @@ export const getGroupKey = async ({
             }
 
             // Decrypt the group key
-            const exportedKey = await cryptoUtils.decryptAESKeys({
-                senderPublicKey: adminPublicKey,
-                recipientPrivateKey: privateKey,
-                encryptedData: exportedEncryptedKey,
-            });
+            const exportedKey = await cryptoUtils.decryptAESKeys(
+                privateKey,
+                exportedEncryptedKey,
+            );
 
             groupKey = await cryptoUtils.importAESKey(exportedKey);
 

@@ -188,18 +188,21 @@ export async function generateAesKey() {
     return key;
 }
 
-export async function encryptAESKeys({
-    recipientPublicKey,
-    senderPrivateKey,
-    message,
-}) {
-    // 1. Derive shared secret using recipient's public key and sender's private key
+export async function encryptAESKeys(recipientPublicKey, message) {
+    // 1. Generate ephemeral key pair for this encryption
+    const ephemeralKeyPair = await window.crypto.subtle.generateKey(
+        { name: 'ECDH', namedCurve: 'P-256' },
+        true,
+        ['deriveKey'],
+    );
+
+    // 2. Derive shared secret using ephemeral private key and recipient's public key
     const sharedSecret = await deriveSharedKey(
-        senderPrivateKey,
+        ephemeralKeyPair.privateKey,
         recipientPublicKey,
     );
 
-    // 2. Encrypt the message
+    // 3. Encrypt the message
     const iv = crypto.getRandomValues(new Uint8Array(12)); // 12 bytes for AES-GCM
     const encryptedContent = await crypto.subtle.encrypt(
         { name: 'AES-GCM', iv },
@@ -207,35 +210,54 @@ export async function encryptAESKeys({
         new TextEncoder().encode(message),
     );
 
-    // 3. Combine IV and encrypted content into a single Uint8Array
-    const combined = new Uint8Array(iv.length + encryptedContent.byteLength);
-    combined.set(iv, 0); // Add IV at the beginning
-    combined.set(new Uint8Array(encryptedContent), iv.length); // Add encrypted content after IV
+    // 4. Export ephemeral public key
+    const exportedEphemeralPublicKey = await crypto.subtle.exportKey(
+        'raw',
+        ephemeralKeyPair.publicKey,
+    );
 
-    // 4. Encode the combined data as Base64
+    // 5. Combine ephemeral public key, IV and encrypted content
+    const ephemeralPubKeyArray = new Uint8Array(exportedEphemeralPublicKey);
+    const combined = new Uint8Array(
+        ephemeralPubKeyArray.length + iv.length + encryptedContent.byteLength,
+    );
+    combined.set(ephemeralPubKeyArray, 0); // Add ephemeral public key at the beginning
+    combined.set(iv, ephemeralPubKeyArray.length); // Add IV after public key
+    combined.set(
+        new Uint8Array(encryptedContent),
+        ephemeralPubKeyArray.length + iv.length,
+    ); // Add encrypted content
+
+    // 6. Encode the combined data as Base64
     return arrayBufferToBase64(combined.buffer);
 }
 
-export async function decryptAESKeys({
-    senderPublicKey,
-    recipientPrivateKey,
-    encryptedData,
-}) {
+export async function decryptAESKeys(recipientPrivateKey, encryptedData) {
     try {
         // 1. Decode the Base64 string into an ArrayBuffer
         const combined = base64ToArrayBuffer(encryptedData);
 
-        // 2. Extract the IV (first 12 bytes) and the encrypted content (remaining bytes)
-        const iv = combined.slice(0, 12); // IV is 12 bytes for AES-GCM
-        const encryptedContent = combined.slice(12);
+        // 2. Extract the ephemeral public key (first 65 bytes for P-256 raw format), IV (next 12 bytes) and encrypted content
+        const ephemeralPublicKeyBytes = combined.slice(0, 65); // 65 bytes for P-256 raw format
+        const iv = combined.slice(65, 77); // IV is 12 bytes for AES-GCM
+        const encryptedContent = combined.slice(77);
 
-        // 3. Derive shared secret using recipient's private key and sender's public key
-        const sharedSecret = await deriveSharedKey(
-            recipientPrivateKey,
-            senderPublicKey,
+        // 3. Import the ephemeral public key
+        const ephemeralPublicKey = await crypto.subtle.importKey(
+            'raw',
+            ephemeralPublicKeyBytes,
+            { name: 'ECDH', namedCurve: 'P-256' },
+            true,
+            [],
         );
 
-        // 4. Decrypt the message
+        // 4. Derive shared secret using recipient's private key and ephemeral public key
+        const sharedSecret = await deriveSharedKey(
+            recipientPrivateKey,
+            ephemeralPublicKey,
+        );
+
+        // 5. Decrypt the message
         const decrypted = await crypto.subtle.decrypt(
             { name: 'AES-GCM', iv },
             sharedSecret,

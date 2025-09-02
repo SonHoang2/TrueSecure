@@ -313,47 +313,61 @@ export class ConversationService {
             throw new NotFoundException('Conversation not found');
         }
 
-        const participants = await this.participantRepo
-            .createQueryBuilder('participant')
-            .leftJoinAndSelect('participant.user', 'user')
-            .select([
-                'participant.id as id',
-                'participant.userId as userId',
-                'participant.role as role',
-                'participant.groupKey as groupKey',
-                'user.publicKey as publicKey',
-            ])
-            .where('participant.conversationId = :conversationId', {
+        // Verify that the requesting user is a participant in this conversation
+        const userParticipation = await this.participantRepo.findOne({
+            where: {
                 conversationId,
-            })
-            .getRawMany();
+                userId,
+            },
+        });
 
-        console.log(
-            `Participants for conversation ${conversationId}:`,
-            participants,
-        );
-
-        const adminPublicKey = participants.find(
-            (p) => p.role === ChatGroupRole.ADMIN,
-        ).publickey;
-
-        const groupKey = participants.find((p) => p.userid === userId).groupkey;
-
-        if (!groupKey) {
-            throw new NotFoundException(
-                'You are not a participant of this conversation or group key not found',
+        if (!userParticipation) {
+            throw new ForbiddenException(
+                'You are not a participant of this conversation',
             );
         }
 
-        if (!adminPublicKey) {
+        // Get all participants with their devices and encrypted group keys
+        const participants = await this.participantRepo
+            .createQueryBuilder('participant')
+            .leftJoinAndSelect('participant.user', 'user')
+            .leftJoinAndSelect(
+                'participant.participantDevices',
+                'participantDevices',
+            )
+            .leftJoinAndSelect('participantDevices.device', 'device')
+            .where('participant.conversationId = :conversationId', {
+                conversationId,
+            })
+            .getMany();
+
+        // Find admin's public keys (from their devices)
+        const admin = participants.find((p) => p.role === ChatGroupRole.ADMIN);
+        if (!admin) {
             throw new NotFoundException(
-                'Admin public key not found for this conversation',
+                'Admin not found for this conversation',
+            );
+        }
+
+        // Find current user's encrypted group keys
+        const currentUserParticipant = participants.find(
+            (p) => p.userId === userId,
+        );
+        const userGroupKeys =
+            currentUserParticipant?.participantDevices?.map((pd) => ({
+                deviceId: pd.device.id,
+                deviceUuid: pd.device.uuid,
+                encryptedGroupKey: pd.encryptedGroupKey,
+            })) || [];
+
+        if (userGroupKeys.length === 0) {
+            throw new NotFoundException(
+                'No encrypted group keys found for your devices',
             );
         }
 
         return {
-            groupKey,
-            adminPublicKey,
+            encryptedGroupKeys: userGroupKeys,
         };
     }
 

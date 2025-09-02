@@ -144,7 +144,7 @@ export const useChatMessages = ({
                 return;
             }
 
-            if (!currentConversation || !user) {
+            if (!currentConversation || !user || !selectedConversationId) {
                 return;
             }
 
@@ -158,6 +158,16 @@ export const useChatMessages = ({
                 }
 
                 if (currentConversation.isGroup) {
+                    if (!userKey) {
+                        throw new Error(
+                            'User keys are required for group chat',
+                        );
+                    }
+
+                    if (!selectedConversationId) {
+                        throw new Error('Selected conversation ID is required');
+                    }
+
                     const groupkey = await getGroupKey({
                         conversationId: selectedConversationId,
                         userKey: userKey,
@@ -175,7 +185,7 @@ export const useChatMessages = ({
                     messageData = {
                         id: messageId,
                         senderId: user.id,
-                        conversationId: selectedConversationId!,
+                        conversationId: selectedConversationId,
                         content: content,
                         type: 'text' as const,
                         status: MessageStatus.SENDING,
@@ -197,7 +207,7 @@ export const useChatMessages = ({
                     messageData = {
                         id: messageId,
                         senderId: user.id,
-                        conversationId: selectedConversationId!,
+                        conversationId: selectedConversationId,
                         content: content,
                         type: 'text' as const,
                         status: MessageStatus.SENDING,
@@ -232,7 +242,7 @@ export const useChatMessages = ({
 
                 dispatch(
                     updateConversationLastMessage({
-                        conversationId: selectedConversationId!,
+                        conversationId: selectedConversationId,
                         lastMessage: {
                             content: currentMessage,
                             senderId: user.id,
@@ -290,122 +300,126 @@ export const useChatMessages = ({
         }
     };
 
-    const sendImage = useCallback(
-        async (file: File) => {
-            if (!currentConversation || !user) {
-                return;
-            }
+    // const sendImage = useCallback(
+    //     async (file: File) => {
+    //         if (!currentConversation || !user) {
+    //             return;
+    //         }
 
-            try {
-                const messageId = uuidv4();
-                const fileData = await file.arrayBuffer();
-                const objectUrl = URL.createObjectURL(file);
+    //         try {
+    //             const messageId = uuidv4();
+    //             const fileData = await file.arrayBuffer();
+    //             const objectUrl = URL.createObjectURL(file);
 
-                let messageData;
+    //             let messageData;
 
-                if (currentConversation.isGroup) {
-                    const groupkey = await getGroupKey({
-                        conversationId: selectedConversationId!,
-                        userKey: userKey!,
-                        axiosPrivate,
-                        userId: user.id,
-                    });
+    //             if (currentConversation.isGroup) {
+    //                 const groupkey = await getGroupKey({
+    //                     conversationId: selectedConversationId,
+    //                     userKey: userKey!,
+    //                     axiosPrivate,
+    //                     userId: user.id,
+    //                 });
 
-                    if (!groupkey) {
-                        throw new Error('Group key not available');
-                    }
+    //                 if (!groupkey) {
+    //                     throw new Error('Group key not available');
+    //                 }
 
-                    const { encryptedContent, iv } =
-                        await cryptoUtils.encryptGroupData(groupkey, fileData);
+    //                 const { encryptedContent, iv } =
+    //                     await cryptoUtils.encryptGroupData(groupkey, fileData);
 
-                    messageData = {
-                        id: messageId,
-                        senderId: user.id,
-                        conversationId: selectedConversationId!,
-                        content: objectUrl,
-                        type: 'image' as const,
-                        fileName: file.name,
-                        fileSize: file.size,
-                        mimeType: file.type,
-                        status: MessageStatus.SENDING,
-                        createdAt: new Date().toISOString(),
-                    };
+    //                 messageData = {
+    //                     id: messageId,
+    //                     senderId: user.id,
+    //                     conversationId: selectedConversationId,
+    //                     content: objectUrl,
+    //                     type: 'image' as const,
+    //                     fileName: file.name,
+    //                     fileSize: file.size,
+    //                     mimeType: file.type,
+    //                     status: MessageStatus.SENDING,
+    //                     createdAt: new Date().toISOString(),
+    //                 };
 
-                    const encryptedMessage = {
-                        ...messageData,
-                        content: encryptedContent,
-                        iv: iv,
-                    };
+    //                 const encryptedMessage = {
+    //                     ...messageData,
+    //                     content: encryptedContent,
+    //                     iv: iv,
+    //                 };
 
-                    socket.emit('send-group-image', encryptedMessage);
-                } else {
-                    if (!userKey?.publicKey) {
-                        throw new Error('Public key not available');
-                    }
+    //                 socket.emit('send-group-image', encryptedMessage);
+    //             } else {
+    //                 if (!userKey?.publicKey) {
+    //                     throw new Error('Public key not available');
+    //                 }
 
-                    const { encryptedContent, iv, ephemeralPublicKey } =
-                        await cryptoUtils.encryptPrivateData(
-                            userKey.publicKey,
-                            fileData,
-                        );
+    //                 const { encryptedContent, iv, ephemeralPublicKey } =
+    //                     await cryptoUtils.encryptPrivateData(
+    //                         userKey.publicKey,
+    //                         fileData,
+    //                     );
 
-                    messageData = {
-                        id: messageId,
-                        senderId: user.id,
-                        conversationId: selectedConversationId!,
-                        content: objectUrl,
-                        type: 'image' as const,
-                        fileName: file.name,
-                        fileSize: file.size,
-                        mimeType: file.type,
-                        status: MessageStatus.SENDING,
-                        createdAt: new Date().toISOString(),
-                    };
+    //                 messageData = {
+    //                     id: messageId,
+    //                     senderId: user.id,
+    //                     conversationId: selectedConversationId,
+    //                     content: objectUrl,
+    //                     type: 'image' as const,
+    //                     fileName: file.name,
+    //                     fileSize: file.size,
+    //                     mimeType: file.type,
+    //                     status: MessageStatus.SENDING,
+    //                     createdAt: new Date().toISOString(),
+    //                 };
 
-                    const encryptedMessage = {
-                        ...messageData,
-                        content: encryptedContent,
-                        iv: iv,
-                        ephemeralPublicKey: ephemeralPublicKey,
-                    };
+    //                 const encryptedMessage = {
+    //                     ...messageData,
+    //                     content: encryptedContent,
+    //                     iv: iv,
+    //                     ephemeralPublicKey: ephemeralPublicKey,
+    //                 };
 
-                    socket.emit('send-private-image', encryptedMessage);
-                }
+    //                 socket.emit('send-private-image', encryptedMessage);
+    //             }
 
-                dispatch(addMessage(messageData));
+    //             dispatch(addMessage(messageData));
 
-                dispatch(
-                    updateConversationLastMessage({
-                        conversationId: selectedConversationId!,
-                        lastMessage: {
-                            content: `📷 Image`,
-                            senderId: user.id,
-                            createdAt: messageData.createdAt,
-                            type: 'image',
-                        },
-                    }),
-                );
-            } catch (error) {
-                console.error('Failed to send image:', error);
-                dispatch(
-                    addNotification({
-                        type: 'error',
-                        title: 'Image Failed',
-                        message: 'Failed to send image. Please try again.',
-                    }),
-                );
-            }
-        },
-        [
-            currentConversation,
-            user,
-            userKey,
-            selectedConversationId,
-            socket,
-            axiosPrivate,
-            dispatch,
-        ],
-    );
+    //             dispatch(
+    //                 updateConversationLastMessage({
+    //                     conversationId: selectedConversationId,
+    //                     lastMessage: {
+    //                         content: `📷 Image`,
+    //                         senderId: user.id,
+    //                         createdAt: messageData.createdAt,
+    //                         type: 'image',
+    //                     },
+    //                 }),
+    //             );
+    //         } catch (error) {
+    //             console.error('Failed to send image:', error);
+    //             dispatch(
+    //                 addNotification({
+    //                     type: 'error',
+    //                     title: 'Image Failed',
+    //                     message: 'Failed to send image. Please try again.',
+    //                 }),
+    //             );
+    //         }
+    //     },
+    //     [
+    //         currentConversation,
+    //         user,
+    //         userKey,
+    //         selectedConversationId,
+    //         socket,
+    //         axiosPrivate,
+    //         dispatch,
+    //     ],
+    // );
+
+    const sendImage = () => {
+        return;
+    }
 
     useEffect(() => {
         if (!socket || !userKey?.privateKey) {
