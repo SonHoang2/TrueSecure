@@ -13,6 +13,7 @@ import { CreateGroupKeyDto } from './dto/create-group-key.dto';
 import { UserService } from 'src/user/user.service';
 import { ChatGroupRole } from 'src/common/enum/chat-role.enum';
 import { ParticipantDevice } from './entities/participant-device.entity';
+import { DeviceService } from 'src/device/device.service';
 
 @Injectable()
 export class ConversationService {
@@ -24,6 +25,7 @@ export class ConversationService {
         private userService: UserService,
         @InjectRepository(ParticipantDevice)
         private participantDeviceRepo: Repository<ParticipantDevice>,
+        private deviceService: DeviceService,
     ) {}
 
     async createConversation(
@@ -32,7 +34,6 @@ export class ConversationService {
     ) {
         const { users, avatar, title } = createConversationDto;
 
-        // Add the current user to the list of users
         users.push(currentUserId);
 
         const existUsers = await this.userService.findUsersByIds(users);
@@ -57,8 +58,6 @@ export class ConversationService {
             throw new BadRequestException('Group chat must have a title');
         }
 
-        // Check if this exact conversation already exists
-        // First, find conversations where all users participate
         const participantsByConversation = this.participantRepo
             .createQueryBuilder('participant')
             .select('participant.conversationId')
@@ -74,7 +73,6 @@ export class ConversationService {
 
         let existingConversation = null;
 
-        // Check if any of these conversations have exactly these users (no more, no less)
         for (const conv of potentialConversations) {
             const conversationId = conv.participant_conversationId;
 
@@ -154,13 +152,11 @@ export class ConversationService {
             isGroup: conversation.isGroup,
             avatar: conversation.avatar,
             myRole: currentUserParticipation.role,
-            // myGroupKey: currentUserParticipation.groupKey,
             createdAt: conversation.createdAt,
             updatedAt: conversation.updatedAt,
         };
 
         if (conversation.isGroup) {
-            // For group chats, include all participants
             const participants = conversation.participants.map((p) => ({
                 id: p.user.id,
                 firstName: p.user.firstName,
@@ -175,7 +171,6 @@ export class ConversationService {
                 participants,
             };
         } else {
-            // For private chats, just include the other user as receiver
             const otherParticipant = conversation.participants.find(
                 (p) => p.userId !== userId,
             );
@@ -220,13 +215,11 @@ export class ConversationService {
                 isGroup: conversation.isGroup,
                 avatar: conversation.avatar,
                 myRole: participation.role,
-                // myGroupKey: participation.groupKey,
                 createdAt: conversation.createdAt,
                 updatedAt: conversation.updatedAt,
             };
 
             if (conversation.isGroup) {
-                // For group chats, include all other participants
                 const participants = conversation.participants
                     .filter((p) => p.userId !== userId)
                     .map((p) => ({
@@ -243,7 +236,6 @@ export class ConversationService {
                     participants,
                 };
             } else {
-                // For private chats, just include the other user as receiver
                 const otherParticipant = conversation.participants.find(
                     (p) => p.userId !== userId,
                 );
@@ -281,9 +273,10 @@ export class ConversationService {
             );
         }
 
-        const participantDevice = await this.participantDeviceRepo
+        let participantDevice = await this.participantDeviceRepo
             .createQueryBuilder('participantDevice')
-            .leftJoinAndSelect('participantDevice.participant', 'participant')
+            .innerJoin('participantDevice.device', 'device')
+            .innerJoin('participantDevice.participant', 'participant')
             .where('device.uuid = :deviceUuid', { deviceUuid })
             .andWhere('participant.conversationId = :conversationId', {
                 conversationId,
@@ -291,11 +284,45 @@ export class ConversationService {
             .getOne();
 
         if (!participantDevice) {
-            throw new NotFoundException('Participant device not found');
+            const conversation = await this.conversationRepo.findOne({
+                where: { id: conversationId },
+            });
+
+            if (!conversation) {
+                throw new NotFoundException('Conversation not found');
+            }
+
+            const device = await this.deviceService.findByUuid(deviceUuid);
+            if (!device) {
+                throw new NotFoundException('Device not found');
+            }
+
+            const participant = await this.participantRepo.findOne({
+                where: {
+                    conversationId,
+                    userId: device.userId,
+                },
+            });
+
+            if (!participant) {
+                throw new NotFoundException(
+                    'User is not a participant of this conversation',
+                );
+            }
+
+            participantDevice = this.participantDeviceRepo.create({
+                participantId: participant.id,
+                deviceId: device.id,
+                encryptedGroupKey: groupKey,
+            });
+        } else {
+            participantDevice.encryptedGroupKey = groupKey;
         }
 
+        await this.participantDeviceRepo.save(participantDevice);
+
         return {
-            groupKey,
+            message: 'Group key stored successfully',
         };
     }
 
@@ -304,7 +331,6 @@ export class ConversationService {
             throw new BadRequestException('Conversation ID is required');
         }
 
-        // Check if conversation exists first
         const conversation = await this.conversationRepo.findOne({
             where: { id: conversationId },
         });
@@ -313,7 +339,6 @@ export class ConversationService {
             throw new NotFoundException('Conversation not found');
         }
 
-        // Verify that the requesting user is a participant in this conversation
         const userParticipation = await this.participantRepo.findOne({
             where: {
                 conversationId,
@@ -327,7 +352,6 @@ export class ConversationService {
             );
         }
 
-        // Get all participants with their devices and encrypted group keys
         const participants = await this.participantRepo
             .createQueryBuilder('participant')
             .leftJoinAndSelect('participant.user', 'user')
@@ -341,7 +365,6 @@ export class ConversationService {
             })
             .getMany();
 
-        // Find admin's public keys (from their devices)
         const admin = participants.find((p) => p.role === ChatGroupRole.ADMIN);
         if (!admin) {
             throw new NotFoundException(
@@ -349,7 +372,6 @@ export class ConversationService {
             );
         }
 
-        // Find current user's encrypted group keys
         const currentUserParticipant = participants.find(
             (p) => p.userId === userId,
         );
@@ -422,7 +444,6 @@ export class ConversationService {
             );
         }
 
-        // If the user is an admin, they can delete the conversation
         if (participant.role !== ChatGroupRole.ADMIN) {
             throw new ForbiddenException(
                 'Only admins can delete this conversation',
