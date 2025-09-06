@@ -62,7 +62,7 @@ export const loginUser = createAsyncThunk(
     ) => {
         try {
             const { privateKey, publicKey } =
-                await EncryptionService.initializeUserKeys();
+                await EncryptionService.initializeUserKey();
 
             let deviceUuid = await cryptoUtils.getDeviceUuid();
 
