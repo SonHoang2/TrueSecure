@@ -49,9 +49,8 @@ export class DeviceController {
     @Get(':id')
     async findOne(
         @Param('id', ParseIntPipe) id: number,
-        @Request() req: any,
     ): Promise<DeviceResponseDto> {
-        const device = await this.deviceService.findOne(id, req.user.id);
+        const device = await this.deviceService.findOne(id);
         return plainToClass(DeviceResponseDto, device, {
             excludeExtraneousValues: true,
         });
@@ -60,14 +59,9 @@ export class DeviceController {
     @Patch(':id')
     async update(
         @Param('id', ParseIntPipe) id: number,
-        @Request() req: any,
         @Body() updateDeviceDto: UpdateDeviceDto,
     ): Promise<DeviceResponseDto> {
-        const device = await this.deviceService.update(
-            id,
-            req.user.id,
-            updateDeviceDto,
-        );
+        const device = await this.deviceService.update(id, updateDeviceDto);
         return plainToClass(DeviceResponseDto, device, {
             excludeExtraneousValues: true,
         });
@@ -76,19 +70,15 @@ export class DeviceController {
     @Patch(':id/deactivate')
     async deactivate(
         @Param('id', ParseIntPipe) id: number,
-        @Request() req: any,
     ): Promise<DeviceResponseDto> {
-        const device = await this.deviceService.deactivate(id, req.user.id);
+        const device = await this.deviceService.deactivate(id);
         return plainToClass(DeviceResponseDto, device, {
             excludeExtraneousValues: true,
         });
     }
 
     @Delete(':id')
-    async remove(
-        @Param('id', ParseIntPipe) id: number,
-        @Request() req: any,
-    ): Promise<void> {
-        return await this.deviceService.remove(id, req.user.id);
+    async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
+        return await this.deviceService.remove(id);
     }
 }

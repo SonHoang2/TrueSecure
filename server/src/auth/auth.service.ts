@@ -164,7 +164,7 @@ export class AuthService {
         }
 
         if (deviceUuid) {
-            await this.deviceService.removeByUuid(deviceUuid, +userId);
+            await this.deviceService.removeByUuid(deviceUuid);
         } else {
             await this.deviceService.removeAllByUserId(+userId);
             await this.redisService.deleteUserTokens(userId);
