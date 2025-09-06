@@ -34,14 +34,12 @@ export default function Login() {
         }
     };
 
-    const handleSubmit = async (event) => {
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         try {
             event.preventDefault();
             await login(formData);
         } catch (err) {
-            let message = extractErrorMessage(err, 'Login failed.');
-            setError(message);
-            console.log(err);
+            setError(extractErrorMessage(err, 'Login failed.'));
         }
     };
 
@@ -84,7 +82,10 @@ export default function Login() {
                             placeholder="username"
                             onChange={(e) =>
                                 setFormData((prev) => {
-                                    return { ...prev, username: e.target.value };
+                                    return {
+                                        ...prev,
+                                        username: e.target.value,
+                                    };
                                 })
                             }
                             autoComplete="on"
