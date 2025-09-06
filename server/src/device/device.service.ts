@@ -37,9 +37,9 @@ export class DeviceService {
         });
     }
 
-    async findOne(id: number, userId: number): Promise<Device> {
+    async findOne(id: number): Promise<Device> {
         const device = await this.deviceRepository.findOne({
-            where: { id, userId },
+            where: { id },
         });
 
         if (!device) {
@@ -49,9 +49,9 @@ export class DeviceService {
         return device;
     }
 
-    async findByUuid(uuid: string, userId: number): Promise<Device> {
+    async findByUuid(uuid: string): Promise<Device> {
         const device = await this.deviceRepository.findOne({
-            where: { uuid, userId },
+            where: { uuid },
         });
 
         if (!device) {
@@ -63,10 +63,9 @@ export class DeviceService {
 
     async update(
         id: number,
-        userId: number,
         updateDeviceDto: UpdateDeviceDto,
     ): Promise<Device> {
-        const device = await this.findOne(id, userId);
+        const device = await this.findOne(id);
 
         Object.assign(device, updateDeviceDto);
         device.lastSeen = new Date();
@@ -74,26 +73,23 @@ export class DeviceService {
         return await this.deviceRepository.save(device);
     }
 
-    async updateLastSeen(uuid: string, userId: number): Promise<void> {
-        await this.deviceRepository.update(
-            { uuid, userId },
-            { lastSeen: new Date() },
-        );
+    async updateLastSeen(uuid: string): Promise<void> {
+        await this.deviceRepository.update({ uuid }, { lastSeen: new Date() });
     }
 
-    async deactivate(id: number, userId: number): Promise<Device> {
-        const device = await this.findOne(id, userId);
+    async deactivate(id: number): Promise<Device> {
+        const device = await this.findOne(id);
         device.active = false;
         return await this.deviceRepository.save(device);
     }
 
-    async remove(id: number, userId: number): Promise<void> {
-        const device = await this.findOne(id, userId);
+    async remove(id: number): Promise<void> {
+        const device = await this.findOne(id);
         await this.deviceRepository.remove(device);
     }
 
-    async removeByUuid(uuid: string, userId: number): Promise<void> {
-        const device = await this.findByUuid(uuid, userId);
+    async removeByUuid(uuid: string): Promise<void> {
+        const device = await this.findByUuid(uuid);
         await this.deviceRepository.remove(device);
     }
 

@@ -61,7 +61,7 @@ export class JwtAuthGuard implements CanActivate {
         const deviceUuid = decoded.deviceUuid;
         if (deviceUuid) {
             try {
-                await this.deviceService.updateLastSeen(deviceUuid, user.id);
+                await this.deviceService.updateLastSeen(deviceUuid);
             } catch (error) {
                 console.log('Failed to update device lastSeen:', error);
             }
