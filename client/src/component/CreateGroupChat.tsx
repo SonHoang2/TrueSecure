@@ -143,6 +143,7 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
     };
 
     const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
+        let conversationId: string | null = null;
         try {
             e.preventDefault();
 
@@ -163,6 +164,8 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
                 avatar: formData.avatar,
             });
 
+            conversationId = conversation.id;
+
             await handleCrypto(conversation.id, publicKeys);
 
             // Reload conversations
@@ -172,6 +175,35 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
             setCreateChat((prev) => ({ ...prev, createGroupChat: false }));
         } catch (error) {
             console.error('Error in handleSubmit:', error);
+
+            if (conversationId) {
+                try {
+                    console.log(
+                        'Crypto failed, deleting conversation:',
+                        conversationId,
+                    );
+                    await axiosPrivate.delete(
+                        `${CONVERSATIONS_URL}/${conversationId}`,
+                    );
+                    console.log('Conversation deleted successfully');
+                } catch (deleteError) {
+                    console.error(
+                        'Failed to delete conversation after crypto error:',
+                        deleteError,
+                    );
+                    // You might want to show a more specific error message here
+                    alert(
+                        'Failed to create secure group chat. Please contact support.',
+                    );
+                    return;
+                }
+            }
+
+            if (error.message?.includes("doesn't have any public keys")) {
+                alert(error.message);
+            } else {
+                alert('Failed to create group chat. Please try again.');
+            }
         }
     };
 

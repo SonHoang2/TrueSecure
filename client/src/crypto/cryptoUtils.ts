@@ -73,8 +73,6 @@ export async function importAESKey(base64Key) {
             c.charCodeAt(0),
         );
 
-        console.log('keyData: ', keyData);
-
         const key = await window.crypto.subtle.importKey(
             'raw',
             keyData,
@@ -169,14 +167,35 @@ async function deriveSharedKey(privateKey, publicKey) {
 }
 
 export async function generateECDHKeys() {
-    return await window.crypto.subtle.generateKey(
-        {
-            name: 'ECDH',
-            namedCurve: 'P-256', // Use P-256 instead of X25519
-        },
-        true, // Key is exportable
-        ['deriveKey'], // Allow key derivation
-    );
+    try {
+        // Check if Web Crypto API is available
+        if (!window.crypto || !window.crypto.subtle) {
+            throw new Error(
+                'Web Crypto API is not available in this environment',
+            );
+        }
+
+        const keyPair = await window.crypto.subtle.generateKey(
+            {
+                name: 'ECDH',
+                namedCurve: 'P-256', // Use P-256 instead of X25519
+            },
+            true, // Key is exportable
+            ['deriveKey'], // Allow key derivation
+        );
+
+        if (!keyPair.privateKey || !keyPair.publicKey) {
+            throw new Error('Failed to generate key pair - missing keys');
+        }
+
+        return {
+            privateKey: keyPair.privateKey,
+            publicKey: keyPair.publicKey,
+        };
+    } catch (error) {
+        console.error('Error in generateECDHKeys:', error);
+        throw new Error(`Failed to generate ECDH keys: ${error.message}`);
+    }
 }
 
 export async function generateAesKey() {
