@@ -3,6 +3,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { In, Repository } from 'typeorm';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
@@ -45,9 +46,7 @@ export class UserService {
         if (!user) {
             throw new NotFoundException(`User with ID ${id} not found`);
         }
-        return {
-            user,
-        };
+        return user;
     }
 
     async findByEmailWithPassword(email: string) {
@@ -121,5 +120,13 @@ export class UserService {
         return {
             users: await queryBuilder.getMany(),
         };
+    }
+
+    async update(id: number, updateUserDto: UpdateUserDto) {
+        const user = await this.findOne(id);
+
+        Object.assign(user, updateUserDto);
+        await this.userRepo.save(user);
+        return user;
     }
 }
