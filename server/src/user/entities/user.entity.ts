@@ -5,6 +5,8 @@ import {
     BeforeInsert,
     BeforeUpdate,
     OneToMany,
+    CreateDateColumn,
+    UpdateDateColumn,
 } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { AppRole } from 'src/common/enum/roles.enum';
@@ -58,6 +60,12 @@ export class User {
 
     @OneToMany(() => Device, (device) => device.user)
     devices: Device[];
+
+    @CreateDateColumn()
+    createdAt: Date;
+
+    @UpdateDateColumn()
+    updatedAt: Date;
 
     @BeforeInsert()
     async hashPasswordBeforeInsert() {

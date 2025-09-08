@@ -27,13 +27,13 @@ export class AuthController {
         return this.authService.signup(signupDto, res);
     }
 
-    @Post('login/google')
-    googleLogin(
-        @Body() googleLoginDto: GoogleLoginDto,
-        @Res({ passthrough: true }) res: Response,
-    ) {
-        return this.authService.googleLogin(googleLoginDto, res);
-    }
+    // @Post('login/google')
+    // googleLogin(
+    //     @Body() googleLoginDto: GoogleLoginDto,
+    //     @Res({ passthrough: true }) res: Response,
+    // ) {
+    //     return this.authService.googleLogin(googleLoginDto, res);
+    // }
 
     @UseGuards(JwtAuthGuard)
     @Post('logout')

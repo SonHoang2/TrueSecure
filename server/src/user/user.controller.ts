@@ -7,6 +7,7 @@ import {
     UseGuards,
     Query,
     Req,
+    Patch,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -15,6 +16,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { RequestWithUser } from 'src/common/interfaces/request-with-user.interface';
 import { DeviceService } from 'src/device/device.service';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('users')
@@ -27,6 +29,14 @@ export class UserController {
     @Get('me')
     getMe(@Req() req: RequestWithUser) {
         return this.userService.findOne(req.user.id);
+    }
+
+    @Patch('me')
+    updateMe(
+        @Req() req: RequestWithUser,
+        @Body() updateUserDto: UpdateUserDto,
+    ) {
+        return this.userService.update(req.user.id, updateUserDto);
     }
 
     @Post('public-key')

@@ -1,32 +1,49 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useDispatch } from 'react-redux';
+import { setUser } from '../store/slices/authSlice';
 import {
     MdPerson,
     MdEmail,
     MdEdit,
     MdSave,
     MdCancel,
-    MdVerified,
-    MdClose,
     MdAdminPanelSettings,
-    MdPeople,
     MdCameraAlt,
 } from 'react-icons/md';
 import { FaGoogle } from 'react-icons/fa';
 import { AppRole } from '../enums/roles.enum';
+import { USERS_URL } from '../config/config';
+import useAxiosPrivate from '../hooks/useAxiosPrivate';
 
 const Profile = () => {
     const { user } = useAuth();
+    const dispatch = useDispatch();
     const [isEditing, setIsEditing] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState({
         id: user?.id || '',
         firstName: user?.firstName || '',
         lastName: user?.lastName || '',
+        username: user?.username || '',
         email: user?.email || '',
         avatar: user?.avatar || '',
         googleAccount: user?.googleAccount || false,
         role: user?.role || 'user',
     });
+    const axiosPrivate = useAxiosPrivate();
+
+    const fetchUserData = async () => {
+        try {
+            const url = `${USERS_URL}/me`;
+            const res = await axiosPrivate.get(url);
+            const fetchedUser = res.data.data || res.data;
+            setFormData((prev) => ({ ...prev, ...fetchedUser }));
+            dispatch(setUser(fetchedUser));
+        } catch (error) {
+            console.error('Failed to fetch user data:', error);
+        }
+    };
 
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -41,8 +58,24 @@ const Profile = () => {
         }));
     };
 
-    const handleSave = () => {
-        setIsEditing(false);
+    const handleSave = async () => {
+        try {
+            setIsLoading(true);
+            const url = `${USERS_URL}/me`;
+            const res = await axiosPrivate.patch(url, formData);
+
+            // Update both local state and auth context
+            const updatedUser = res.data.data || res.data;
+            setFormData((prev) => ({ ...prev, ...updatedUser }));
+            dispatch(setUser(updatedUser));
+
+            setIsEditing(false);
+        } catch (error) {
+            console.error('Failed to update profile:', error);
+            // You might want to show an error toast here
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleCancel = () => {
@@ -50,6 +83,7 @@ const Profile = () => {
             id: user?.id || '',
             firstName: user?.firstName || '',
             lastName: user?.lastName || '',
+            username: user?.username || '',
             email: user?.email || '',
             avatar: user?.avatar || '',
             googleAccount: user?.googleAccount || false,
@@ -62,8 +96,6 @@ const Profile = () => {
         switch (role) {
             case 'admin':
                 return <MdAdminPanelSettings className="text-red-500" />;
-            case 'moderator':
-                return <MdPeople className="text-orange-500" />;
             default:
                 return <MdPerson className="text-blue-500" />;
         }
@@ -77,6 +109,10 @@ const Profile = () => {
                 return 'bg-blue-100 text-blue-800 border-blue-200';
         }
     };
+
+    useEffect(() => {
+        fetchUserData();
+    }, []);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8 px-4">
@@ -105,10 +141,11 @@ const Profile = () => {
                                 <div className="flex gap-2">
                                     <button
                                         onClick={handleSave}
-                                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200"
+                                        disabled={isLoading}
+                                        className="bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200"
                                     >
                                         <MdSave className="text-lg" />
-                                        Save
+                                        {isLoading ? 'Saving...' : 'Save'}
                                     </button>
                                     <button
                                         onClick={handleCancel}
@@ -147,7 +184,7 @@ const Profile = () => {
 
                             <div className="sm:ml-6 mt-4 sm:mt-0 text-center sm:text-left">
                                 <h2 className="text-3xl font-bold text-gray-800">
-                                    {formData.firstName} {formData.lastName}
+                                    {formData.username}
                                 </h2>
                                 <div className="flex items-center justify-center sm:justify-start gap-2 mt-2">
                                     <span
@@ -209,6 +246,26 @@ const Profile = () => {
                                 />
                             </div>
 
+                            {/* Username */}
+                            <div className="space-y-2">
+                                <label className="text-md font-semibold text-gray-700 flex items-center gap-2">
+                                    <MdPerson className="text-gray-500" />
+                                    Username
+                                </label>
+                                <input
+                                    type="text"
+                                    name="username"
+                                    value={formData.username}
+                                    onChange={handleInputChange}
+                                    disabled={!isEditing}
+                                    className={`w-full px-4 py-3 border rounded-lg transition-all duration-200 ${
+                                        isEditing
+                                            ? 'border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white'
+                                            : 'border-gray-200 bg-gray-50 text-gray-600'
+                                    }`}
+                                />
+                            </div>
+
                             {/* Email */}
                             <div className="space-y-2">
                                 <label className="text-md font-semibold text-gray-700 flex items-center gap-2">
@@ -235,25 +292,16 @@ const Profile = () => {
                                     {getRoleIcon(formData.role)}
                                     Role
                                 </label>
-                                <select
-                                    name="role"
-                                    value={formData.role}
-                                    onChange={handleInputChange}
-                                    disabled={!isEditing}
-                                    className={`w-full px-4 py-3 border rounded-lg transition-all duration-200 ${
-                                        isEditing
-                                            ? 'border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white'
-                                            : 'border-gray-200 bg-gray-50 text-gray-600'
-                                    }`}
-                                >
-                                    <option value="user">User</option>
-                                    <option value="moderator">Moderator</option>
-                                    <option value="admin">Admin</option>
-                                </select>
+                                <div className="w-full px-4 py-3 border border-gray-200 bg-gray-50 text-gray-600 rounded-lg flex items-center gap-2">
+                                    {getRoleIcon(formData.role)}
+                                    <span className="capitalize">
+                                        {formData.role}
+                                    </span>
+                                </div>
                             </div>
 
                             {/* Google Account */}
-                            <div className="md:col-span-2 space-y-2">
+                            {/* <div className="md:col-span-2 space-y-2">
                                 <label className="text-md font-semibold text-gray-700 flex items-center gap-2">
                                     <FaGoogle className="text-gray-500" />
                                     Google Account Integration
@@ -278,7 +326,7 @@ const Profile = () => {
                                         )}
                                     </label>
                                 </div>
-                            </div>
+                            </div> */}
                         </div>
                     </div>
                 </div>
@@ -299,13 +347,15 @@ const Profile = () => {
                         </div>
                         <div className="bg-green-50 p-4 rounded-lg text-center">
                             <div className="text-2xl font-bold text-green-600">
-                                Active
+                                {user?.active ? 'Active' : 'Inactive'}
                             </div>
                             <div className="text-md text-gray-600">Status</div>
                         </div>
                         <div className="bg-purple-50 p-4 rounded-lg text-center">
                             <div className="text-2xl font-bold text-purple-600">
-                                2024
+                                {new Date(
+                                    user?.createdAt || '',
+                                ).getFullYear() || 'N/A'}
                             </div>
                             <div className="text-md text-gray-600">
                                 Member Since

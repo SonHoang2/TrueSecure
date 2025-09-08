@@ -14,7 +14,6 @@ import { DeviceService } from 'src/device/device.service';
 import * as bcrypt from 'bcrypt';
 import { User } from 'src/user/entities/user.entity';
 import { cleanDto } from 'src/common/utils/cleanDto';
-import { GoogleLoginDto } from './dto/googleLogin.dto';
 import { RedisService } from 'src/redis/redis.service';
 import { parseTimeToMilliseconds } from 'src/common/utils/time.utils';
 
@@ -260,57 +259,5 @@ export class AuthService {
         this.setCookies(res, accessToken, newRefreshToken);
 
         return;
-    }
-
-    async googleLogin(googleLoginDto: GoogleLoginDto, res: Response) {
-        const clientId = this.configService.get('googleClientId');
-        const clientSecret = this.configService.get('googleClientSecret');
-        const grantType = 'authorization_code';
-        const url = 'https://oauth2.googleapis.com/token';
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                client_id: clientId,
-                client_secret: clientSecret,
-                redirect_uri: googleLoginDto.redirectUri,
-                code: googleLoginDto.code,
-                grant_type: grantType,
-            }),
-        });
-
-        const data = await response.json();
-        if (!data.id_token) {
-            throw new BadRequestException('Failed to authenticate with Google');
-        }
-
-        const decodedToken = this.jwtService.decode(data.id_token);
-        if (!decodedToken) {
-            throw new BadRequestException(
-                'Invalid token: Token could not be decoded',
-            );
-        }
-
-        const { email, given_name, family_name } = decodedToken as any;
-
-        let user = await this.userService.findByEmail(email);
-        if (!user) {
-            const password =
-                Math.random().toString(36).slice(-12) +
-                Math.random().toString(36).slice(-12);
-
-            user = await this.userService.create({
-                email,
-                firstName: given_name,
-                lastName: family_name,
-                password,
-                googleAccount: true,
-            });
-        }
-
-        // return this.createSendToken(user, res);
     }
 }

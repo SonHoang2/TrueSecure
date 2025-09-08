@@ -148,7 +148,7 @@ export default function Login() {
                         />
                     </div>
                 </form>
-                <div className="text-center text-gray-600">
+                {/* <div className="text-center text-gray-600">
                     <p>Or login with a social account</p>
                 </div>
                 <div className="flex justify-center mt-2 mb-10">
@@ -162,7 +162,7 @@ export default function Login() {
                             className="w-6 h-6 transition-transform duration-200 hover:scale-105"
                         />
                     </div>
-                </div>
+                </div> */}
                 <div className="text-center text-gray-600">
                     <p>
                         Don't have an account?

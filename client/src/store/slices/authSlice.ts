@@ -8,11 +8,17 @@ import * as cryptoUtils from '../../crypto/cryptoUtils';
 
 export interface User {
     id: number;
+    firstName: string;
+    lastName: string;
     username: string;
     email: string;
     avatar: string;
-    isOnline: boolean;
+    googleAccount: boolean;
+    active: boolean;
+    isOnline?: boolean;
     role: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface AuthState {
