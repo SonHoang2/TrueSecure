@@ -59,14 +59,29 @@ export class SocketService {
                 +senderId,
             );
 
-        // Notify all participants
+        // Notify all participants on all their devices
         for (const participant of participants) {
-            await this.socketManagerService.emitToUser({
-                userId: participant.userId,
-                event: 'new-group-message',
-                data,
-                deviceUuid,
-            });
+            const deviceMap = await this.socketCacheService.getDevicesByUserId(
+                participant.userId,
+            );
+
+            if (Object.keys(deviceMap).length > 0) {
+                // User is online on at least one device
+                for (const participantDeviceUuid of Object.keys(deviceMap)) {
+                    await this.socketManagerService.emitToUser({
+                        userId: participant.userId,
+                        event: 'new-group-message',
+                        data,
+                        deviceUuid: participantDeviceUuid,
+                    });
+                }
+            } else {
+                // If participant is offline, store the message in cache
+                await this.rabbitmqService.sendOfflineMessage(
+                    String(participant.userId),
+                    data,
+                );
+            }
         }
 
         // Notify sender
