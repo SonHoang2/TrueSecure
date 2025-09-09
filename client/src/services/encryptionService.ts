@@ -67,7 +67,7 @@ export const getGroupKey = async ({
                 `${CONVERSATIONS_URL}/${conversationId}/key`,
             );
 
-            const { groupKey: exportedEncryptedKey, adminPublicKey } =
+            const { encryptedGroupKey: exportedEncryptedKey, adminPublicKey } =
                 response.data.data;
 
             if (!exportedEncryptedKey) {
