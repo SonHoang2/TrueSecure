@@ -121,7 +121,7 @@ export class SocketManagerService {
         if (resolvedSocketId) {
             this.server.to(resolvedSocketId).emit(event, data);
         } else {
-            this.logger.warn(
+            this.logger.error(
                 `No socket found for user ${userId} device ${deviceUuid} when emitting "${event}" resolvedSocketId: ${resolvedSocketId}`,
             );
         }
