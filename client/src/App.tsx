@@ -11,7 +11,10 @@ import useAxiosPrivate from './hooks/useAxiosPrivate';
 import { AppRole } from './enums/roles.enum';
 import Profile from './pages/Profile';
 import { useAppDispatch, useAppSelector } from './store/hooks';
-import { loadUserKeyFromStorage } from './store/slices/authSlice';
+import {
+    loadDeviceUuidFromStorage,
+    loadUserKeyFromStorage,
+} from './store/slices/authSlice';
 
 const App = () => {
     const [userStatus, setUserStatus] = useState({
@@ -27,6 +30,7 @@ const App = () => {
     useEffect(() => {
         if (user && !isKeysInitialized) {
             dispatch(loadUserKeyFromStorage());
+            dispatch(loadDeviceUuidFromStorage());
         }
     }, [user, isKeysInitialized, dispatch, axiosPrivate]);
 

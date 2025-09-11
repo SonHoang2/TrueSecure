@@ -127,6 +127,7 @@ export const useAuth = () => {
         error,
         userKey,
         isKeysInitialized,
+        deviceUuid,
 
         // Actions
         login,

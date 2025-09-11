@@ -47,7 +47,7 @@ export const useChatMessages = ({
 }: UseChatMessagesProps) => {
     const dispatch = useAppDispatch();
     const user = useAuthUser();
-    const { userKey } = useAuth();
+    const { userKey, deviceUuid } = useAuth();
     const { recipientDevices } = useConversations();
 
     const messageSoundRef = useRef(
@@ -164,6 +164,10 @@ export const useChatMessages = ({
                         );
                     }
 
+                    if (!deviceUuid) {
+                        throw new Error('Device UUID is required');
+                    }
+
                     if (!selectedConversationId) {
                         throw new Error('Selected conversation ID is required');
                     }
@@ -173,6 +177,7 @@ export const useChatMessages = ({
                         userKey: userKey,
                         axiosPrivate,
                         userId: user.id,
+                        deviceUuid: deviceUuid,
                     });
 
                     if (!groupkey) {
@@ -196,6 +201,7 @@ export const useChatMessages = ({
                         ...messageData,
                         content: encryptedContent,
                         iv: iv,
+                        deviceUuid: deviceUuid,
                     };
 
                     socket.emit('send-group-message', encryptedMessage);
@@ -419,7 +425,7 @@ export const useChatMessages = ({
 
     const sendImage = () => {
         return;
-    }
+    };
 
     useEffect(() => {
         if (!socket || !userKey?.privateKey) {
@@ -511,6 +517,7 @@ export const useChatMessages = ({
                         userKey: userKey,
                         axiosPrivate,
                         userId: user.id,
+                        deviceUuid: deviceUuid,
                     });
 
                     const decryptedContent = await cryptoUtils.decryptGroupData(
@@ -584,6 +591,8 @@ export const useChatMessages = ({
                 userId: number;
                 status: MessageStatus;
             }) => {
+                console.log('group message update', data);
+
                 dispatch(persistGroupStatusUpdate(data));
             },
         );
