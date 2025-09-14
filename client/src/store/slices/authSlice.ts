@@ -189,6 +189,20 @@ export const loginWithGoogle = createAsyncThunk(
     },
 );
 
+export const loadDeviceUuidFromStorage = createAsyncThunk(
+    'auth/loadDeviceUuidFromStorage',
+    async (_, { rejectWithValue }) => {
+        try {
+            const deviceUuid = await cryptoUtils.getDeviceUuid();
+            return deviceUuid;
+        } catch (error: any) {
+            return rejectWithValue(
+                error.message || 'Failed to load device UUID from storage',
+            );
+        }
+    },
+);
+
 const authSlice = createSlice({
     name: 'auth',
     initialState,
@@ -306,6 +320,9 @@ const authSlice = createSlice({
                 state.isLoading = false;
                 state.error = action.payload as string;
                 state.isKeysInitialized = false;
+            })
+            .addCase(loadDeviceUuidFromStorage.fulfilled, (state, action) => {
+                state.deviceUuid = action.payload;
             });
     },
 });

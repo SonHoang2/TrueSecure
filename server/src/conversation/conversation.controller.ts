@@ -9,6 +9,7 @@ import {
     Delete,
     Request,
     ParseIntPipe,
+    Query,
 } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
@@ -35,12 +36,14 @@ export class ConversationController {
     @Get(':conversationId/key')
     getConversationKey(
         @Param('conversationId') conversationId: string,
+        @Query('deviceUuid') deviceUuid: string,
         @Req() req: RequestWithUser,
     ) {
         const userId = req.user.id;
         return this.conversationService.getConversationKey(
             +conversationId,
             userId,
+            deviceUuid,
         );
     }
 
