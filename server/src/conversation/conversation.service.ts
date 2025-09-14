@@ -454,4 +454,94 @@ export class ConversationService {
 
         return;
     }
+
+    async leaveGroup(conversationId: number, userId: number) {
+        const conversation = await this.conversationRepo.findOne({
+            where: { id: conversationId },
+            relations: ['participants'],
+        });
+
+        if (!conversation) {
+            throw new NotFoundException('Conversation not found');
+        }
+
+        if (!conversation.isGroup) {
+            throw new BadRequestException(
+                'Cannot leave a private conversation',
+            );
+        }
+
+        const participant = conversation.participants.find(
+            (p) => p.userId === userId,
+        );
+
+        if (!participant) {
+            throw new ForbiddenException(
+                'You are not a participant of this conversation',
+            );
+        }
+
+        // Check if user is the only admin
+        const admins = conversation.participants.filter(
+            (p) => p.role === ChatGroupRole.ADMIN,
+        );
+
+        if (participant.role === ChatGroupRole.ADMIN && admins.length === 1) {
+            // If only one admin and more than one participant, promote another member
+            const members = conversation.participants.filter(
+                (p) => p.role === ChatGroupRole.MEMBER,
+            );
+
+            if (members.length > 0) {
+                // Promote the first member to admin
+                members[0].role = ChatGroupRole.ADMIN;
+                await this.participantRepo.save(members[0]);
+            }
+        }
+
+        // Remove participant devices first (due to foreign key constraints)
+        await this.participantDeviceRepo.delete({
+            participantId: participant.id,
+        });
+
+        // Remove the participant
+        await this.participantRepo.remove(participant);
+
+        // Check remaining participants
+        const remainingParticipants = await this.participantRepo.count({
+            where: { conversationId },
+        });
+
+        // Delete group if 0 or 1 participants remain
+        if (remainingParticipants <= 1) {
+            // Clean up any remaining participant devices
+            const remainingParticipantIds = await this.participantRepo.find({
+                where: { conversationId },
+                select: ['id'],
+            });
+
+            for (const p of remainingParticipantIds) {
+                await this.participantDeviceRepo.delete({
+                    participantId: p.id,
+                });
+            }
+
+            // Remove remaining participants
+            await this.participantRepo.delete({ conversationId });
+
+            // Delete the conversation
+            await this.conversationRepo.remove(conversation);
+
+            return {
+                message:
+                    'Successfully left the group. Group was deleted as it had insufficient members.',
+                groupDeleted: true,
+            };
+        }
+
+        return {
+            message: 'Successfully left the group',
+            groupDeleted: false,
+        };
+    }
 }

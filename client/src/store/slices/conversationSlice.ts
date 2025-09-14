@@ -57,12 +57,12 @@ export const loadConversationDetails = createAsyncThunk(
                 `${CONVERSATIONS_URL}/${conversationId}`,
             );
             return res.data.data;
-        } catch (error) {
-            return rejectWithValue(
-                error instanceof Error
-                    ? error.message
-                    : 'Failed to load conversation details',
-            );
+        } catch (error: any) {
+            const errorMessage =
+                error.response?.data?.message ||
+                error.message ||
+                'Failed to load conversation details';
+            return rejectWithValue(errorMessage);
         }
     },
 );
@@ -108,6 +108,22 @@ export const fetchRecipientDevices = createAsyncThunk(
         } catch (error: any) {
             return rejectWithValue(
                 error.message || 'Failed to fetch recipient devices',
+            );
+        }
+    },
+);
+
+export const leaveGroup = createAsyncThunk(
+    'conversations/leaveGroup',
+    async (conversationId: number, { rejectWithValue }) => {
+        try {
+            await axiosPrivate.delete(
+                `${CONVERSATIONS_URL}/${conversationId}/leave`,
+            );
+            return conversationId;
+        } catch (error: any) {
+            return rejectWithValue(
+                error.response?.data?.message || 'Failed to leave group',
             );
         }
     },
@@ -244,6 +260,9 @@ const conversationSlice = createSlice({
             .addCase(loadConversationDetails.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
+                state.currentConversation = null;
+                state.currentReceiver = null;
+                state.participants = [];
             })
             // Create conversation cases
             .addCase(createConversation.pending, (state) => {
@@ -265,6 +284,30 @@ const conversationSlice = createSlice({
             })
             .addCase(fetchRecipientDevices.rejected, (state, action) => {
                 state.recipientDevices = [];
+                state.error = action.payload as string;
+            })
+            .addCase(leaveGroup.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(leaveGroup.fulfilled, (state, action) => {
+                state.isLoading = false;
+                const conversationId = action.payload;
+                // Remove the conversation from the list
+                state.conversations = state.conversations.filter(
+                    (conv) => conv.id !== conversationId,
+                );
+                // Clear current conversation if it's the one being left
+                if (state.selectedConversationId === conversationId) {
+                    state.selectedConversationId = null;
+                    state.currentConversation = null;
+                    state.currentReceiver = null;
+                    state.participants = [];
+                    state.recipientDevices = [];
+                }
+            })
+            .addCase(leaveGroup.rejected, (state, action) => {
+                state.isLoading = false;
                 state.error = action.payload as string;
             });
     },

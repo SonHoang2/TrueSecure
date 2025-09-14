@@ -1,5 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Participant } from './participant.entity';
+import { DEFAULT_GROUP_AVATAR_URL } from 'src/common/constants/default-avatar';
 
 @Entity('conversations')
 export class Conversation {
@@ -17,7 +18,7 @@ export class Conversation {
     isGroup: boolean;
 
     @Column({
-        nullable: true,
+        default: DEFAULT_GROUP_AVATAR_URL,
     })
     avatar: string;
 

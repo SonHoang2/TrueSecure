@@ -9,12 +9,16 @@ import {
     MdLogout,
 } from 'react-icons/md';
 import { FaArrowLeft, FaRegEdit } from 'react-icons/fa';
+import { useDispatch } from 'react-redux';
+import { AppDispatch } from '../store';
+import { leaveGroup } from '../store/slices/conversationSlice';
 
 interface ChatInfoSidebarProps {
     isOpen: boolean;
     onClose: () => void;
     conversation: any;
     receiver: any;
+    participants: any[];
 }
 
 const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
@@ -22,6 +26,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
     onClose,
     conversation,
     receiver,
+    participants,
 }) => {
     if (!isOpen) return null;
 
@@ -33,11 +38,25 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
         mediaFiles: false,
     });
 
+    const dispatch = useDispatch<AppDispatch>();
+
     const toggleSection = (section: string) => {
         setOpenSections((prev) => ({
             ...prev,
             [section]: !prev[section],
         }));
+    };
+
+    const handleLeaveGroup = async () => {
+        if (!conversation?.isGroup) return;
+
+        try {
+            await dispatch(leaveGroup(conversation.id)).unwrap();
+            onClose(); // Close sidebar after leaving
+        } catch (error) {
+            console.error('Failed to leave group:', error);
+            // Handle error (show toast, etc.)
+        }
     };
 
     return (
@@ -132,29 +151,52 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                 </div> */}
 
                 <div className="py-2">
-                    <button
-                        className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left"
-                        onClick={() => toggleSection('chatMembers')}
-                    >
-                        <span className="font-medium flex-1 text-left">
-                            Chat members
-                        </span>
-                        <span className="ml-2">
-                            {openSections.chatMembers ? (
-                                <MdExpandLess size={20} />
-                            ) : (
-                                <MdExpandMore size={20} />
+                    {conversation?.isGroup && (
+                        <>
+                            <button
+                                className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left"
+                                onClick={() => toggleSection('chatMembers')}
+                            >
+                                <span className="font-medium flex-1 text-left">
+                                    Chat members
+                                </span>
+                                <span className="ml-2">
+                                    {openSections.chatMembers ? (
+                                        <MdExpandLess size={20} />
+                                    ) : (
+                                        <MdExpandMore size={20} />
+                                    )}
+                                </span>
+                            </button>
+                            {openSections.chatMembers && (
+                                <div className="pl-4 py-2">
+                                    {participants?.map((participant) => (
+                                        <div
+                                            key={participant.id}
+                                            className="flex items-center py-2 px-4 hover:bg-gray-50 rounded"
+                                        >
+                                            <img
+                                                src={participant.avatar}
+                                                alt={`${participant.firstName} ${participant.lastName}`}
+                                                className="w-8 h-8 rounded-full object-cover mr-3"
+                                            />
+                                            <div className="flex-1">
+                                                <div className="text-sm font-medium text-gray-900">
+                                                    {participant.firstName}{' '}
+                                                    {participant.lastName}
+                                                </div>
+                                                <div className="text-xs text-gray-500 capitalize">
+                                                    {participant.role}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
-                        </span>
-                    </button>
-                    {openSections.chatMembers && (
-                        <div className="pl-8 py-2 text-gray-600 text-sm">
-                            {/* Chat members content here */}
-                            Members list...
-                        </div>
+                        </>
                     )}
 
-                    <button
+                    {/* <button
                         className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left"
                         onClick={() => toggleSection('mediaFiles')}
                     >
@@ -171,10 +213,9 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                     </button>
                     {openSections.mediaFiles && (
                         <div className="pl-8 py-2 text-gray-600 text-sm">
-                            {/* Media/files content here */}
                             Media and files...
                         </div>
-                    )}
+                    )} */}
 
                     <button
                         className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left"
@@ -193,7 +234,14 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                     </button>
                     {openSections.privacy && (
                         <div>
-                            <button className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left">
+                            <button
+                                className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left"
+                                onClick={
+                                    conversation?.isGroup
+                                        ? handleLeaveGroup
+                                        : undefined
+                                }
+                            >
                                 <span className="mr-3 text-gray-600">
                                     {conversation?.isGroup ? (
                                         <MdLogout size={20} />

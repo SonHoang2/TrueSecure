@@ -7,6 +7,8 @@ import {
     UseGuards,
     Req,
     Delete,
+    Request,
+    ParseIntPipe,
 } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
@@ -69,5 +71,14 @@ export class ConversationController {
             createConversationDto,
             userId,
         );
+    }
+
+    @Delete(':id/leave')
+    @UseGuards(JwtAuthGuard)
+    async leaveGroup(
+        @Param('id', ParseIntPipe) conversationId: number,
+        @Request() req,
+    ) {
+        return this.conversationService.leaveGroup(conversationId, req.user.id);
     }
 }
