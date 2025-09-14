@@ -32,7 +32,7 @@ export class ConversationService {
         createConversationDto: CreateConversationDto,
         currentUserId: number,
     ) {
-        const { users, avatar, title } = createConversationDto;
+        const { users, title } = createConversationDto;
 
         users.push(currentUserId);
 
@@ -94,10 +94,6 @@ export class ConversationService {
             conversation = this.conversationRepo.create({
                 isGroup: users.length > 2,
                 title: users.length > 2 ? title : null,
-                avatar:
-                    users.length > 2
-                        ? avatar?.trim() || 'group-avatar-default.png'
-                        : null,
             });
 
             await this.conversationRepo.save(conversation);

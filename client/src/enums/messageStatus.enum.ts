@@ -1,6 +1,6 @@
 export enum MessageStatus {
     SENDING = 'sending',
     SENT = 'sent',
-    DELIVERED = 'delivered',
+    // DELIVERED = 'delivered',
     SEEN = 'seen',
 }
