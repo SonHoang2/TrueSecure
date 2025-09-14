@@ -20,6 +20,7 @@ interface CreateGroupChatProps {
     onSearch: (
         searchTerm: string,
         setUsers: Dispatch<SetStateAction<User[]>>,
+        axiosPrivate: any,
     ) => Promise<void>;
 }
 

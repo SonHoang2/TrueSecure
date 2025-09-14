@@ -12,6 +12,7 @@ import { getLastMessageFromIndexedDB } from '../utils/indexedDB';
 import { Message } from '../types/messages.types';
 import { useConversations } from '../store/hooks';
 import { useAuthUser } from '../hooks/useAuthUser';
+import { searchUsers } from '../utils/userUtils';
 
 type ChatLeftPanelProps = {
     userStatus: UserStatus;
@@ -41,30 +42,6 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
 
     const axiosPrivate = useAxiosPrivate();
     const navigate = useNavigate();
-
-    const searchUsers = async (
-        searchTerm: string,
-        setUsers: React.Dispatch<React.SetStateAction<any[]>>,
-    ) => {
-        try {
-            if (!searchTerm) {
-                return;
-            }
-
-            const res = await axiosPrivate.get(
-                USERS_URL + `/search?username=${searchTerm}`,
-            );
-
-            console.log(
-                `Search results for "${searchTerm}":`,
-                res.data.data.users,
-            );
-
-            setUsers(res.data.data.users);
-        } catch (error) {
-            console.log(error);
-        }
-    };
 
     const getSenderName = (participants: any[], senderId: number) => {
         const sender = participants?.find(
@@ -99,7 +76,7 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
 
     useEffect(() => {
         if (searchTerm) {
-            searchUsers(searchTerm, setFilteredUsers);
+            searchUsers(searchTerm, setFilteredUsers, axiosPrivate);
         } else {
             setFilteredUsers([]);
         }

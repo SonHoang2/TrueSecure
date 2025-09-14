@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import socket from '../utils/socket';
 import { useAuth } from '../hooks/useAuth';
 import ChatLeftPanel from '../component/ChatLeftPanel';
@@ -20,6 +20,7 @@ import { UserStatus } from '../types/users.types';
 import ChatInfoSidebar from '../component/ChatInfoSidebar';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { fetchRecipientDevices } from '../store/slices/conversationSlice';
+import { Routes } from '../enums/routes.enum';
 
 interface ChatProps {
     userStatus: UserStatus;
@@ -120,9 +121,6 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
         fileInputRef.current?.click();
     };
 
-    console.log('Conversation error:', error);
-    
-
     if (
         (error && error.includes('not found')) ||
         error?.includes('not a participant')
@@ -164,12 +162,12 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
                                     ? 'This conversation no longer exists.'
                                     : 'You are not a participant in this conversation.'}
                             </p>
-                            <button
-                                onClick={() => window.history.back()}
-                                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                            <Link
+                                to={Routes.HOME}
+                                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors inline-block text-center"
                             >
                                 Go Back
-                            </button>
+                            </Link>
                         </div>
                     </div>
                 </div>

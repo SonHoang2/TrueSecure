@@ -7,6 +7,7 @@ import {
     MdExpandMore,
     MdBlock,
     MdLogout,
+    MdPersonAdd,
 } from 'react-icons/md';
 import { FaArrowLeft, FaRegEdit } from 'react-icons/fa';
 import { useDispatch } from 'react-redux';
@@ -36,7 +37,12 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
         privacy: false,
         chatMembers: false,
         mediaFiles: false,
+        addUsers: false,
     });
+
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
 
     const dispatch = useDispatch<AppDispatch>();
 
@@ -56,6 +62,42 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
         } catch (error) {
             console.error('Failed to leave group:', error);
             // Handle error (show toast, etc.)
+        }
+    };
+
+    const handleSearchUsers = async (term: string) => {
+        if (!term.trim()) {
+            setSearchResults([]);
+            return;
+        }
+
+        setIsSearching(true);
+        try {
+            // TODO: Replace with actual API call to search users
+            // const response = await fetch(`/api/users/search?q=${term}`);
+            // const users = await response.json();
+            // setSearchResults(users.filter(user =>
+            //     !participants.some(p => p.id === user.id)
+            // ));
+
+            // Mock data for now
+            setSearchResults([]);
+        } catch (error) {
+            console.error('Failed to search users:', error);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    const handleAddUser = async (userId: string) => {
+        try {
+            // TODO: Implement addUserToGroup action in Redux store
+            // await dispatch(addUserToGroup({ conversationId: conversation.id, userId })).unwrap();
+            setSearchTerm('');
+            setSearchResults([]);
+            console.log('Adding user to group:', userId);
+        } catch (error) {
+            console.error('Failed to add user to group:', error);
         }
     };
 
@@ -153,6 +195,92 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                 <div className="py-2">
                     {conversation?.isGroup && (
                         <>
+                            <button
+                                className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left"
+                                onClick={() => toggleSection('addUsers')}
+                            >
+                                <span className="mr-3 text-gray-600">
+                                    <MdPersonAdd size={20} />
+                                </span>
+                                <span className="font-medium flex-1 text-left">
+                                    Add users
+                                </span>
+                                <span className="ml-2">
+                                    {openSections.addUsers ? (
+                                        <MdExpandLess size={20} />
+                                    ) : (
+                                        <MdExpandMore size={20} />
+                                    )}
+                                </span>
+                            </button>
+                            {openSections.addUsers && (
+                                <div className="pl-4 py-2">
+                                    <div className="px-4 mb-3">
+                                        <input
+                                            type="text"
+                                            placeholder="Search users to add..."
+                                            value={searchTerm}
+                                            onChange={(e) => {
+                                                setSearchTerm(e.target.value);
+                                                handleSearchUsers(
+                                                    e.target.value,
+                                                );
+                                            }}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                        />
+                                    </div>
+                                    {isSearching && (
+                                        <div className="px-4 py-2 text-sm text-gray-500">
+                                            Searching...
+                                        </div>
+                                    )}
+                                    {searchResults.length > 0 && (
+                                        <div className="max-h-40 overflow-y-auto">
+                                            {searchResults.map((user) => (
+                                                <div
+                                                    key={user.id}
+                                                    className="flex items-center justify-between py-2 px-4 hover:bg-gray-50 rounded"
+                                                >
+                                                    <div className="flex items-center">
+                                                        <img
+                                                            src={user.avatar}
+                                                            alt={`${user.firstName} ${user.lastName}`}
+                                                            className="w-8 h-8 rounded-full object-cover mr-3"
+                                                        />
+                                                        <div>
+                                                            <div className="text-sm font-medium text-gray-900">
+                                                                {user.firstName}{' '}
+                                                                {user.lastName}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500">
+                                                                {user.email}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() =>
+                                                            handleAddUser(
+                                                                user.id,
+                                                            )
+                                                        }
+                                                        className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+                                                    >
+                                                        Add
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {searchTerm &&
+                                        !isSearching &&
+                                        searchResults.length === 0 && (
+                                            <div className="px-4 py-2 text-sm text-gray-500">
+                                                No users found
+                                            </div>
+                                        )}
+                                </div>
+                            )}
+
                             <button
                                 className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left"
                                 onClick={() => toggleSection('chatMembers')}
