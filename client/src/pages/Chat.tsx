@@ -13,10 +13,7 @@ import { useWebRTC } from '../hooks/useWebRTC';
 import { useChatMessages } from '../hooks/useChatMessages';
 import { useAppDispatch, useConversations } from '../store/hooks';
 import { setCurrentMessage } from '../store/slices/chatSlice';
-import {
-    loadConversationDetails,
-    selectConversation,
-} from '../store/slices/conversationSlice';
+import { loadConversationDetails } from '../store/slices/conversationSlice';
 import SidebarNavigation from '../component/SidebarNavigation';
 import { MdImage, MdSend, MdThumbUp } from 'react-icons/md';
 import { UserStatus } from '../types/users.types';
@@ -36,7 +33,7 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
     const { userKeys, isKeysInitialized } = useAuth();
     const dispatch = useAppDispatch();
 
-    const { currentConversation, currentReceiver, participants } =
+    const { currentConversation, currentReceiver, participants, error } =
         useConversations();
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -123,6 +120,63 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
         fileInputRef.current?.click();
     };
 
+    console.log('Conversation error:', error);
+    
+
+    if (
+        (error && error.includes('not found')) ||
+        error?.includes('not a participant')
+    ) {
+        return (
+            <div className="py-4 flex bg-neutral-100 h-full">
+                <SidebarNavigation />
+                <div
+                    className={`hidden md:min-w-[400px] md:flex md:w-auto me-4`}
+                >
+                    <ChatLeftPanel
+                        userStatus={userStatus}
+                        conversationId={conversationId}
+                    />
+                </div>
+                <div className="rounded-lg bg-white me-4 flex-col flex w-full">
+                    <div className="flex flex-col items-center justify-center h-full py-20">
+                        <div className="text-center max-w-md mx-auto">
+                            <div className="mb-4">
+                                <svg
+                                    className="mx-auto h-16 w-16 text-gray-400"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={1}
+                                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                    />
+                                </svg>
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                Conversation Not Available
+                            </h3>
+                            <p className="text-gray-500 mb-6">
+                                {error.includes('not found')
+                                    ? 'This conversation no longer exists.'
+                                    : 'You are not a participant in this conversation.'}
+                            </p>
+                            <button
+                                onClick={() => window.history.back()}
+                                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                            >
+                                Go Back
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="py-4 flex bg-neutral-100 h-full">
             <SidebarNavigation />
@@ -156,7 +210,7 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
                         typingUsers={typingUsers}
                     />
                     <div className="flex p-1 items-center mb-2">
-                        <input
+                        {/* <input
                             ref={fileInputRef}
                             type="file"
                             accept="image/*"
@@ -168,7 +222,7 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
                             onClick={triggerImageUpload}
                         >
                             <MdImage className="text-blue-500 text-2xl" />
-                        </button>
+                        </button> */}
                         <input
                             type="text"
                             className="flex-grow ms-2 bg-gray-100 px-3 py-2 rounded-3xl focus:outline-none caret-blue-500 me-2"
@@ -207,6 +261,7 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
                     onClose={() => setShowChatInfo(false)}
                     conversation={currentConversation}
                     receiver={currentReceiver}
+                    participants={participants}
                 />
             )}
             <div>
