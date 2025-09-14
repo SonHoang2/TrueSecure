@@ -8,6 +8,7 @@ interface GetGroupKeyParams {
     userKey: UserKey;
     userId: number;
     axiosPrivate: AxiosInstance;
+    deviceUuid: string;
 }
 
 class EncryptionError extends Error {
@@ -45,6 +46,7 @@ export const getGroupKey = async ({
     userKey,
     userId,
     axiosPrivate,
+    deviceUuid,
 }: GetGroupKeyParams): Promise<CryptoKey> => {
     const { privateKey } = userKey;
 
@@ -56,53 +58,83 @@ export const getGroupKey = async ({
         throw new EncryptionError('Conversation ID and User ID are required');
     }
 
-    try {
-        let groupKey = await cryptoUtils.importGroupKey({
-            conversationId,
-            userId,
-        });
+    if (!deviceUuid) {
+        throw new EncryptionError('Device UUID is required');
+    }
 
-        if (!groupKey) {
-            const response = await axiosPrivate.get(
-                `${CONVERSATIONS_URL}/${conversationId}/key`,
-            );
+    let groupKey = await cryptoUtils.importGroupKey({
+        conversationId,
+        userId,
+    });
 
-            const { encryptedGroupKey: exportedEncryptedKey, adminPublicKey } =
-                response.data.data;
-
-            if (!exportedEncryptedKey) {
-                throw new EncryptionError(
-                    'Encrypted group key not found on server',
-                );
-            }
-
-            // Decrypt the group key
-            const exportedKey = await cryptoUtils.decryptAESKeys(
-                privateKey,
-                exportedEncryptedKey,
-            );
-
-            groupKey = await cryptoUtils.importAESKey(exportedKey);
-
-            await cryptoUtils.storeGroupKey({
-                conversationId,
-                userId,
-                groupKey,
-            });
-        }
-
-        if (!groupKey) {
-            throw new EncryptionError('Failed to obtain or decrypt group key');
-        }
-
+    if (groupKey) {
         return groupKey;
-    } catch (error) {
-        if (error instanceof EncryptionError) {
-            throw error;
-        }
+    }
+
+    let response;
+    try {
+        response = await axiosPrivate.get(
+            `${CONVERSATIONS_URL}/${conversationId}/key`,
+            {
+                params: { deviceUuid },
+            },
+        );
+    } catch (apiError: any) {
         throw new EncryptionError(
-            `Failed to get group key for conversation ${conversationId}`,
-            error instanceof Error ? error : new Error(String(error)),
+            `Failed to fetch group key from server: ${
+                apiError.response?.data?.message || apiError.message
+            }`,
+            apiError,
         );
     }
+
+    const { encryptedGroupKey } = response.data.data || response.data;
+
+    if (!encryptedGroupKey) {
+        throw new EncryptionError(
+            'No encrypted group key found for this device',
+        );
+    }
+
+    let decryptedKey;
+    try {
+        decryptedKey = await cryptoUtils.decryptAESKeys(
+            privateKey,
+            encryptedGroupKey,
+        );
+    } catch (decryptError) {
+        throw new EncryptionError(
+            'Failed to decrypt group key',
+            decryptError instanceof Error
+                ? decryptError
+                : new Error(String(decryptError)),
+        );
+    }
+
+    try {
+        groupKey = await cryptoUtils.importAESKey(decryptedKey);
+    } catch (importError) {
+        throw new EncryptionError(
+            'Failed to import decrypted group key',
+            importError instanceof Error
+                ? importError
+                : new Error(String(importError)),
+        );
+    }
+
+    if (!groupKey) {
+        throw new EncryptionError('Failed to import group key');
+    }
+
+    try {
+        await cryptoUtils.storeGroupKey({
+            conversationId,
+            userId,
+            groupKey,
+        });
+    } catch (storeError) {
+        console.warn('Failed to store group key locally:', storeError);
+    }
+
+    return groupKey;
 };

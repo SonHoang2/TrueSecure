@@ -326,9 +326,17 @@ export class ConversationService {
         };
     }
 
-    async getConversationKey(conversationId: number, userId: number) {
+    async getConversationKey(
+        conversationId: number,
+        userId: number,
+        deviceUuid: string,
+    ) {
         if (!conversationId) {
             throw new BadRequestException('Conversation ID is required');
+        }
+
+        if (!deviceUuid) {
+            throw new BadRequestException('Device UUID is required');
         }
 
         const conversation = await this.conversationRepo.findOne({
@@ -352,44 +360,24 @@ export class ConversationService {
             );
         }
 
-        const participants = await this.participantRepo
-            .createQueryBuilder('participant')
-            .leftJoinAndSelect('participant.user', 'user')
-            .leftJoinAndSelect(
-                'participant.participantDevices',
-                'participantDevices',
-            )
-            .leftJoinAndSelect('participantDevices.device', 'device')
-            .where('participant.conversationId = :conversationId', {
+        const participantDevice = await this.participantDeviceRepo
+            .createQueryBuilder('participantDevice')
+            .innerJoin('participantDevice.device', 'device')
+            .innerJoin('participantDevice.participant', 'participant')
+            .where('device.uuid = :deviceUuid', { deviceUuid })
+            .andWhere('participant.conversationId = :conversationId', {
                 conversationId,
             })
-            .getMany();
+            .getOne();
 
-        const admin = participants.find((p) => p.role === ChatGroupRole.ADMIN);
-        if (!admin) {
+        if (!participantDevice) {
             throw new NotFoundException(
-                'Admin not found for this conversation',
-            );
-        }
-
-        const currentUserParticipant = participants.find(
-            (p) => p.userId === userId,
-        );
-        const userGroupKeys =
-            currentUserParticipant?.participantDevices?.map((pd) => ({
-                deviceId: pd.device.id,
-                deviceUuid: pd.device.uuid,
-                encryptedGroupKey: pd.encryptedGroupKey,
-            })) || [];
-
-        if (userGroupKeys.length === 0) {
-            throw new NotFoundException(
-                'No encrypted group keys found for your devices',
+                'No encrypted group key found for this device',
             );
         }
 
         return {
-            encryptedGroupKeys: userGroupKeys,
+            encryptedGroupKey: participantDevice.encryptedGroupKey,
         };
     }
 

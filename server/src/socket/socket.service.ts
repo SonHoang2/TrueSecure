@@ -77,12 +77,14 @@ export class SocketService {
                 }
             } else {
                 // If participant is offline, store the message in cache
-                await this.rabbitmqService.sendOfflineMessage(
-                    String(participant.userId),
-                    data,
-                );
+                // await this.rabbitmqService.sendOfflineMessage(
+                //     String(participant.userId),
+                //     data,
+                // );
             }
         }
+
+        console.log('Notifying sender about message status', deviceUuid);
 
         // Notify sender
         await this.socketManagerService.emitToUser({
