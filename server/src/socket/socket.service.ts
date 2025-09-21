@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SocketManagerService } from './services/socket-manager/socket-manager.service';
 import { SocketCacheService } from './services/socket-cache/socket-cache.service';
 import { ConversationService } from 'src/conversation/conversation.service';
@@ -7,15 +7,31 @@ import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 import { PrivateMessageDto } from './dto/message/private-message.dto';
 import { GroupMessageDto } from './dto/message/group-message.dto';
 import { MessageStatusDto } from './dto/message/message-status.dto';
+import { SocketUser } from './interfaces/socket-user.interface';
+import {
+    AnswerDto,
+    CallActionDto,
+    IceCandidateDto,
+    OfferDto,
+} from './dto/call/call.dto';
+
+const userCallDeviceMap = new Map<number, string>();
 
 @Injectable()
 export class SocketService {
+    private readonly logger = new Logger(SocketService.name);
+
     constructor(
         private readonly socketManagerService: SocketManagerService,
         private readonly socketCacheService: SocketCacheService,
         private readonly conversationService: ConversationService,
         private readonly rabbitmqService: RabbitmqService,
     ) {}
+
+    getCleanDeviceUuid(client: SocketUser): string {
+        const raw = client.handshake?.query?.deviceUuid as string;
+        return raw ? raw.replace(/^"|"$/g, '').trim() : '';
+    }
 
     async sendPrivateMessage(data: PrivateMessageDto): Promise<void> {
         const { receiverId, senderId, id, deviceUuid } = data;
@@ -84,9 +100,6 @@ export class SocketService {
             }
         }
 
-        console.log('Notifying sender about message status', deviceUuid);
-
-        // Notify sender
         await this.socketManagerService.emitToUser({
             userId: senderId,
             event: 'group-message-status-update',
@@ -178,5 +191,108 @@ export class SocketService {
         }
 
         await Promise.all(emitPromises);
+    }
+
+    async handleOffer(client: SocketUser, data: OfferDto) {
+        const user = (client as any).user;
+        const deviceUuid = this.getCleanDeviceUuid(client);
+        data.sender = user;
+
+        const deviceMap = await this.socketCacheService.getDevicesByUserId(
+            data.receiverId,
+        );
+
+        const [firstDeviceUuid] = Object.keys(deviceMap);
+        if (firstDeviceUuid) {
+            await this.socketManagerService.emitToUser({
+                userId: data.receiverId,
+                event: 'offer',
+                data: {
+                    offer: data.offer,
+                    sender: user,
+                    isVideo: data.isVideo,
+                },
+                deviceUuid: firstDeviceUuid,
+            });
+
+            userCallDeviceMap.set(data.receiverId, firstDeviceUuid);
+            userCallDeviceMap.set(user.id, deviceUuid);
+        }
+    }
+
+    async handleAnswer(client: SocketUser, data: AnswerDto) {
+        const user = (client as any).user;
+        const deviceUuid = this.getCleanDeviceUuid(client);
+
+        const expectedDeviceUuid = userCallDeviceMap.get(user.id);
+        if (expectedDeviceUuid && expectedDeviceUuid !== deviceUuid) {
+            this.logger.warn(
+                `Device UUID mismatch for user ${user.id}: expected ${expectedDeviceUuid}, got ${deviceUuid}. Ignoring answer.`,
+            );
+            return;
+        }
+
+        userCallDeviceMap.set(user.id, deviceUuid);
+
+        const receiverDeviceUuid = userCallDeviceMap.get(data.receiverId);
+        if (!receiverDeviceUuid) {
+            console.log('No device UUID found for receiver');
+            return;
+        }
+
+        await this.socketManagerService.emitToUser({
+            userId: data.receiverId,
+            event: 'answer',
+            data: { answer: data.answer },
+            deviceUuid: receiverDeviceUuid,
+        });
+    }
+
+    async handleIceCandidate(client: SocketUser, data: IceCandidateDto) {
+        const receiverDeviceUuid = userCallDeviceMap.get(data.receiverId);
+        if (!receiverDeviceUuid) {
+            console.log('No device UUID found for receiver');
+            return;
+        }
+
+        await this.socketManagerService.emitToUser({
+            userId: data.receiverId,
+            event: 'ice-candidate',
+            data: { candidate: data.candidate },
+            deviceUuid: receiverDeviceUuid,
+        });
+    }
+
+    async handleCallRejected(client: SocketUser, data: CallActionDto) {
+        const receiverDeviceUuid = userCallDeviceMap.get(data.receiverId);
+        if (!receiverDeviceUuid) {
+            console.log('No device UUID found for receiver');
+            return;
+        }
+
+        await this.socketManagerService.emitToUser({
+            userId: data.receiverId,
+            event: 'call-rejected',
+            data: {},
+            deviceUuid: receiverDeviceUuid,
+        });
+    }
+
+    async handleCallEnded(client: SocketUser, data: CallActionDto) {
+        const receiverDeviceUuid = userCallDeviceMap.get(data.receiverId);
+        if (!receiverDeviceUuid) {
+            console.log('No device UUID found for receiver');
+            return;
+        }
+
+        await this.socketManagerService.emitToUser({
+            userId: data.receiverId,
+            event: 'call-ended',
+            data: {},
+            deviceUuid: receiverDeviceUuid,
+        });
+
+        userCallDeviceMap.delete(data.receiverId);
+        userCallDeviceMap.delete((client as any).user.id);
     }
 }

@@ -147,7 +147,7 @@ export const useWebRTC = ({
         console.log('Creating new peer connection...');
 
         if (peer.current) {
-            peer.current.close(); // Close old connection if exists
+            peer.current.close();
         }
 
         peer.current = new RTCPeerConnection({
@@ -156,7 +156,6 @@ export const useWebRTC = ({
 
         // Re-attach event listeners
         peer.current.onicecandidate = (event) => {
-            console.log({ candidate: event.candidate, receiverId });
             if (event.candidate) {
                 socket.emit('ice-candidate', {
                     candidate: event.candidate,
@@ -246,7 +245,11 @@ export const useWebRTC = ({
 
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
-                video: callState.isVideoCall,
+                video: {
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                    facingMode: 'user',
+                },
             });
 
             setLocalStream(stream);

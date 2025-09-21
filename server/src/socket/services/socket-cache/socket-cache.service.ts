@@ -16,10 +16,6 @@ export class SocketCacheService {
             throw new Error('Invalid parameters to add online user');
         }
 
-        console.log(
-            `Storing deviceUuid: ${deviceUuid}, socketId: ${socketId} for userId: ${userId}`,
-        );
-
         await this.redisService.storeValue(
             `onlineDevices:${userId}`,
             deviceUuid,
@@ -64,15 +60,25 @@ export class SocketCacheService {
     async getOnlineStatus(): Promise<{
         onlineUsers: number[];
         lastSeen: Record<string, string>;
+        userDevicePairs: string[];
     }> {
         const lastSeen = await this.redisService.getAllValues('lastSeen');
         const onlineUsersSet = new Set<number>();
         const keys = await this.redisService.scanKeys('onlineDevices:*');
+        const userDevicePairs: string[] = [];
         for (const key of keys) {
             const userId = key.split(':')[1];
             onlineUsersSet.add(Number(userId));
+            const devices = await this.getDevicesByUserId(userId);
+            userDevicePairs.push(
+                `User ${userId}: [${Object.keys(devices).join(', ')}]`,
+            );
         }
-        return { onlineUsers: Array.from(onlineUsersSet), lastSeen };
+        return {
+            onlineUsers: Array.from(onlineUsersSet),
+            lastSeen,
+            userDevicePairs,
+        };
     }
 
     async checkAndRemoveStaleConnections(

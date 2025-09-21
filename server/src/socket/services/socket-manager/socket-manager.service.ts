@@ -93,7 +93,6 @@ export class SocketManagerService {
 
     async broadcastOnlineStatus(): Promise<void> {
         const onlineStatus = await this.socketCacheService.getOnlineStatus();
-        console.log('online users: ', onlineStatus.onlineUsers);
         this.server.emit('online-users', onlineStatus);
     }
 
@@ -118,12 +117,14 @@ export class SocketManagerService {
             );
         }
 
-        if (resolvedSocketId) {
-            this.server.to(resolvedSocketId).emit(event, data);
-        } else {
-            this.logger.error(
+        if (event === 'offer' || event === 'answer') {
+            this.logger.warn(
                 `No socket found for user ${userId} device ${deviceUuid} when emitting "${event}" resolvedSocketId: ${resolvedSocketId}`,
             );
+        }
+
+        if (resolvedSocketId) {
+            this.server.to(resolvedSocketId).emit(event, data);
         }
     }
 }
