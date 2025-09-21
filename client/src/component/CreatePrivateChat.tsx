@@ -64,7 +64,7 @@ export const CreatePrivateChat: React.FC<CreatePrivateChatProps> = ({
     useEffect(() => {
         const debouncedSearch = debounce(onSearch, 300);
 
-        debouncedSearch(searchTerm, setFilteredUsers);
+        debouncedSearch(searchTerm, setFilteredUsers, axiosPrivate);
 
         return () => {
             debouncedSearch.cancel();
