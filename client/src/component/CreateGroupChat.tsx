@@ -211,7 +211,7 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
     useEffect(() => {
         const debouncedSearch = debounce(onSearch, 300);
 
-        debouncedSearch(searchTerm, setFilteredUsers);
+        debouncedSearch(searchTerm, setFilteredUsers, axiosPrivate);
 
         return () => {
             debouncedSearch.cancel();
