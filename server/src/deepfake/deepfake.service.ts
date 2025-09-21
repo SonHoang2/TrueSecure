@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as fs from 'fs';
@@ -8,6 +8,7 @@ import * as FormData from 'form-data';
 @Injectable()
 export class DeepfakeService {
     private dfServer: string;
+    private readonly logger = new Logger(DeepfakeService.name);
 
     constructor(private configService: ConfigService) {
         this.dfServer = this.configService.get<string>('deepfakeServer');
@@ -18,11 +19,6 @@ export class DeepfakeService {
         confidence: number;
     }> {
         try {
-            console.log(
-                'Sending image to Python service (FormData):',
-                this.dfServer,
-            );
-
             const formData = new FormData();
             formData.append('imageFile', file.buffer, {
                 filename: file.originalname || 'image.jpg',
@@ -48,7 +44,6 @@ export class DeepfakeService {
 
             return result;
         } catch (error) {
-            console.error('Error calling Python service:', error);
             if (axios.isAxiosError(error)) {
                 if (error.response) {
                     throw new BadRequestException(
@@ -90,7 +85,7 @@ export class DeepfakeService {
                 1000 * 60 * 3,
             );
         } catch (error) {
-            console.error('[TEST] Error saving image:', error);
+            this.logger.error(`Failed to save test image: ${error.message}`);
         }
     }
 }

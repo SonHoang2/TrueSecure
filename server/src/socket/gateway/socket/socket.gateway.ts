@@ -83,21 +83,7 @@ export class SocketGateway
         @MessageBody() data: OfferDto,
     ) {
         try {
-            const user = (client as any).user;
-            data.sender = user;
-
-            const deviceUuid = client.handshake?.query?.deviceUuid as string;
-
-            await this.socketManagerService.emitToUser({
-                userId: data.receiverId,
-                event: 'offer',
-                data: {
-                    offer: data.offer,
-                    sender: user,
-                    isVideo: data.isVideo,
-                },
-                deviceUuid: deviceUuid,
-            });
+            await this.socketService.handleOffer(client, data);
         } catch (error) {
             this.logger.error(`Error handling offer: ${error.message}`);
         }
@@ -109,13 +95,7 @@ export class SocketGateway
         @MessageBody() data: AnswerDto,
     ) {
         try {
-            const deviceUuid = client.handshake?.query?.deviceUuid as string;
-            await this.socketManagerService.emitToUser({
-                userId: data.receiverId,
-                event: 'answer',
-                data: { answer: data.answer },
-                deviceUuid: deviceUuid,
-            });
+            await this.socketService.handleAnswer(client, data);
         } catch (error) {
             this.logger.error(`Error handling answer: ${error.message}`);
         }
@@ -127,14 +107,7 @@ export class SocketGateway
         @MessageBody() data: IceCandidateDto,
     ) {
         try {
-            const deviceUuid = client.handshake?.query?.deviceUuid as string;
-
-            await this.socketManagerService.emitToUser({
-                userId: data.receiverId,
-                event: 'ice-candidate',
-                data: { candidate: data.candidate },
-                deviceUuid: deviceUuid,
-            });
+            await this.socketService.handleIceCandidate(client, data);
         } catch (error) {
             this.logger.error(`Error handling ICE candidate: ${error.message}`);
         }
@@ -146,14 +119,7 @@ export class SocketGateway
         @MessageBody() data: CallActionDto,
     ) {
         try {
-            const deviceUuid = client.handshake?.query?.deviceUuid as string;
-
-            await this.socketManagerService.emitToUser({
-                userId: data.receiverId,
-                event: 'call-rejected',
-                data: {},
-                deviceUuid: deviceUuid,
-            });
+            await this.socketService.handleCallRejected(client, data);
         } catch (error) {
             this.logger.error(
                 `Error handling call rejection: ${error.message}`,
@@ -167,14 +133,7 @@ export class SocketGateway
         @MessageBody() data: CallActionDto,
     ) {
         try {
-            const deviceUuid = client.handshake?.query?.deviceUuid as string;
-
-            await this.socketManagerService.emitToUser({
-                userId: data.receiverId,
-                event: 'call-ended',
-                data: {},
-                deviceUuid: deviceUuid,
-            });
+            await this.socketService.handleCallEnded(client, data);
         } catch (error) {
             this.logger.error(`Error handling call end: ${error.message}`);
         }
