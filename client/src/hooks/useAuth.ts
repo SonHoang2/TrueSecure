@@ -13,6 +13,7 @@ import { AUTH_URL, CLIENT_URL, GOOGLE_CLIENT_ID } from '../config/config';
 import queryString from 'query-string';
 import { axiosPrivate } from '../api/axios';
 import { Routes } from '../enums/routes.enum';
+import socket from '../../socket';
 
 interface LoginCredentials {
     username: string;
@@ -112,6 +113,12 @@ export const useAuth = () => {
     const refreshTokens = useCallback(async () => {
         try {
             const result = await dispatch(refreshToken()).unwrap();
+
+            if (socket.connected) {
+                socket.disconnect();
+            }
+            socket.connect();
+
             return result;
         } catch (error) {
             console.log('Token Refresh Failed', error);
