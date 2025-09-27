@@ -3,6 +3,9 @@ import { Socket } from 'socket.io-client';
 import { User } from '../types/users.types';
 import { DEEPFAKE_URL } from '../config/config';
 import { AxiosInstance } from 'axios';
+import { useDispatch } from 'react-redux';
+import { setDeepfakeResults } from '../store/slices/deepfakeSlice';
+import { TIME_CAPTURE_IMG_INTERVAL } from '../common/app.constant';
 
 interface UseWebRTCProps {
     receiverId: number;
@@ -56,6 +59,8 @@ export const useWebRTC = ({
     const [capturedImages, setCapturedImages] = useState<String[]>([]);
     const captureIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    const dispatch = useDispatch();
 
     const captureFrame = (stream: MediaStream): Promise<Blob | null> => {
         if (!stream) return Promise.resolve(null);
@@ -125,13 +130,30 @@ export const useWebRTC = ({
                             },
                         },
                     );
-
-                    console.log('Image uploaded successfully:', res.data);
+                    const result = res.data.data;
+                    console.log('Deepfake result:', result);
+                    
+                    dispatch(
+                        setDeepfakeResults({
+                            isDeepfake: result.isDeepfake ?? false,
+                            confidence:
+                                typeof result.confidence === 'number'
+                                    ? result.confidence
+                                    : 0,
+                            faceDetected: result.faceDetected ?? false,
+                        }),
+                    );
                 }
             } catch (error) {
-                console.error('Error capturing frame:', error);
+                dispatch(
+                    setDeepfakeResults({
+                        isDeepfake: false,
+                        confidence: 0,
+                        faceDetected: false,
+                    }),
+                );
             }
-        }, 5000); // Capture every 5 seconds
+        }, TIME_CAPTURE_IMG_INTERVAL);
     };
 
     // Stop capturing images
@@ -196,8 +218,6 @@ export const useWebRTC = ({
 
             setLocalStream(stream);
             localStreamRef.current = stream;
-
-            console.log('Local stream:', stream);
 
             // Add tracks to peer connection
             stream.getTracks().forEach((track) => {
@@ -407,8 +427,6 @@ export const useWebRTC = ({
                     );
 
                     setCallState((prev) => {
-                        console.log('Previous state:', prev); // Log previous state
-
                         const newState = {
                             isConnected: true,
                             isCalling: false,
@@ -418,14 +436,9 @@ export const useWebRTC = ({
                             isVideoCall: prev.isVideoCall,
                         };
 
-                        console.log('New state:', newState); // Log new state
-
                         // Start image capture when call is connected and it's a video call
-                        if (prev.isVideoCall && localStreamRef.current) {
-                            console.log(
-                                'Starting image capture for video call',
-                            );
-                            startImageCapture(localStreamRef.current);
+                        if (prev.isVideoCall && remoteStream) {
+                            startImageCapture(remoteStream);
                         }
 
                         return newState;

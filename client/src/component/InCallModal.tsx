@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Receiver } from '../types/users.types';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
 
 type InCallModalProps = {
     localStream: MediaStream | null;
@@ -18,6 +20,9 @@ const InCallModal: React.FC<InCallModalProps> = ({
 }) => {
     const localRef = useRef<any>(null);
     const remoteRef = useRef<any>(null);
+
+    const deepfakeResults = useSelector((state: RootState) => state.deepfake);
+    console.log('Deepfake Results in InCallModal:', deepfakeResults);
 
     useEffect(() => {
         if (localRef.current) {
@@ -49,6 +54,39 @@ const InCallModal: React.FC<InCallModalProps> = ({
                     />
                 </svg>
             </button>
+
+            {isVideoCall && (
+                <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex flex-row items-center space-x-8 z-50">
+                    <div className="flex items-center space-x-2">
+                        <span className="font-medium text-white">
+                            Deepfake:
+                        </span>
+                        <span
+                            className={`px-2 py-1 rounded-full text-white text-sm ${deepfakeResults.isDeepfake ? 'bg-red-500' : 'bg-green-500'}`}
+                        >
+                            {deepfakeResults.isDeepfake ? 'Yes' : 'No'}
+                        </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <span className="font-medium text-white">
+                            Confidence:
+                        </span>
+                        <span className="text-white text-sm font-mono">
+                            {deepfakeResults.confidence.toFixed(2)}
+                        </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <span className="font-medium text-white">Face:</span>
+                        <span
+                            className={`px-2 py-1 rounded-full text-white text-sm ${deepfakeResults.faceDetected ? 'bg-green-500' : 'bg-red-500'}`}
+                        >
+                            {deepfakeResults.faceDetected
+                                ? 'Detected'
+                                : 'Not detected'}
+                        </span>
+                    </div>
+                </div>
+            )}
 
             {isVideoCall ? (
                 <div className="relative w-full h-full">
