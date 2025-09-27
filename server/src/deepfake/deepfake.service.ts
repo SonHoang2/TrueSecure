@@ -15,8 +15,9 @@ export class DeepfakeService {
     }
 
     async sendToPythonService(file: Express.Multer.File): Promise<{
-        is_deepfake: boolean;
+        isDeepfake: boolean;
         confidence: number;
+        faceDetected: boolean;
     }> {
         try {
             const formData = new FormData();
@@ -34,20 +35,16 @@ export class DeepfakeService {
                 },
             );
 
-            const result = response.data;
-
-            if (!result || result.status !== 'success') {
-                throw new Error(
-                    `Python service failed: ${result?.message || 'Unknown error'}`,
-                );
-            }
-
-            return result;
+            return {
+                isDeepfake: response.data.isDeepfake,
+                confidence: response.data.confidence,
+                faceDetected: response.data.faceDetected,
+            };
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 if (error.response) {
                     throw new BadRequestException(
-                        `Python service error: ${error.response.status} - ${error.response.data?.message || 'Unknown error'}`,
+                        `${error.response.data?.detail || 'Unknown error'}`,
                     );
                 } else if (error.request) {
                     throw new BadRequestException(
@@ -75,15 +72,12 @@ export class DeepfakeService {
 
             fs.writeFileSync(filePath, imageFile);
 
-            // Auto-delete after 3 minute for testing
-            setTimeout(
-                () => {
-                    if (fs.existsSync(filePath)) {
-                        fs.unlinkSync(filePath);
-                    }
-                },
-                1000 * 60 * 3,
-            );
+            // Delete after 30 seconds
+            setTimeout(() => {
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+            }, 1000 * 30);
         } catch (error) {
             this.logger.error(`Failed to save test image: ${error.message}`);
         }

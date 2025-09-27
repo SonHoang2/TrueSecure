@@ -1,0 +1,1 @@
+export const TIME_CAPTURE_IMG_INTERVAL = 1000;

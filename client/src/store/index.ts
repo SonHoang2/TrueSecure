@@ -3,6 +3,7 @@ import { persistStore, persistReducer } from 'redux-persist';
 import authSlice from './slices/authSlice';
 import chatSlice from './slices/chatSlice';
 import conversationSlice from './slices/conversationSlice';
+import deepfakeSlice from './slices/deepfakeSlice';
 import uiSlice from './slices/uiSlice';
 import { authPersistConfig } from './persistConfig';
 
@@ -15,6 +16,7 @@ export const store = configureStore({
         chat: chatSlice,
         conversations: conversationSlice,
         ui: uiSlice,
+        deepfake: deepfakeSlice,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({

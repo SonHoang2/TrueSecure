@@ -1,5 +1,6 @@
 import base64
 from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import cv2
 import numpy as np
@@ -31,18 +32,29 @@ async def detect(imageFile: UploadFile = File(...)):
         npimg = np.frombuffer(contents, np.uint8)
         frame = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
 
+        # Detect face before prediction
+        face_box = detect_bounding_box(frame)
+        if face_box is None:
+            return JSONResponse(content={
+                "status": "fail",
+                "isDeepfake": False,
+                "confidence": 0,
+                "faceDetected": False,
+            })
+
         # Get prediction result
         is_deepfake, confidence, frame = predict(frame)
 
-        return {
+        return JSONResponse(content={
             "status": "success",
-            "is_deepfake": is_deepfake,
+            "isDeepfake": is_deepfake,
             "confidence": round(confidence, 3),
-        }
+            "faceDetected": True,
+        })
     except Exception as e:
         print(f"Error processing image: {str(e)}")
         raise HTTPException(
-            status_code=500, detail=f"Error processing image: {str(e)}")
+            status_code=400, detail=f"Error processing image: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

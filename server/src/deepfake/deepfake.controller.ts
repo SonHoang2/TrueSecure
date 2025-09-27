@@ -17,7 +17,7 @@ export class DeepfakeController {
     @UseInterceptors(FileInterceptor('image'))
     async analyzeBase64(
         @UploadedFile() file: Express.Multer.File,
-        @Body('callId') callId: string,
+        // @Body('callId') callId: string,
     ) {
         if (!file) {
             throw new BadRequestException('No image file provided');
@@ -29,7 +29,7 @@ export class DeepfakeController {
             );
         }
 
-        this.deepfakeService.saveImageForTesting(file.buffer, callId);
+        // this.deepfakeService.saveImageForTesting(file.buffer, callId);
 
         const result = await this.deepfakeService.sendToPythonService(file);
 
