@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import {
-    MdPeople,
-    MdAttachFile,
-    MdPrivacyTip,
     MdExpandLess,
     MdExpandMore,
     MdBlock,
     MdLogout,
+    MdCheck,
+    MdClose,
     MdPersonAdd,
 } from 'react-icons/md';
-import { FaArrowLeft, FaRegEdit } from 'react-icons/fa';
+import { FaArrowLeft, FaRegEdit, FaUserPlus } from 'react-icons/fa';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '../store';
 import { leaveGroup } from '../store/slices/conversationSlice';
@@ -43,6 +42,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [showAddUserModal, setShowAddUserModal] = useState(false);
 
     const dispatch = useDispatch<AppDispatch>();
 
@@ -90,14 +90,11 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
     };
 
     const handleAddUser = async (userId: string) => {
+        if (!conversation?.isGroup) return;
+
         try {
-            // TODO: Implement addUserToGroup action in Redux store
-            // await dispatch(addUserToGroup({ conversationId: conversation.id, userId })).unwrap();
-            setSearchTerm('');
-            setSearchResults([]);
-            console.log('Adding user to group:', userId);
         } catch (error) {
-            console.error('Failed to add user to group:', error);
+            console.error('Failed to add user:', error);
         }
     };
 
@@ -111,7 +108,6 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
             >
                 <FaArrowLeft size={20} className="text-gray-600" />
             </button>
-            {/* Profile Section */}
             <div className="flex flex-col items-center p-4">
                 <div className="w-24 h-24 rounded-full overflow-hidden mb-3">
                     <img
@@ -140,147 +136,10 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                 </p>
             </div>
 
-            {/* Options */}
             <div className="flex-1 overflow-y-auto">
-                {/* <div className="py-2 border-b">
-                    <button className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left">
-                        <span className="mr-3 text-gray-600">
-                            <MdPushPin size={20} />
-                        </span>
-                        <span>View pinned messages</span>
-                    </button>
-                </div> */}
-
-                {/* <div className="py-2 border-b">
-                    <h3 className="text-sm font-medium px-4 py-2 text-gray-500">
-                        Customise chat
-                    </h3>
-
-                    <button className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left">
-                        <span className="mr-3 text-gray-600">
-                            <MdEdit size={20} />
-                        </span>
-                        <span>Change chat name</span>
-                    </button>
-
-                    <button className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left">
-                        <span className="mr-3 text-gray-600">
-                            <MdPhoto size={20} />
-                        </span>
-                        <span>Change photo</span>
-                    </button>
-
-                    <button className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left">
-                        <span className="mr-3 text-gray-600">
-                            <MdPalette size={20} />
-                        </span>
-                        <span>Change theme</span>
-                    </button>
-
-                    <button className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left">
-                        <span className="mr-3 text-gray-600">
-                            <MdEmojiEmotions size={20} />
-                        </span>
-                        <span>Change emoji</span>
-                    </button>
-
-                    <button className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left">
-                        <span className="mr-3 text-gray-600">
-                            <FaRegEdit size={20} />
-                        </span>
-                        <span>Edit nicknames</span>
-                    </button>
-                </div> */}
-
                 <div className="py-2">
                     {conversation?.isGroup && (
                         <>
-                            <button
-                                className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left"
-                                onClick={() => toggleSection('addUsers')}
-                            >
-                                <span className="mr-3 text-gray-600">
-                                    <MdPersonAdd size={20} />
-                                </span>
-                                <span className="font-medium flex-1 text-left">
-                                    Add users
-                                </span>
-                                <span className="ml-2">
-                                    {openSections.addUsers ? (
-                                        <MdExpandLess size={20} />
-                                    ) : (
-                                        <MdExpandMore size={20} />
-                                    )}
-                                </span>
-                            </button>
-                            {openSections.addUsers && (
-                                <div className="pl-4 py-2">
-                                    <div className="px-4 mb-3">
-                                        <input
-                                            type="text"
-                                            placeholder="Search users to add..."
-                                            value={searchTerm}
-                                            onChange={(e) => {
-                                                setSearchTerm(e.target.value);
-                                                handleSearchUsers(
-                                                    e.target.value,
-                                                );
-                                            }}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                        />
-                                    </div>
-                                    {isSearching && (
-                                        <div className="px-4 py-2 text-sm text-gray-500">
-                                            Searching...
-                                        </div>
-                                    )}
-                                    {searchResults.length > 0 && (
-                                        <div className="max-h-40 overflow-y-auto">
-                                            {searchResults.map((user) => (
-                                                <div
-                                                    key={user.id}
-                                                    className="flex items-center justify-between py-2 px-4 hover:bg-gray-50 rounded"
-                                                >
-                                                    <div className="flex items-center">
-                                                        <img
-                                                            src={user.avatar}
-                                                            alt={`${user.firstName} ${user.lastName}`}
-                                                            className="w-8 h-8 rounded-full object-cover mr-3"
-                                                        />
-                                                        <div>
-                                                            <div className="text-sm font-medium text-gray-900">
-                                                                {user.firstName}{' '}
-                                                                {user.lastName}
-                                                            </div>
-                                                            <div className="text-xs text-gray-500">
-                                                                {user.email}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        onClick={() =>
-                                                            handleAddUser(
-                                                                user.id,
-                                                            )
-                                                        }
-                                                        className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
-                                                    >
-                                                        Add
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    {searchTerm &&
-                                        !isSearching &&
-                                        searchResults.length === 0 && (
-                                            <div className="px-4 py-2 text-sm text-gray-500">
-                                                No users found
-                                            </div>
-                                        )}
-                                </div>
-                            )}
-
                             <button
                                 className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left"
                                 onClick={() => toggleSection('chatMembers')}
@@ -296,29 +155,217 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                                     )}
                                 </span>
                             </button>
+
                             {openSections.chatMembers && (
-                                <div className="pl-4 py-2">
-                                    {participants?.map((participant) => (
-                                        <div
-                                            key={participant.id}
-                                            className="flex items-center py-2 px-4 hover:bg-gray-50 rounded"
-                                        >
-                                            <img
-                                                src={participant.avatar}
-                                                alt={`${participant.firstName} ${participant.lastName}`}
-                                                className="w-8 h-8 rounded-full object-cover mr-3"
-                                            />
-                                            <div className="flex-1">
-                                                <div className="text-sm font-medium text-gray-900">
-                                                    {participant.firstName}{' '}
-                                                    {participant.lastName}
+                                <div>
+                                    <div className="py-2">
+                                        {participants?.map((participant) => (
+                                            <div
+                                                key={participant.id}
+                                                className="flex items-center justify-between pl-4 pe-5 py-3 rounded-xl hover:bg-gray-50 transition-all duration-150"
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <img
+                                                        src={participant.avatar}
+                                                        alt={`${participant.firstName} ${participant.lastName}`}
+                                                        className="w-11 h-11 rounded-full object-cover border border-gray-200 shadow-sm"
+                                                    />
+                                                    <div>
+                                                        <div className="text-base font-semibold text-gray-800">
+                                                            {
+                                                                participant.firstName
+                                                            }{' '}
+                                                            {
+                                                                participant.lastName
+                                                            }
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="text-xs text-gray-500 capitalize">
-                                                    {participant.role}
-                                                </div>
+
+                                                {participant.role ===
+                                                'admin' ? (
+                                                    <span className="text-[11px] px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                                                        Admin
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[11px] px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full font-medium">
+                                                        Member
+                                                    </span>
+                                                )}
                                             </div>
+                                        ))}
+                                    </div>
+                                    <button
+                                        className="flex items-center w-full px-4 py-3 hover:bg-gray-100 text-left mt-2"
+                                        onClick={() =>
+                                            setShowAddUserModal(true)
+                                        }
+                                    >
+                                        <FaUserPlus
+                                            className="mr-2"
+                                            size={18}
+                                        />
+                                        <span className="font-medium flex-1 text-left">
+                                            Add members
+                                        </span>
+                                    </button>
+                                </div>
+                            )}
+
+                            {showAddUserModal && (
+                                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative animate-fadeIn">
+                                        {/* Close Button */}
+                                        <button
+                                            onClick={() =>
+                                                setShowAddUserModal(false)
+                                            }
+                                            className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+                                        >
+                                            <MdClose size={22} />
+                                        </button>
+
+                                        {/* Header */}
+                                        <h2 className="text-xl font-semibold mb-5 text-center text-gray-800">
+                                            Add People
+                                        </h2>
+
+                                        {/* Search Box */}
+                                        <div className="relative mb-4">
+                                            <MdPersonAdd
+                                                className="absolute left-3 top-2.5 text-gray-400"
+                                                size={20}
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="Type a username..."
+                                                value={searchTerm}
+                                                onChange={(e) => {
+                                                    setSearchTerm(
+                                                        e.target.value,
+                                                    );
+                                                    handleSearchUsers(
+                                                        e.target.value,
+                                                    );
+                                                }}
+                                                className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+                                            />
                                         </div>
-                                    ))}
+
+                                        {/* Results / Suggestions */}
+                                        <div className="mb-5">
+                                            {isSearching ? (
+                                                <div className="text-center text-sm text-gray-500 py-3">
+                                                    Searching...
+                                                </div>
+                                            ) : searchTerm &&
+                                              searchResults.length > 0 ? (
+                                                <div className="max-h-56 overflow-y-auto divide-y divide-gray-100 rounded-md border border-gray-100">
+                                                    {searchResults.map(
+                                                        (user) => (
+                                                            <div
+                                                                key={user.id}
+                                                                className="flex items-center justify-between p-3 hover:bg-gray-50 transition-all"
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <img
+                                                                        src={
+                                                                            user.avatar
+                                                                        }
+                                                                        alt={`${user.firstName} ${user.lastName}`}
+                                                                        className="w-9 h-9 rounded-full object-cover border border-gray-200"
+                                                                    />
+                                                                    <div>
+                                                                        <div className="text-sm font-semibold text-gray-800">
+                                                                            {
+                                                                                user.firstName
+                                                                            }{' '}
+                                                                            {
+                                                                                user.lastName
+                                                                            }
+                                                                        </div>
+                                                                        <div className="text-xs text-gray-500">
+                                                                            {
+                                                                                user.email
+                                                                            }
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() =>
+                                                                        handleAddUser(
+                                                                            user.id,
+                                                                        )
+                                                                    }
+                                                                    className="px-3 py-1 text-xs font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transition-all"
+                                                                >
+                                                                    Add
+                                                                </button>
+                                                            </div>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            ) : searchTerm &&
+                                              !isSearching &&
+                                              searchResults.length === 0 ? (
+                                                <div className="text-center text-sm text-gray-500 py-4">
+                                                    No users found
+                                                </div>
+                                            ) : (
+                                                <div className="text-sm text-gray-400 text-center py-2">
+                                                    Type to search users
+                                                    <div className="flex flex-wrap gap-2 justify-center mt-3">
+                                                        {searchResults
+                                                            ?.slice(0, 5)
+                                                            .map((user) => (
+                                                                <button
+                                                                    key={
+                                                                        user.id
+                                                                    }
+                                                                    onClick={() =>
+                                                                        handleAddUser(
+                                                                            user.id,
+                                                                        )
+                                                                    }
+                                                                    className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-full hover:bg-gray-50 text-sm text-gray-700 transition-all"
+                                                                >
+                                                                    <img
+                                                                        src={
+                                                                            user.avatar
+                                                                        }
+                                                                        alt={
+                                                                            user.firstName
+                                                                        }
+                                                                        className="w-6 h-6 rounded-full object-cover"
+                                                                    />
+                                                                    <span>
+                                                                        {
+                                                                            user.firstName
+                                                                        }
+                                                                    </span>
+                                                                </button>
+                                                            ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <button
+                                            onClick={() =>
+                                                setShowAddUserModal(false)
+                                            }
+                                            disabled={
+                                                searchResults.length === 0
+                                            }
+                                            className={`w-full py-2.5 rounded-lg font-semibold transition-all active:scale-95 ${
+                                                searchResults.length === 0
+                                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                                            }`}
+                                        >
+                                            Done
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </>
