@@ -116,16 +116,20 @@ export const signupUser = createAsyncThunk(
         { rejectWithValue },
     ) => {
         try {
-            const response = await axiosPrivate.post(
-                AUTH_URL + '/signup',
-                credentials,
-            );
+            const { publicKey } = await EncryptionService.initializeUserKey();
+            let deviceUuid = await cryptoUtils.getDeviceUuid();
+
+            const response = await axiosPrivate.post(AUTH_URL + '/signup', {
+                ...credentials,
+                publicKey,
+                ...(deviceUuid && { deviceUuid }),
+            });
             return response.data;
         } catch (error: any) {
             return rejectWithValue(
                 error.response?.data?.message ||
                     error.message ||
-                    'Login failed',
+                    'Signup failed',
             );
         }
     },
