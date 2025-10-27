@@ -260,6 +260,7 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
                     conversation={currentConversation}
                     receiver={currentReceiver}
                     participants={participants}
+                    user={user}
                 />
             )}
             <div>

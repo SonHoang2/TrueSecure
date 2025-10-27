@@ -7,6 +7,7 @@ import {
     MdCheck,
     MdClose,
     MdPersonAdd,
+    MdDelete,
 } from 'react-icons/md';
 import { FaArrowLeft, FaRegEdit, FaUserPlus } from 'react-icons/fa';
 import { useDispatch } from 'react-redux';
@@ -27,6 +28,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
     conversation,
     receiver,
     participants,
+    user,
 }) => {
     if (!isOpen) return null;
 
@@ -43,6 +45,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showAddUserModal, setShowAddUserModal] = useState(false);
+    const currentUser = participants.find((p) => p.id === user.id);
 
     const dispatch = useDispatch<AppDispatch>();
 
@@ -62,6 +65,18 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
         } catch (error) {
             console.error('Failed to leave group:', error);
             // Handle error (show toast, etc.)
+        }
+    };
+
+    const handleRemoveUser = async (userId: string) => {
+        if (currentUser?.role !== 'admin') return;
+
+        try {
+            // TODO: Replace with actual API call to remove user from group
+            // await dispatch(removeUserFromGroup({ groupId: conversation.id, userId })).unwrap();
+            console.log('User removed:', userId);
+        } catch (error) {
+            console.error('Failed to remove user:', error);
         }
     };
 
@@ -182,16 +197,38 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                                                     </div>
                                                 </div>
 
-                                                {participant.role ===
-                                                'admin' ? (
-                                                    <span className="text-[11px] px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
-                                                        Admin
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[11px] px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full font-medium">
-                                                        Member
-                                                    </span>
-                                                )}
+                                                <div className="flex items-center gap-2">
+                                                    {participant.role ===
+                                                    'admin' ? (
+                                                        <span className="text-[11px] px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                                                            Admin
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[11px] px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full font-medium">
+                                                            Member
+                                                        </span>
+                                                    )}
+
+                                                    {/* Show delete button only if current user is admin and participant is not admin */}
+                                                    {currentUser?.role ===
+                                                        'admin' &&
+                                                        participant.role !==
+                                                            'admin' && (
+                                                            <button
+                                                                onClick={() =>
+                                                                    handleRemoveUser(
+                                                                        participant.id,
+                                                                    )
+                                                                }
+                                                                className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                                title="Remove user"
+                                                            >
+                                                                <MdDelete
+                                                                    size={18}
+                                                                />
+                                                            </button>
+                                                        )}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
