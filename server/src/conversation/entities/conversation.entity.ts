@@ -30,6 +30,23 @@ export class Conversation {
     })
     groupEpoch: number;
 
+    @Column({
+        default: false,
+    })
+    rotateNeeded: boolean;
+
+    @Column({
+        type: 'varchar',
+        nullable: true,
+    })
+    rotateReason: string;
+
+    @Column({
+        type: 'timestamp',
+        nullable: true,
+    })
+    rotateRequestedAt: Date;
+
     @OneToMany(() => Participant, (participant) => participant.conversation, {
         cascade: true,
     })

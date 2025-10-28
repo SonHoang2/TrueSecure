@@ -70,8 +70,6 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
     });
 
     useEffect(() => {
-        console.log({ conversationId });
-
         if (conversationId) {
             dispatch(loadConversationDetails(conversationId));
         }
@@ -108,7 +106,7 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
 
             const formData = new FormData();
             formData.append('image', file);
-            formData.append('conversationId', conversationId.toString());
+            formData.append('conversationId', conversationId);
 
             console.log('Sending image:', formData);
         }

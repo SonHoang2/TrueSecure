@@ -13,6 +13,9 @@ import { FaArrowLeft, FaRegEdit, FaUserPlus } from 'react-icons/fa';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '../store';
 import { leaveGroup } from '../store/slices/conversationSlice';
+import { searchUsers } from '../utils/userUtils';
+import useAxiosPrivate from '../hooks/useAxiosPrivate';
+import { USERS_URL } from '../config/config';
 
 interface ChatInfoSidebarProps {
     isOpen: boolean;
@@ -20,6 +23,7 @@ interface ChatInfoSidebarProps {
     conversation: any;
     receiver: any;
     participants: any[];
+    user: any;
 }
 
 const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
@@ -45,7 +49,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showAddUserModal, setShowAddUserModal] = useState(false);
-    const currentUser = participants.find((p) => p.id === user.id);
+    const axiosPrivate = useAxiosPrivate();
 
     const dispatch = useDispatch<AppDispatch>();
 
@@ -69,7 +73,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
     };
 
     const handleRemoveUser = async (userId: string) => {
-        if (currentUser?.role !== 'admin') return;
+        if (user?.role !== 'admin') return;
 
         try {
             // TODO: Replace with actual API call to remove user from group
@@ -88,15 +92,18 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
 
         setIsSearching(true);
         try {
-            // TODO: Replace with actual API call to search users
-            // const response = await fetch(`/api/users/search?q=${term}`);
-            // const users = await response.json();
-            // setSearchResults(users.filter(user =>
-            //     !participants.some(p => p.id === user.id)
-            // ));
+            const res = await axiosPrivate.get(
+                USERS_URL + `/search?username=${searchTerm}`,
+            );
 
-            // Mock data for now
-            setSearchResults([]);
+            const filteredResults = res.data.data.users.filter(
+                (user: any) =>
+                    !participants.some(
+                        (participant) => participant.id === user.id,
+                    ),
+            );
+
+            setSearchResults(filteredResults);
         } catch (error) {
             console.error('Failed to search users:', error);
         } finally {
@@ -108,6 +115,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
         if (!conversation?.isGroup) return;
 
         try {
+            console.log('add success');
         } catch (error) {
             console.error('Failed to add user:', error);
         }
@@ -210,8 +218,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                                                     )}
 
                                                     {/* Show delete button only if current user is admin and participant is not admin */}
-                                                    {currentUser?.role ===
-                                                        'admin' &&
+                                                    {user?.role === 'admin' &&
                                                         participant.role !==
                                                             'admin' && (
                                                             <button
@@ -315,15 +322,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                                                                     <div>
                                                                         <div className="text-sm font-semibold text-gray-800">
                                                                             {
-                                                                                user.firstName
-                                                                            }{' '}
-                                                                            {
-                                                                                user.lastName
-                                                                            }
-                                                                        </div>
-                                                                        <div className="text-xs text-gray-500">
-                                                                            {
-                                                                                user.email
+                                                                                user.username
                                                                             }
                                                                         </div>
                                                                     </div>
