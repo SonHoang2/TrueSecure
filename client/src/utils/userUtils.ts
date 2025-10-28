@@ -11,6 +11,8 @@ export const searchUsers = async (
             USERS_URL + `/search?username=${searchTerm}`,
         );
         setUsers(res.data.data.users);
+
+        return res.data.data.users;
     } catch (error) {
         console.log(error);
     }

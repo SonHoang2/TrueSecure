@@ -51,14 +51,12 @@ export const loadConversations = createAsyncThunk(
 
 export const loadConversationDetails = createAsyncThunk(
     'conversations/loadConversationDetails',
-    async (conversationId: number, { rejectWithValue }) => {
+    async (conversationId: string, { rejectWithValue }) => {
         try {
             const res = await axiosPrivate.get(
                 `${CONVERSATIONS_URL}/${conversationId}`,
             );
 
-            console.log(conversationId);
-            
             return res.data.data;
         } catch (error: any) {
             const errorMessage =

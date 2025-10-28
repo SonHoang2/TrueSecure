@@ -1,7 +1,7 @@
 import * as cryptoUtils from '../crypto/cryptoUtils';
-import { CONVERSATIONS_URL } from '../config/config';
+import { CONVERSATIONS_URL, USERS_URL } from '../config/config';
 import { AxiosInstance } from 'axios';
-import { UserKey } from '../types/users.types';
+import { User, UserKey } from '../types/users.types';
 
 interface GetGroupKeyParams {
     conversationId: number;
@@ -19,6 +19,11 @@ class EncryptionError extends Error {
         super(message);
         this.name = 'EncryptionError';
     }
+}
+
+export interface UserDevice {
+    deviceUuid: string;
+    publicKey: string;
 }
 
 export const initializeUserKey = async (): Promise<{
@@ -137,4 +142,83 @@ export const getGroupKey = async ({
     }
 
     return groupKey;
+};
+
+export async function distributeGroupKeys(params: {
+    conversationId: string;
+    members: User[];
+    publicKeys: Map<number, { deviceUuid: string; publicKey: string }[]>;
+    axiosPrivate: AxiosInstance;
+    currentUserId: number;
+}) {
+    const { conversationId, members, publicKeys, axiosPrivate, currentUserId } =
+        params;
+
+    const aesKey = await cryptoUtils.generateAesKey();
+
+    for (const participant of members) {
+        const devices = publicKeys.get(participant.id);
+        if (!devices) continue;
+
+        for (const device of devices) {
+            const recipientPublicKey = await cryptoUtils.importPublicKey(
+                device.publicKey,
+            );
+            const exportedAESKey = await cryptoUtils.exportAESKey(aesKey);
+            const encryptedAesKey = await cryptoUtils.encryptAESKeys(
+                recipientPublicKey,
+                exportedAESKey,
+            );
+
+            await axiosPrivate.post(CONVERSATIONS_URL + `/key`, {
+                groupKey: encryptedAesKey,
+                conversationId,
+                deviceUuid: device.deviceUuid,
+            });
+        }
+    }
+
+    await cryptoUtils.storeGroupKey({
+        conversationId,
+        userId: currentUserId,
+        groupKey: aesKey,
+    });
+}
+
+export const getUserPublicKeys = async ({
+    axiosPrivate,
+    userIds,
+}: any): Promise<Map<number, UserDevice[]>> => {
+    const publicKeys = new Map<number, UserDevice[]>();
+
+    for (const userId of userIds) {
+        try {
+            const res = await axiosPrivate.get(
+                `${USERS_URL}/${userId}/public-keys`,
+            );
+            const devices = res.data?.data?.devices;
+
+            if (!devices || devices.length === 0) {
+                throw new Error(
+                    `User ${userId} doesn't have any public keys/devices.`,
+                );
+            }
+
+            publicKeys.set(userId, devices);
+        } catch (error: any) {
+            if (error.response?.status === 404) {
+                throw new Error(
+                    `User ${userId} doesn't have any public keys/devices.`,
+                );
+            }
+            throw error;
+        }
+    }
+
+    return publicKeys;
+};
+
+export const validateUserKeys = async ({ members, axiosPrivate }: any) => {
+    const userIds = members.map((m) => m.id);
+    return await getUserPublicKeys({ userIds, axiosPrivate });
 };

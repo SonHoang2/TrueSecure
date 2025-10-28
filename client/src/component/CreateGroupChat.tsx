@@ -9,6 +9,11 @@ import { User } from '../types/users.types';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { useAppDispatch } from '../store/hooks';
 import { loadConversations } from '../store/slices/conversationSlice';
+import {
+    distributeGroupKeys,
+    getUserPublicKeys,
+    validateUserKeys,
+} from '../services/encryptionService';
 
 type CreateChatState = {
     createGroupChat: boolean;
@@ -73,76 +78,6 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
         }));
     };
 
-    const validateUserKeys = async (): Promise<Map<number, string>> => {
-        const publicKeys = new Map<number, string>();
-
-        for (const participant of formData.groupMembers) {
-            try {
-                const res = await axiosPrivate.get(
-                    USERS_URL + `/${participant.id}/public-keys`,
-                );
-
-                const devices = res.data?.data?.devices;
-                if (!devices || devices.length === 0) {
-                    throw new Error(
-                        `User ${participant.username} doesn't have any public keys/devices.`,
-                    );
-                }
-
-                publicKeys.set(participant.id, devices);
-            } catch (error) {
-                if (error.response?.status === 404) {
-                    throw new Error(
-                        `User ${participant.username} doesn't have any public keys/devices.`,
-                    );
-                }
-                throw error;
-            }
-        }
-
-        return publicKeys;
-    };
-
-    const handleCrypto = async (
-        conversationId: string,
-        publicKeys: Map<number, { deviceUuid: string; publicKey: string }[]>,
-    ) => {
-        try {
-            const aesKey = await cryptoUtils.generateAesKey();
-
-            for (const participant of formData.groupMembers) {
-                const devices = publicKeys.get(participant.id);
-                if (!devices) continue;
-
-                for (const device of devices) {
-                    const recipientPublicKey =
-                        await cryptoUtils.importPublicKey(device.publicKey);
-
-                    const exportedAESKey =
-                        await cryptoUtils.exportAESKey(aesKey);
-                    const encryptedAesKey = await cryptoUtils.encryptAESKeys(
-                        recipientPublicKey,
-                        exportedAESKey,
-                    );
-
-                    await axiosPrivate.post(CONVERSATIONS_URL + `/key`, {
-                        groupKey: encryptedAesKey,
-                        conversationId: conversationId,
-                        deviceUuid: device.deviceUuid,
-                    });
-                }
-            }
-
-            await cryptoUtils.storeGroupKey({
-                conversationId: conversationId,
-                userId: user.id,
-                groupKey: aesKey,
-            });
-        } catch (error) {
-            console.error('Error in handleCrypto:', error);
-        }
-    };
-
     const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
         let conversationId: string | null = null;
         try {
@@ -153,7 +88,7 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
                 return;
             }
 
-            const publicKeys = await validateUserKeys();
+            const publicKeys = await validateUserKeys(formData.groupMembers);
 
             const {
                 data: {
@@ -167,7 +102,13 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
 
             conversationId = conversation.id;
 
-            await handleCrypto(conversation.id, publicKeys);
+            await distributeGroupKeys({
+                conversationId: conversation.id,
+                members: formData.groupMembers,
+                publicKeys: publicKeys,
+                axiosPrivate: axiosPrivate,
+                currentUserId: user.id,
+            });
 
             // Reload conversations
             dispatch(loadConversations());
