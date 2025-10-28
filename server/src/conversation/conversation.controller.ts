@@ -48,9 +48,9 @@ export class ConversationController {
     }
 
     @Get(':id')
-    findOne(@Param('id') id: string, @Req() req: RequestWithUser) {
+    findOne(@Param('id') uuid: string, @Req() req: RequestWithUser) {
         const userId = req.user.id;
-        return this.conversationService.getConversation(+id, userId);
+        return this.conversationService.getConversation(uuid, userId);
     }
 
     @Delete(':id')

@@ -7,6 +7,9 @@ export class Conversation {
     @PrimaryGeneratedColumn()
     id: number;
 
+    @Column({ type: 'uuid', unique: true, default: () => 'gen_random_uuid()' })
+    uuid: string;
+
     @Column({
         nullable: true,
     })
@@ -21,6 +24,11 @@ export class Conversation {
         default: DEFAULT_GROUP_AVATAR_URL,
     })
     avatar: string;
+
+    @Column({
+        default: 0,
+    })
+    groupEpoch: number;
 
     @OneToMany(() => Participant, (participant) => participant.conversation, {
         cascade: true,
