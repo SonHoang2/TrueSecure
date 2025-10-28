@@ -120,7 +120,7 @@ export class ConversationService {
         };
     }
 
-    async getConversation(id: number, userId: number) {
+    async getConversation(uuid: string, userId: number) {
         const conversation = await this.conversationRepo
             .createQueryBuilder('conversation')
             .leftJoinAndSelect('conversation.participants', 'participants')
@@ -129,7 +129,7 @@ export class ConversationService {
                 'participants.participantDevices',
                 'participantDevices',
             )
-            .where('conversation.id = :id', { id })
+            .where('conversation.uuid = :uuid', { uuid })
             .getOne();
 
         if (!conversation) {
@@ -206,7 +206,7 @@ export class ConversationService {
             const conversation = participation.conversation;
 
             const baseResponse = {
-                id: conversation.id,
+                id: conversation.uuid,
                 title: conversation.title,
                 isGroup: conversation.isGroup,
                 avatar: conversation.avatar,

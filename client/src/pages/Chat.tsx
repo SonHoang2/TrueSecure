@@ -27,7 +27,7 @@ interface ChatProps {
 }
 
 const Chat: React.FC<ChatProps> = ({ userStatus }) => {
-    const conversationId = Number(useParams()?.conversationId);
+    const conversationId = useParams()?.conversationId;
     const [showChatInfo, setShowChatInfo] = useState(false);
 
     const user = useAuthUser();
@@ -70,6 +70,8 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
     });
 
     useEffect(() => {
+        console.log({ conversationId });
+
         if (conversationId) {
             dispatch(loadConversationDetails(conversationId));
         }

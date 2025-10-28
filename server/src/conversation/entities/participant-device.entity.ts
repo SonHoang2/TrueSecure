@@ -25,6 +25,11 @@ export class ParticipantDevice {
     @Column({ type: 'text' })
     encryptedGroupKey: string;
 
+    @Column({
+        default: 0,
+    })
+    groupEpoch: number;
+
     @CreateDateColumn()
     createdAt: Date;
 
