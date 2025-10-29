@@ -382,6 +382,11 @@ export class ConversationService {
             );
         }
 
+        await this.participantDeviceRepo.update(
+            { id: participantDevice.id },
+            { encryptedGroupKey: null, groupEpoch: conversation.groupEpoch },
+        );
+
         return {
             encryptedGroupKey: participantDevice.encryptedGroupKey,
         };
@@ -544,6 +549,99 @@ export class ConversationService {
         return {
             message: 'Successfully left the group',
             groupDeleted: false,
+        };
+    }
+
+    async addUserToGroup(
+        conversationId: number,
+        userId: number,
+        requestingUserId: number,
+    ) {
+        // Verify conversation exists and is a group
+        const conversation = await this.conversationRepo.findOne({
+            where: { id: conversationId },
+            relations: ['participants'],
+        });
+
+        if (!conversation) {
+            throw new NotFoundException('Conversation not found');
+        }
+
+        if (!conversation.isGroup) {
+            throw new BadRequestException(
+                'Cannot add users to a private conversation',
+            );
+        }
+
+        // Check if requesting user is an admin
+        const requestingUserParticipant = conversation.participants.find(
+            (p) => p.userId === requestingUserId,
+        );
+
+        if (!requestingUserParticipant) {
+            throw new ForbiddenException(
+                'You are not a participant of this conversation',
+            );
+        }
+
+        if (requestingUserParticipant.role !== ChatGroupRole.ADMIN) {
+            throw new ForbiddenException(
+                'Only admins can add users to this group',
+            );
+        }
+
+        // Verify user exists
+        const userToAdd = await this.userService.findOne(userId);
+        if (!userToAdd) {
+            throw new NotFoundException('User not found');
+        }
+
+        // Check if user is already a participant
+        const existingParticipant = conversation.participants.find(
+            (p) => p.userId === userId,
+        );
+
+        if (existingParticipant) {
+            throw new BadRequestException(
+                'User is already a participant of this group',
+            );
+        }
+
+        // Check group size limit
+        if (conversation.participants.length >= 25) {
+            throw new BadRequestException(
+                'The maximum number of users in a group conversation is 25',
+            );
+        }
+
+        // Add user as member
+        const newParticipant = this.participantRepo.create({
+            userId,
+            conversationId: conversation.id,
+            role: ChatGroupRole.MEMBER,
+        });
+
+        await this.participantRepo.save(newParticipant);
+
+        // Mark group for key rotation
+        await this.conversationRepo.update(
+            { id: conversationId },
+            {
+                groupEpoch: () => '"groupEpoch" + 1',
+                rotateNeeded: true,
+            },
+        );
+
+        return {
+            message: 'User added to group successfully',
+            participant: {
+                id: userToAdd.id,
+                firstName: userToAdd.firstName,
+                lastName: userToAdd.lastName,
+                email: userToAdd.email,
+                avatar: userToAdd.avatar,
+                role: ChatGroupRole.MEMBER,
+            },
         };
     }
 }

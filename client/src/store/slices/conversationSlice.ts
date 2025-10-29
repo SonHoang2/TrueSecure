@@ -120,7 +120,7 @@ export const fetchRecipientDevices = createAsyncThunk(
 
 export const leaveGroup = createAsyncThunk(
     'conversations/leaveGroup',
-    async (conversationId: string, { rejectWithValue }) => {
+    async (conversationId: number, { rejectWithValue }) => {
         try {
             await axiosPrivate.delete(
                 `${CONVERSATIONS_URL}/${conversationId}/leave`,
@@ -129,6 +129,26 @@ export const leaveGroup = createAsyncThunk(
         } catch (error: any) {
             return rejectWithValue(
                 error.response?.data?.message || 'Failed to leave group',
+            );
+        }
+    },
+);
+
+export const addUserToConversation = createAsyncThunk(
+    'conversations/addUserToConversation',
+    async (
+        { conversation, userId }: { conversation: string; userId: string },
+        { rejectWithValue },
+    ) => {
+        try {
+            await axiosPrivate.post(
+                `${CONVERSATIONS_URL}/${conversation}/add-user`,
+                { userId },
+            );
+            return;
+        } catch (error: any) {
+            return rejectWithValue(
+                error.response?.data?.message || 'Failed to add user to group',
             );
         }
     },
@@ -312,6 +332,24 @@ const conversationSlice = createSlice({
                 }
             })
             .addCase(leaveGroup.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload as string;
+            })
+            .addCase(addUserToConversation.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(addUserToConversation.fulfilled, (state, action) => {
+                state.isLoading = false;
+                // Thêm user vào participants list
+                if (
+                    action.payload &&
+                    !state.participants.some((p) => p.id === action.payload.id)
+                ) {
+                    state.participants.push(action.payload);
+                }
+            })
+            .addCase(addUserToConversation.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
             });

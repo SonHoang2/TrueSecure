@@ -46,6 +46,20 @@ export class ConversationController {
         );
     }
 
+    @Post(':conversationId/add-user')
+    addUserToGroup(
+        @Param('conversationId', ParseIntPipe) conversationId: number,
+        @Body() { userId }: { userId: number },
+        @Req() req: RequestWithUser,
+    ) {
+        const requestingUserId = req.user.id;
+        return this.conversationService.addUserToGroup(
+            conversationId,
+            userId,
+            requestingUserId,
+        );
+    }
+
     @Get(':id')
     findOne(@Param('id') uuid: string, @Req() req: RequestWithUser) {
         const userId = req.user.id;
