@@ -49,6 +49,7 @@ export const useChatMessages = ({
     const user = useAuthUser();
     const { userKey, deviceUuid } = useAuth();
     const { recipientDevices } = useConversations();
+    const groupKeyCache = useRef<Map<number, any>>(new Map());
 
     const messageSoundRef = useRef(
         new Audio('/assets/sound/notification-sound.mp3'),
@@ -132,11 +133,45 @@ export const useChatMessages = ({
                 return {
                     userId: lastMessage.senderId,
                     messageId: lastMessage.id,
-                    avatar: currentReceiver.avatar || '',
+                    avatar: currentReceiver?.avatar || '',
                 };
             }
             return null;
         }, [participants, messages]);
+
+    const getOrFetchGroupKey = useCallback(
+        async (conversationId: number) => {
+            if (!userKey) {
+                throw new Error('User keys are required for group chat');
+            }
+
+            if (!deviceUuid) {
+                throw new Error('Device UUID is required');
+            }
+
+            if (!conversationId) {
+                throw new Error('Selected conversation ID is required');
+            }
+
+            if (groupKeyCache.current.has(conversationId)) {
+                return groupKeyCache.current.get(conversationId);
+            }
+
+            const key = await getGroupKey({
+                conversationId,
+                userKey: userKey,
+                axiosPrivate,
+                userId: user.id,
+                deviceUuid: deviceUuid,
+            });
+
+            if (key) {
+                groupKeyCache.current.set(conversationId, key);
+            }
+            return key;
+        },
+        [userKey, axiosPrivate, user.id, deviceUuid],
+    );
 
     const sendMessage = useCallback(
         async (message?: string) => {
@@ -164,21 +199,9 @@ export const useChatMessages = ({
                         );
                     }
 
-                    if (!deviceUuid) {
-                        throw new Error('Device UUID is required');
-                    }
-
-                    if (!selectedConversationId) {
-                        throw new Error('Selected conversation ID is required');
-                    }
-
-                    const groupkey = await getGroupKey({
-                        conversationId: selectedConversationId,
-                        userKey: userKey,
-                        axiosPrivate,
-                        userId: user.id,
-                        deviceUuid: deviceUuid,
-                    });
+                    const groupkey = await getOrFetchGroupKey(
+                        selectedConversationId,
+                    );
 
                     if (!groupkey) {
                         throw new Error('Group key not available');
