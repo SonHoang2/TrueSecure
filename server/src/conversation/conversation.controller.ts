@@ -15,7 +15,6 @@ import { ConversationService } from './conversation.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RequestWithUser } from 'src/common/interfaces/request-with-user.interface';
-import { CreateGroupKeyDto } from './dto/create-group-key.dto';
 
 @Controller('conversations')
 @UseGuards(JwtAuthGuard)
@@ -28,20 +27,20 @@ export class ConversationController {
         return this.conversationService.getUserConversations(userId);
     }
 
-    @Post('key')
-    createGroupKey(@Body() createGroupKeyDto: CreateGroupKeyDto) {
-        return this.conversationService.createGroupKey(createGroupKeyDto);
+    @Post('keys')
+    createGroupKeys(@Body() createGroupKeyDto) {
+        return this.conversationService.createGroupKeys(createGroupKeyDto);
     }
 
     @Get(':conversationId/key')
     getConversationKey(
-        @Param('conversationId') conversationId: string,
+        @Param('conversationId') conversationId: number,
         @Query('deviceUuid') deviceUuid: string,
         @Req() req: RequestWithUser,
     ) {
         const userId = req.user.id;
         return this.conversationService.getConversationKey(
-            +conversationId,
+            conversationId,
             userId,
             deviceUuid,
         );

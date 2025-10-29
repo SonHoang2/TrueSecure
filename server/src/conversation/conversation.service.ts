@@ -9,7 +9,6 @@ import { Not, Repository } from 'typeorm';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { Conversation } from './entities/conversation.entity';
 import { Participant } from './entities/participant.entity';
-import { CreateGroupKeyDto } from './dto/create-group-key.dto';
 import { UserService } from 'src/user/user.service';
 import { ChatGroupRole } from 'src/common/enum/chat-role.enum';
 import { ParticipantDevice } from './entities/participant-device.entity';
@@ -144,12 +143,15 @@ export class ConversationService {
 
         const baseResponse = {
             id: conversation.id,
+            uuid: conversation.uuid,
             title: conversation.title,
             isGroup: conversation.isGroup,
             avatar: conversation.avatar,
             myRole: currentUserParticipation.role,
             createdAt: conversation.createdAt,
             updatedAt: conversation.updatedAt,
+            groupEpoch: conversation.groupEpoch,
+            rotateNeeded: conversation.rotateNeeded,
         };
 
         if (conversation.isGroup) {
@@ -260,66 +262,74 @@ export class ConversationService {
         };
     }
 
-    async createGroupKey(createGroupKeyDto: CreateGroupKeyDto) {
-        const { groupKey, deviceUuid, conversationId } = createGroupKeyDto;
+    async createGroupKeys(createGroupKeysDto: {
+        conversationId: number;
+        encryptedKeys: {
+            deviceUuid: string;
+            encryptedGroupKey: string;
+        }[];
+    }) {
+        const { conversationId, encryptedKeys } = createGroupKeysDto;
 
-        if (!groupKey || !deviceUuid || !conversationId) {
+        if (!conversationId || !encryptedKeys?.length) {
             throw new BadRequestException(
-                'Group key, device UUID and conversation ID are required',
+                'Conversation ID and encryptedKeys array are required',
             );
         }
 
-        let participantDevice = await this.participantDeviceRepo
-            .createQueryBuilder('participantDevice')
-            .innerJoin('participantDevice.device', 'device')
-            .innerJoin('participantDevice.participant', 'participant')
-            .where('device.uuid = :deviceUuid', { deviceUuid })
-            .andWhere('participant.conversationId = :conversationId', {
-                conversationId,
-            })
-            .getOne();
+        const conversation = await this.conversationRepo.findOne({
+            where: { id: conversationId },
+        });
 
-        if (!participantDevice) {
-            const conversation = await this.conversationRepo.findOne({
-                where: { id: conversationId },
-            });
-
-            if (!conversation) {
-                throw new NotFoundException('Conversation not found');
-            }
-
-            const device = await this.deviceService.findByUuid(deviceUuid);
-            if (!device) {
-                throw new NotFoundException('Device not found');
-            }
-
-            const participant = await this.participantRepo.findOne({
-                where: {
-                    conversationId,
-                    userId: device.userId,
-                },
-            });
-
-            if (!participant) {
-                throw new NotFoundException(
-                    'User is not a participant of this conversation',
-                );
-            }
-
-            participantDevice = this.participantDeviceRepo.create({
-                participantId: participant.id,
-                deviceId: device.id,
-                encryptedGroupKey: groupKey,
-            });
-        } else {
-            participantDevice.encryptedGroupKey = groupKey;
+        if (!conversation) {
+            throw new NotFoundException('Conversation not found');
         }
 
-        await this.participantDeviceRepo.save(participantDevice);
+        if (conversation.groupEpoch !== 0 && !conversation.rotateNeeded) {
+            throw new BadRequestException(
+                'Group keys are already set for the current epoch',
+            );
+        }
 
-        return {
-            message: 'Group key stored successfully',
-        };
+        for (const { deviceUuid, encryptedGroupKey } of encryptedKeys) {
+            if (!deviceUuid || !encryptedGroupKey) continue;
+
+            let participantDevice = await this.participantDeviceRepo
+                .createQueryBuilder('participantDevice')
+                .innerJoin('participantDevice.device', 'device')
+                .innerJoin('participantDevice.participant', 'participant')
+                .where('device.uuid = :deviceUuid', { deviceUuid })
+                .andWhere('participant.conversationId = :conversationId', {
+                    conversationId,
+                })
+                .getOne();
+
+            if (!participantDevice) {
+                const device = await this.deviceService.findByUuid(deviceUuid);
+                if (!device) continue; // bỏ qua thiết bị không tồn tại
+
+                const participant = await this.participantRepo.findOne({
+                    where: {
+                        conversationId: conversation.id,
+                        userId: device.userId,
+                    },
+                });
+
+                if (!participant) continue; // bỏ qua user không thuộc cuộc trò chuyện
+
+                participantDevice = this.participantDeviceRepo.create({
+                    participantId: participant.id,
+                    deviceId: device.id,
+                    encryptedGroupKey,
+                });
+            } else {
+                participantDevice.encryptedGroupKey = encryptedGroupKey;
+            }
+
+            await this.participantDeviceRepo.save(participantDevice);
+        }
+
+        return { message: 'Group keys stored successfully' };
     }
 
     async getConversationKey(
@@ -522,6 +532,14 @@ export class ConversationService {
                 groupDeleted: true,
             };
         }
+
+        await this.conversationRepo.update(
+            { id: conversation.id },
+            {
+                groupEpoch: () => '"groupEpoch" + 1',
+                rotateNeeded: true,
+            },
+        );
 
         return {
             message: 'Successfully left the group',

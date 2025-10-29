@@ -34,8 +34,14 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
     const { userKeys, isKeysInitialized } = useAuth();
     const dispatch = useAppDispatch();
 
-    const { currentConversation, currentReceiver, participants, error } =
-        useConversations();
+    const {
+        currentConversation,
+        currentReceiver,
+        participants,
+        error,
+        groupEpoch,
+        rotateNeeded,
+    } = useConversations();
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const axiosPrivate = useAxiosPrivate();
@@ -72,6 +78,12 @@ const Chat: React.FC<ChatProps> = ({ userStatus }) => {
     useEffect(() => {
         if (conversationId) {
             dispatch(loadConversationDetails(conversationId));
+
+            if (rotateNeeded) {
+                console.log(
+                    `Conversation ${conversationId} requires key rotation. Current groupEpoch: ${groupEpoch}`,
+                );
+            }
         }
     }, [conversationId, dispatch]);
 

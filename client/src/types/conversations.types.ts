@@ -16,4 +16,7 @@ export interface Conversation {
     receiver?: User;
     createdAt: string;
     updatedAt: string;
+    uuid: string;
+    groupEpoch?: number;
+    rotateNeeded?: boolean;
 }

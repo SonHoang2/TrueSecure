@@ -156,6 +156,11 @@ export async function distributeGroupKeys(params: {
 
     const aesKey = await cryptoUtils.generateAesKey();
 
+    const encryptedPayloads: {
+        deviceUuid: string;
+        encryptedGroupKey: string;
+    }[] = [];
+
     for (const participant of members) {
         const devices = publicKeys.get(participant.id);
         if (!devices) continue;
@@ -170,19 +175,32 @@ export async function distributeGroupKeys(params: {
                 exportedAESKey,
             );
 
-            await axiosPrivate.post(CONVERSATIONS_URL + `/key`, {
-                groupKey: encryptedAesKey,
-                conversationId,
+            encryptedPayloads.push({
                 deviceUuid: device.deviceUuid,
+                encryptedGroupKey: encryptedAesKey,
             });
         }
     }
 
-    await cryptoUtils.storeGroupKey({
-        conversationId,
-        userId: currentUserId,
-        groupKey: aesKey,
-    });
+    try {
+        await axiosPrivate.post(CONVERSATIONS_URL + `/keys`, {
+            conversationId,
+            encryptedKeys: encryptedPayloads,
+        });
+
+        await cryptoUtils.storeGroupKey({
+            conversationId,
+            userId: currentUserId,
+            groupKey: aesKey,
+        });
+    } catch (error) {
+        console.error('Error distributing group keys:', error);
+
+        throw new EncryptionError(
+            'Failed to distribute group keys to server',
+            error instanceof Error ? error : new Error(String(error)),
+        );
+    }
 }
 
 export const getUserPublicKeys = async ({
@@ -218,7 +236,13 @@ export const getUserPublicKeys = async ({
     return publicKeys;
 };
 
-export const validateUserKeys = async ({ members, axiosPrivate }: any) => {
+export const validateUserKeys = async ({
+    members,
+    axiosPrivate,
+}: {
+    members: User[];
+    axiosPrivate: AxiosInstance;
+}) => {
     const userIds = members.map((m) => m.id);
     return await getUserPublicKeys({ userIds, axiosPrivate });
 };

@@ -19,6 +19,8 @@ export interface ConversationState {
     isLoading: boolean;
     error: string | null;
     selectedConversationId: number | null;
+    groupEpoch: number;
+    rotateNeeded: boolean;
 }
 
 const initialState: ConversationState = {
@@ -30,6 +32,8 @@ const initialState: ConversationState = {
     isLoading: false,
     error: null,
     selectedConversationId: null,
+    groupEpoch: 0,
+    rotateNeeded: false,
 };
 
 export const loadConversations = createAsyncThunk(
@@ -116,7 +120,7 @@ export const fetchRecipientDevices = createAsyncThunk(
 
 export const leaveGroup = createAsyncThunk(
     'conversations/leaveGroup',
-    async (conversationId: number, { rejectWithValue }) => {
+    async (conversationId: string, { rejectWithValue }) => {
         try {
             await axiosPrivate.delete(
                 `${CONVERSATIONS_URL}/${conversationId}/leave`,

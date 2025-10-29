@@ -88,7 +88,10 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
                 return;
             }
 
-            const publicKeys = await validateUserKeys(formData.groupMembers);
+            const publicKeys = await validateUserKeys({
+                members: formData.groupMembers,
+                axiosPrivate: axiosPrivate,
+            });
 
             const {
                 data: {
@@ -111,10 +114,10 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
             });
 
             // Reload conversations
-            dispatch(loadConversations());
+            // dispatch(loadConversations());
 
-            setNewGroupChat(false);
-            setCreateChat((prev) => ({ ...prev, createGroupChat: false }));
+            // setNewGroupChat(false);
+            // setCreateChat((prev) => ({ ...prev, createGroupChat: false }));
         } catch (error) {
             console.error('Error in handleSubmit:', error);
 
