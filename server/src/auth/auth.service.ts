@@ -162,9 +162,10 @@ export class AuthService {
             await this.redisService.removeUserToken(userId, refreshToken);
         }
 
-        if (deviceUuid) {
+        try {
             await this.deviceService.removeByUuid(deviceUuid);
-        } else {
+        } catch (error) {
+            console.log('Failed to remove device:', error);
             await this.deviceService.removeAllByUserId(+userId);
             await this.redisService.deleteUserTokens(userId);
         }

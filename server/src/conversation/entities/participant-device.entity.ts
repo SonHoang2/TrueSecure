@@ -22,7 +22,7 @@ export class ParticipantDevice {
     @Column()
     deviceId: number;
 
-    @Column({ type: 'text' })
+    @Column({ type: 'text', nullable: true })
     encryptedGroupKey: string;
 
     @Column({

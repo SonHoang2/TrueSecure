@@ -12,10 +12,17 @@ import {
 import { FaArrowLeft, FaRegEdit, FaUserPlus } from 'react-icons/fa';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '../store';
-import { leaveGroup } from '../store/slices/conversationSlice';
+import {
+    addUserToConversation,
+    leaveGroup,
+} from '../store/slices/conversationSlice';
 import { searchUsers } from '../utils/userUtils';
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
 import { USERS_URL } from '../config/config';
+import {
+    distributeGroupKeys,
+    getUserPublicKeys,
+} from '../services/encryptionService';
 
 interface ChatInfoSidebarProps {
     isOpen: boolean;
@@ -115,7 +122,33 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
         if (!conversation?.isGroup) return;
 
         try {
-            console.log('add success');
+            await dispatch(
+                addUserToConversation({
+                    conversation: conversation.id,
+                    userId,
+                }),
+            ).unwrap();
+
+            const publicKeys = await getUserPublicKeys({
+                userIds: [...participants.map((p) => p.id), userId],
+                axiosPrivate,
+            });
+
+            await distributeGroupKeys({
+                conversationId: conversation.id,
+                members: [...participants, { id: userId }],
+                publicKeys,
+                axiosPrivate,
+                currentUserId: user.id,
+            });
+
+            setSearchResults((prev) =>
+                prev.filter((user) => user.id !== userId),
+            );
+
+            if (searchResults.length <= 1) {
+                setSearchTerm('');
+            }
         } catch (error) {
             console.error('Failed to add user:', error);
         }
@@ -385,22 +418,6 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                                                 </div>
                                             )}
                                         </div>
-
-                                        <button
-                                            onClick={() =>
-                                                setShowAddUserModal(false)
-                                            }
-                                            disabled={
-                                                searchResults.length === 0
-                                            }
-                                            className={`w-full py-2.5 rounded-lg font-semibold transition-all active:scale-95 ${
-                                                searchResults.length === 0
-                                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                    : 'bg-blue-500 text-white hover:bg-blue-600'
-                                            }`}
-                                        >
-                                            Done
-                                        </button>
                                     </div>
                                 </div>
                             )}
