@@ -43,7 +43,7 @@ class CryptoStorage {
         return `privateKey`;
     }
 
-    getGroupKeyId(conversationId: string): string {
+    getGroupKeyId(conversationId: number): string {
         return `groupKey_${conversationId}`;
     }
 }

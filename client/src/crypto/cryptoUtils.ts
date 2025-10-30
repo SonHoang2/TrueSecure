@@ -86,15 +86,19 @@ export async function importAESKey(base64Key) {
     }
 }
 
-export async function storeGroupKey({ conversationId, userId, groupKey }) {
-    if (!userId || !conversationId) {
-        console.error(
-            'User ID and conversationId are required to store group key',
-        );
+export async function storeGroupKey({
+    conversationId,
+    groupKey,
+}: {
+    conversationId: number;
+    groupKey: CryptoKey;
+}) {
+    if (!conversationId) {
+        console.error('Conversation ID is required to store group key');
         return;
     }
 
-    const storageKey = cryptoStorage.getGroupKeyId(userId, conversationId);
+    const storageKey = cryptoStorage.getGroupKeyId(conversationId);
     const exportedKey = await window.crypto.subtle.exportKey('jwk', groupKey);
 
     await cryptoStorage.setItem(storageKey, exportedKey);
@@ -123,15 +127,19 @@ export async function importPrivateKey() {
     return privateKey;
 }
 
-export async function importGroupKey({ conversationId, userId }) {
-    if (!userId || !conversationId) {
+export async function importGroupKey({
+    conversationId,
+}: {
+    conversationId: number;
+}) {
+    if (!conversationId) {
         console.warn(
             'User ID and conversationId are required to import group key',
         );
         return;
     }
 
-    const storageKey = cryptoStorage.getGroupKeyId(userId, conversationId);
+    const storageKey = cryptoStorage.getGroupKeyId(conversationId);
     const exportedKey = await cryptoStorage.getItem(storageKey);
 
     if (!exportedKey) {

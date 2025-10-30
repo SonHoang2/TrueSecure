@@ -11,25 +11,12 @@ interface GetGroupKeyParams {
     deviceUuid: string;
 }
 
-class EncryptionError extends Error {
-    constructor(
-        message: string,
-        public cause?: Error,
-    ) {
-        super(message);
-        this.name = 'EncryptionError';
-    }
-}
-
 export interface UserDevice {
     deviceUuid: string;
     publicKey: string;
 }
 
-export const initializeUserKey = async (): Promise<{
-    privateKey: CryptoKey;
-    publicKey: string;
-}> => {
+export const initializeUserKey = async () => {
     try {
         const { privateKey, publicKey } = await cryptoUtils.generateECDHKeys();
 
@@ -39,10 +26,7 @@ export const initializeUserKey = async (): Promise<{
 
         return { privateKey, publicKey: exportedPublicKey };
     } catch (error) {
-        throw new EncryptionError(
-            'Failed to initialize encryption keys',
-            error instanceof Error ? error : new Error(String(error)),
-        );
+        console.error('Failed to initialize encryption keys', error);
     }
 };
 
@@ -52,24 +36,23 @@ export const getGroupKey = async ({
     userId,
     axiosPrivate,
     deviceUuid,
-}: GetGroupKeyParams): Promise<CryptoKey> => {
+}: GetGroupKeyParams) => {
     const { privateKey } = userKey;
 
     if (!privateKey) {
-        throw new EncryptionError('User private keys are required');
+        console.error('User private keys are required');
     }
 
     if (!conversationId || !userId) {
-        throw new EncryptionError('Conversation ID and User ID are required');
+        console.error('Conversation ID and User ID are required');
     }
 
     if (!deviceUuid) {
-        throw new EncryptionError('Device UUID is required');
+        console.error('Device UUID is required');
     }
 
     let groupKey = await cryptoUtils.importGroupKey({
         conversationId,
-        userId,
     });
 
     if (groupKey) {
@@ -85,7 +68,7 @@ export const getGroupKey = async ({
             },
         );
     } catch (apiError: any) {
-        throw new EncryptionError(
+        console.error(
             `Failed to fetch group key from server: ${
                 apiError.response?.data?.message || apiError.message
             }`,
@@ -96,9 +79,8 @@ export const getGroupKey = async ({
     const { encryptedGroupKey } = response.data.data || response.data;
 
     if (!encryptedGroupKey) {
-        throw new EncryptionError(
-            'No encrypted group key found for this device',
-        );
+        console.error('No encrypted group key found in server response');
+        return;
     }
 
     let decryptedKey;
@@ -108,44 +90,34 @@ export const getGroupKey = async ({
             encryptedGroupKey,
         );
     } catch (decryptError) {
-        throw new EncryptionError(
-            'Failed to decrypt group key',
-            decryptError instanceof Error
-                ? decryptError
-                : new Error(String(decryptError)),
-        );
+        console.error('Failed to decrypt group key');
+        return;
     }
 
     try {
         groupKey = await cryptoUtils.importAESKey(decryptedKey);
-    } catch (importError) {
-        throw new EncryptionError(
-            'Failed to import decrypted group key',
-            importError instanceof Error
-                ? importError
-                : new Error(String(importError)),
-        );
+    } catch (error) {
+        console.error('Failed to import decrypted group key');
     }
 
     if (!groupKey) {
-        throw new EncryptionError('Failed to import group key');
+        console.error('Failed to import group key');
+        return;
     }
 
     try {
         await cryptoUtils.storeGroupKey({
             conversationId,
-            userId,
             groupKey,
         });
     } catch (storeError) {
         console.warn('Failed to store group key locally:', storeError);
     }
-
     return groupKey;
 };
 
 export async function distributeGroupKeys(params: {
-    conversationId: string;
+    conversationId: number;
     members: User[];
     publicKeys: Map<number, { deviceUuid: string; publicKey: string }[]>;
     axiosPrivate: AxiosInstance;
@@ -190,13 +162,12 @@ export async function distributeGroupKeys(params: {
 
         await cryptoUtils.storeGroupKey({
             conversationId,
-            userId: currentUserId,
             groupKey: aesKey,
         });
     } catch (error) {
         console.error('Error distributing group keys:', error);
 
-        throw new EncryptionError(
+        console.error(
             'Failed to distribute group keys to server',
             error instanceof Error ? error : new Error(String(error)),
         );
