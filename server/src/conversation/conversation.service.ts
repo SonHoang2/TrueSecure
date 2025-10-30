@@ -382,10 +382,10 @@ export class ConversationService {
             );
         }
 
-        await this.participantDeviceRepo.update(
-            { id: participantDevice.id },
-            { encryptedGroupKey: null, groupEpoch: conversation.groupEpoch },
-        );
+        // await this.participantDeviceRepo.update(
+        //     { id: participantDevice.id },
+        //     { encryptedGroupKey: null, groupEpoch: conversation.groupEpoch },
+        // );
 
         return {
             encryptedGroupKey: participantDevice.encryptedGroupKey,

@@ -39,6 +39,7 @@ export class ConversationController {
         @Req() req: RequestWithUser,
     ) {
         const userId = req.user.id;
+
         return this.conversationService.getConversationKey(
             conversationId,
             userId,
