@@ -44,11 +44,13 @@ async def detect(imageFile: UploadFile = File(...)):
 
         # Get prediction result
         is_deepfake, confidence, frame = predict(frame)
+        
+        confidence_percent = round(confidence * 100)
 
         return JSONResponse(content={
             "status": "success",
             "isDeepfake": is_deepfake,
-            "confidence": round(confidence, 3),
+            "confidence": confidence_percent,
             "faceDetected": True,
         })
     except Exception as e:
