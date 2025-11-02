@@ -72,7 +72,7 @@ const InCallModal: React.FC<InCallModalProps> = ({
                             Confidence:
                         </span>
                         <span className="text-white text-sm font-mono">
-                            {deepfakeResults.confidence.toFixed(2)}
+                            {deepfakeResults.confidence}
                         </span>
                     </div>
                     <div className="flex items-center space-x-2">
