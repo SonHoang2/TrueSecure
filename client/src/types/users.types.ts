@@ -25,13 +25,13 @@ export type UserKeysExported = {
 };
 
 export type Receiver = {
-    id: string;
+    id: number;
     avatar: string;
     firstName: string;
     lastName: string;
 };
 
 export type UserStatus = {
-    onlineUsers: Array<string>;
+    onlineUsers: Array<number>;
     lastSeen: Record<string, string>;
 };
