@@ -154,6 +154,33 @@ export const addUserToConversation = createAsyncThunk(
     },
 );
 
+export const removeUserFromGroup = createAsyncThunk(
+    'conversations/removeUserFromGroup',
+    async (
+        { groupId, userId }: { groupId: number; userId: number },
+        { rejectWithValue },
+    ) => {
+        try {
+            // await axiosPrivate.post(
+            //     `${CONVERSATIONS_URL}/${groupId}/remove-user`,
+            //     { userId },
+            // );
+
+            console.log({
+                groupId,
+                userId,
+            });
+
+            return;
+        } catch (error: any) {
+            return rejectWithValue(
+                error.response?.data?.message ||
+                    'Failed to remove user from group',
+            );
+        }
+    },
+);
+
 const conversationSlice = createSlice({
     name: 'conversations',
     initialState,

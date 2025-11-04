@@ -43,6 +43,29 @@ export async function importPublicKey(base64Key) {
     );
 }
 
+export async function importPrivateKey() {
+    const storageKey = cryptoStorage.getPrivateKeyId();
+    const exportedKey = await cryptoStorage.getItem(storageKey);
+
+    if (!exportedKey) {
+        console.error('No key data found for the user');
+        return;
+    }
+
+    const privateKey = await window.crypto.subtle.importKey(
+        'jwk', // Format of the key
+        exportedKey,
+        {
+            name: 'ECDH',
+            namedCurve: 'P-256',
+        },
+        true, // Key is exportable
+        ['deriveKey'], // Key usages
+    );
+
+    return privateKey;
+}
+
 export async function storePrivateKey(privateKey) {
     const storageKey = cryptoStorage.getPrivateKeyId();
     const exportedKey = await window.crypto.subtle.exportKey('jwk', privateKey);
@@ -102,29 +125,6 @@ export async function storeGroupKey({
     const exportedKey = await window.crypto.subtle.exportKey('jwk', groupKey);
 
     await cryptoStorage.setItem(storageKey, exportedKey);
-}
-
-export async function importPrivateKey() {
-    const storageKey = cryptoStorage.getPrivateKeyId();
-    const exportedKey = await cryptoStorage.getItem(storageKey);
-
-    if (!exportedKey) {
-        console.error('No key data found for the user');
-        return;
-    }
-
-    const privateKey = await window.crypto.subtle.importKey(
-        'jwk', // Format of the key
-        exportedKey,
-        {
-            name: 'ECDH',
-            namedCurve: 'P-256',
-        },
-        true, // Key is exportable
-        ['deriveKey'], // Key usages
-    );
-
-    return privateKey;
 }
 
 export async function importGroupKey({

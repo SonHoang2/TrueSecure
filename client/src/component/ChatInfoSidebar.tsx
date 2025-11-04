@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     MdExpandLess,
     MdExpandMore,
@@ -15,6 +15,7 @@ import { AppDispatch } from '../store';
 import {
     addUserToConversation,
     leaveGroup,
+    removeUserFromGroup,
 } from '../store/slices/conversationSlice';
 import { searchUsers } from '../utils/userUtils';
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
@@ -57,6 +58,10 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
     const [isSearching, setIsSearching] = useState(false);
     const [showAddUserModal, setShowAddUserModal] = useState(false);
     const axiosPrivate = useAxiosPrivate();
+    const currentUserIsAdmin = useMemo(() => {
+        if (conversation?.isGroup !== true) return false;
+        return participants.find((p) => p.id === user.id && p.role === 'admin');
+    }, [participants, user?.id]);
 
     const dispatch = useDispatch<AppDispatch>();
 
@@ -79,12 +84,14 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
         }
     };
 
-    const handleRemoveUser = async (userId: string) => {
-        if (user?.role !== 'admin') return;
+    const handleRemoveUser = async (userId: number) => {
+        if (!currentUserIsAdmin) return;
 
         try {
             // TODO: Replace with actual API call to remove user from group
-            // await dispatch(removeUserFromGroup({ groupId: conversation.id, userId })).unwrap();
+            await dispatch(
+                removeUserFromGroup({ groupId: conversation.id, userId }),
+            ).unwrap();
             console.log('User removed:', userId);
         } catch (error) {
             console.error('Failed to remove user:', error);
@@ -250,10 +257,9 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                                                         </span>
                                                     )}
 
-                                                    {/* Show delete button only if current user is admin and participant is not admin */}
-                                                    {user?.role === 'admin' &&
-                                                        participant.role !==
-                                                            'admin' && (
+                                                    {currentUserIsAdmin &&
+                                                        participant.id !==
+                                                            user?.id && (
                                                             <button
                                                                 onClick={() =>
                                                                     handleRemoveUser(
