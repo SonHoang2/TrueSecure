@@ -115,7 +115,8 @@ export const ChatLeftPanel: React.FC<ChatLeftPanelProps> = ({
                 const isOtherUserOnline =
                     !isGroup &&
                     otherUser?.id &&
-                    userStatus?.onlineUsers.hasOwnProperty(otherUser.id);
+                    Array.isArray(userStatus?.onlineUsers) &&
+                    userStatus.onlineUsers.includes(otherUser.id);
 
                 return {
                     ...conv,

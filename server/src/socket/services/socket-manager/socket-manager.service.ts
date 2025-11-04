@@ -93,6 +93,9 @@ export class SocketManagerService {
 
     async broadcastOnlineStatus(): Promise<void> {
         const onlineStatus = await this.socketCacheService.getOnlineStatus();
+        this.logger.log(
+            `Broadcasting online status: ${JSON.stringify(onlineStatus)}`,
+        );
         this.server.emit('online-users', onlineStatus);
     }
 
