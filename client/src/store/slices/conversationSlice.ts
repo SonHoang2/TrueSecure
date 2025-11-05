@@ -141,11 +141,12 @@ export const addUserToConversation = createAsyncThunk(
         { rejectWithValue },
     ) => {
         try {
-            await axiosPrivate.post(
+            const res = await axiosPrivate.post(
                 `${CONVERSATIONS_URL}/${conversation}/add-user`,
                 { userId },
             );
-            return;
+
+            return res.data.data.participant;
         } catch (error: any) {
             return rejectWithValue(
                 error.response?.data?.message || 'Failed to add user to group',
@@ -161,17 +162,11 @@ export const removeUserFromGroup = createAsyncThunk(
         { rejectWithValue },
     ) => {
         try {
-            // await axiosPrivate.post(
-            //     `${CONVERSATIONS_URL}/${groupId}/remove-user`,
-            //     { userId },
-            // );
+            await axiosPrivate.delete(
+                `${CONVERSATIONS_URL}/${groupId}/remove-user?userId=${userId}`,
+            );
 
-            console.log({
-                groupId,
-                userId,
-            });
-
-            return;
+            return userId;
         } catch (error: any) {
             return rejectWithValue(
                 error.response?.data?.message ||
@@ -373,10 +368,25 @@ const conversationSlice = createSlice({
                     action.payload &&
                     !state.participants.some((p) => p.id === action.payload.id)
                 ) {
-                    state.participants.push(action.payload);
+                    state.participants.push(action.payload as User);
                 }
             })
             .addCase(addUserToConversation.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload as string;
+            })
+            .addCase(removeUserFromGroup.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(removeUserFromGroup.fulfilled, (state, action) => {
+                state.isLoading = false;
+                // Xóa user khỏi participants list
+                state.participants = state.participants.filter(
+                    (p) => p.id !== action.payload,
+                );
+            })
+            .addCase(removeUserFromGroup.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
             });

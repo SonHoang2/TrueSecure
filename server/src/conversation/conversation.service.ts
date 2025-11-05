@@ -644,4 +644,82 @@ export class ConversationService {
             },
         };
     }
+
+    async removeUserFromGroup(
+        conversationId: number,
+        userId: number,
+        requestingUserId: number,
+    ) {
+        // Verify conversation exists and is a group
+        const conversation = await this.conversationRepo.findOne({
+            where: { id: conversationId },
+            relations: ['participants'],
+        });
+
+        if (!conversation) {
+            throw new NotFoundException('Conversation not found');
+        }
+
+        if (!conversation.isGroup) {
+            throw new BadRequestException(
+                'Cannot remove users from a private conversation',
+            );
+        }
+
+        // Check if requesting user is an admin
+        const requestingUserParticipant = conversation.participants.find(
+            (p) => p.userId === requestingUserId,
+        );
+
+        if (!requestingUserParticipant) {
+            throw new ForbiddenException(
+                'You are not a participant of this conversation',
+            );
+        }
+
+        if (requestingUserParticipant.role !== ChatGroupRole.ADMIN) {
+            throw new ForbiddenException(
+                'Only admins can remove users from this group',
+            );
+        }
+
+        // Prevent admin from removing themselves
+        if (userId === requestingUserId) {
+            throw new BadRequestException(
+                'Cannot remove yourself from the group. Use leave group instead',
+            );
+        }
+
+        // Find the participant to remove
+        const participantToRemove = conversation.participants.find(
+            (p) => p.userId === userId,
+        );
+
+        if (!participantToRemove) {
+            throw new NotFoundException(
+                'User is not a participant of this group',
+            );
+        }
+
+        // Remove participant devices first (due to foreign key constraints)
+        await this.participantDeviceRepo.delete({
+            participantId: participantToRemove.id,
+        });
+
+        // Remove the participant
+        await this.participantRepo.remove(participantToRemove);
+
+        // Mark group for key rotation
+        await this.conversationRepo.update(
+            { id: conversationId },
+            {
+                groupEpoch: () => '"groupEpoch" + 1',
+                rotateNeeded: true,
+            },
+        );
+
+        return {
+            message: 'User removed from group successfully',
+        };
+    }
 }
