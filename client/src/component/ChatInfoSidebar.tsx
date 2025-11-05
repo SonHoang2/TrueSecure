@@ -10,8 +10,8 @@ import {
     MdDelete,
 } from 'react-icons/md';
 import { FaArrowLeft, FaRegEdit, FaUserPlus } from 'react-icons/fa';
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from '../store';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../store';
 import {
     addUserToConversation,
     leaveGroup,
@@ -39,10 +39,13 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
     onClose,
     conversation,
     receiver,
-    participants,
     user,
 }) => {
     if (!isOpen) return null;
+
+    const participants = useSelector(
+        (state: RootState) => state.conversations.participants,
+    );
 
     const [openSections, setOpenSections] = useState<{
         [key: string]: boolean;
@@ -129,7 +132,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
         if (!conversation?.isGroup) return;
 
         try {
-            await dispatch(
+            const response = await dispatch(
                 addUserToConversation({
                     conversation: conversation.id,
                     userId,
@@ -143,7 +146,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
 
             await distributeGroupKeys({
                 conversationId: conversation.id,
-                members: [...participants, { id: userId }],
+                members: [...participants, response],
                 publicKeys,
                 axiosPrivate,
                 currentUserId: user.id,
@@ -194,7 +197,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                 </h3>
                 <p className="text-gray-500 text-sm">
                     {conversation?.isGroup
-                        ? `${conversation.participants?.length || 0} members`
+                        ? `${participants.length || 0} members`
                         : 'Active now'}
                 </p>
             </div>

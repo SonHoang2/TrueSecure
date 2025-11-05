@@ -98,4 +98,18 @@ export class ConversationController {
     ) {
         return this.conversationService.leaveGroup(conversationId, req.user.id);
     }
+
+    @Delete(':id/remove-user')
+    @UseGuards(JwtAuthGuard)
+    async removeUserFromGroup(
+        @Param('id', ParseIntPipe) conversationId: number,
+        @Query('userId', ParseIntPipe) userId: number,
+        @Request() req,
+    ) {
+        return this.conversationService.removeUserFromGroup(
+            conversationId,
+            userId,
+            req.user.id,
+        );
+    }
 }
