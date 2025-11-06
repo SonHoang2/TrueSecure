@@ -80,10 +80,8 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
 
         try {
             await dispatch(leaveGroup(conversation.id)).unwrap();
-            onClose(); // Close sidebar after leaving
         } catch (error) {
             console.error('Failed to leave group:', error);
-            // Handle error (show toast, etc.)
         }
     };
 
@@ -91,11 +89,26 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
         if (!currentUserIsAdmin) return;
 
         try {
-            // TODO: Replace with actual API call to remove user from group
             await dispatch(
                 removeUserFromGroup({ groupId: conversation.id, userId }),
             ).unwrap();
-            console.log('User removed:', userId);
+
+            const remainingParticipants = participants.filter(
+                (p) => p.id !== userId,
+            );
+
+            const publicKeys = await getUserPublicKeys({
+                userIds: remainingParticipants.map((p) => p.id),
+                axiosPrivate,
+            });
+
+            await distributeGroupKeys({
+                conversationId: conversation.id,
+                members: remainingParticipants,
+                publicKeys,
+                axiosPrivate,
+                currentUserId: user.id,
+            });
         } catch (error) {
             console.error('Failed to remove user:', error);
         }
