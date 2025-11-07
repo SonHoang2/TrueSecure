@@ -3,7 +3,11 @@ import { Socket } from 'socket.io-client';
 import { AxiosInstance } from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import * as cryptoUtils from '../crypto/cryptoUtils';
-import { getGroupKey } from '../services/encryptionService';
+import {
+    distributeGroupKeys,
+    getGroupKey,
+    getUserPublicKeys,
+} from '../services/encryptionService';
 import { MessageStatus } from '../enums/messageStatus.enum';
 import { CONVERSATIONS_URL } from '../config/config';
 import {
@@ -282,7 +286,7 @@ export const useChatMessages = ({
                 );
 
                 dispatch(setCurrentMessage(''));
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Failed to send message:', error);
                 if (
                     error instanceof DOMException ||
@@ -453,6 +457,11 @@ export const useChatMessages = ({
     useEffect(() => {
         if (!socket || !userKey?.privateKey) {
             console.warn('Socket or userKey is not available');
+            return;
+        }
+
+        if (!deviceUuid) {
+            console.error('Device UUID is required for message handling');
             return;
         }
 
@@ -641,6 +650,23 @@ export const useChatMessages = ({
             },
         );
 
+        socket.on('user-left-group', async ({ conversationId, userId }) => {
+            const remainingParticipants = participants.filter(
+                (p) => p.id !== userId,
+            );
+            const publicKeys = await getUserPublicKeys({
+                userIds: remainingParticipants.map((p) => p.id),
+                axiosPrivate,
+            });
+
+            await distributeGroupKeys({
+                conversationId,
+                members: remainingParticipants,
+                publicKeys,
+                axiosPrivate,
+            });
+        });
+
         return () => {
             socket.off('new-private-message');
             socket.off('new-group-message');
@@ -648,6 +674,7 @@ export const useChatMessages = ({
             socket.off('group-message-status-update');
             socket.off('user-typing');
             socket.off('user-stopped-typing');
+            socket.off('user-left-group');
         };
     }, [socket, userKey, selectedConversationId, user, axiosPrivate, dispatch]);
 

@@ -455,101 +455,116 @@ export class ConversationService {
     }
 
     async leaveGroup(conversationId: number, userId: number) {
-        const conversation = await this.conversationRepo.findOne({
-            where: { id: conversationId },
-            relations: ['participants'],
-        });
-
-        if (!conversation) {
-            throw new NotFoundException('Conversation not found');
-        }
-
-        if (!conversation.isGroup) {
-            throw new BadRequestException(
-                'Cannot leave a private conversation',
-            );
-        }
-
-        const participant = conversation.participants.find(
-            (p) => p.userId === userId,
-        );
-
-        if (!participant) {
-            throw new ForbiddenException(
-                'You are not a participant of this conversation',
-            );
-        }
-
-        // Check if user is the only admin
-        const admins = conversation.participants.filter(
-            (p) => p.role === ChatGroupRole.ADMIN,
-        );
-
-        if (participant.role === ChatGroupRole.ADMIN && admins.length === 1) {
-            // If only one admin and more than one participant, promote another member
-            const members = conversation.participants.filter(
-                (p) => p.role === ChatGroupRole.MEMBER,
-            );
-
-            if (members.length > 0) {
-                // Promote the first member to admin
-                members[0].role = ChatGroupRole.ADMIN;
-                await this.participantRepo.save(members[0]);
-            }
-        }
-
-        // Remove participant devices first (due to foreign key constraints)
-        await this.participantDeviceRepo.delete({
-            participantId: participant.id,
-        });
-
-        // Remove the participant
-        await this.participantRepo.remove(participant);
-
-        // Check remaining participants
-        const remainingParticipants = await this.participantRepo.count({
-            where: { conversationId },
-        });
-
-        // Delete group if 0 or 1 participants remain
-        if (remainingParticipants <= 1) {
-            // Clean up any remaining participant devices
-            const remainingParticipantIds = await this.participantRepo.find({
-                where: { conversationId },
-                select: ['id'],
-            });
-
-            for (const p of remainingParticipantIds) {
-                await this.participantDeviceRepo.delete({
-                    participantId: p.id,
+        return await this.conversationRepo.manager.transaction(
+            async (manager) => {
+                const conversation = await manager.findOne(Conversation, {
+                    where: { id: conversationId },
+                    relations: ['participants'],
                 });
-            }
 
-            // Remove remaining participants
-            await this.participantRepo.delete({ conversationId });
+                if (!conversation) {
+                    throw new NotFoundException('Conversation not found');
+                }
 
-            // Delete the conversation
-            await this.conversationRepo.remove(conversation);
+                if (!conversation.isGroup) {
+                    throw new BadRequestException(
+                        'Cannot leave a private conversation',
+                    );
+                }
 
-            return {
-                message:
-                    'Successfully left the group. Group was deleted as it had insufficient members.',
-                groupDeleted: true,
-            };
-        }
+                const participant = conversation.participants.find(
+                    (p) => p.userId === userId,
+                );
 
-        await this.conversationRepo.update(
-            { id: conversation.id },
-            {
-                groupEpoch: () => '"groupEpoch" + 1',
-                rotateNeeded: true,
+                if (!participant) {
+                    throw new ForbiddenException(
+                        'You are not a participant of this conversation',
+                    );
+                }
+
+                // Check if user is the only admin
+                const admins = conversation.participants.filter(
+                    (p) => p.role === ChatGroupRole.ADMIN,
+                );
+
+                if (
+                    participant.role === ChatGroupRole.ADMIN &&
+                    admins.length === 1
+                ) {
+                    // If only one admin and more than one participant, promote another member
+                    const members = conversation.participants.filter(
+                        (p) => p.role === ChatGroupRole.MEMBER,
+                    );
+
+                    if (members.length > 0) {
+                        members[0].role = ChatGroupRole.ADMIN;
+                        await manager.save(members[0]);
+                    }
+                }
+
+                // Remove participant devices first (due to FK constraints)
+                await manager.delete(ParticipantDevice, {
+                    participantId: participant.id,
+                });
+
+                // Remove participant
+                await manager.remove(participant);
+
+                // Count remaining participants
+                const remainingParticipants = await manager.count(Participant, {
+                    where: { conversationId },
+                });
+
+                // If no one or only one left → delete the whole group
+                if (remainingParticipants <= 1) {
+                    const remainingParticipantIds = await manager.find(
+                        Participant,
+                        {
+                            where: { conversationId },
+                            select: ['id'],
+                        },
+                    );
+
+                    if (remainingParticipantIds.length > 0) {
+                        for (const p of remainingParticipantIds) {
+                            await manager.delete(ParticipantDevice, {
+                                participantId: p.id,
+                            });
+                        }
+
+                        await manager.delete(Participant, { conversationId });
+                    }
+
+                    await manager.remove(conversation);
+
+                    return {
+                        message:
+                            'Successfully left the group. Group was deleted as it had insufficient members.',
+                        groupDeleted: true,
+                    };
+                }
+
+                // Mark group for key rotation (atomic update)
+                await manager
+                    .createQueryBuilder()
+                    .update(Conversation)
+                    .set({
+                        groupEpoch: () => '"groupEpoch" + 1',
+                        rotateNeeded: true,
+                        rotateReason: 'member_left',
+                        rotateRequestedAt: () => 'CURRENT_TIMESTAMP',
+                    })
+                    .where('id = :id AND rotateNeeded = false', {
+                        id: conversation.id,
+                    })
+                    .execute();
+
+                return {
+                    message: 'Successfully left the group',
+                    groupDeleted: false,
+                };
             },
         );
-
-        return {
-            message: 'Successfully left the group',
-            groupDeleted: false,
-        };
     }
 
     async addUserToGroup(

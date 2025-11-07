@@ -24,6 +24,7 @@ import {
     distributeGroupKeys,
     getUserPublicKeys,
 } from '../services/encryptionService';
+import socket from '../../socket';
 
 interface ChatInfoSidebarProps {
     isOpen: boolean;
@@ -80,6 +81,11 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
 
         try {
             await dispatch(leaveGroup(conversation.id)).unwrap();
+
+            socket.emit('user-left-group', {
+                conversationId: conversation.id,
+                userId: user.id,
+            });
         } catch (error) {
             console.error('Failed to leave group:', error);
         }
@@ -107,7 +113,6 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                 members: remainingParticipants,
                 publicKeys,
                 axiosPrivate,
-                currentUserId: user.id,
             });
         } catch (error) {
             console.error('Failed to remove user:', error);
@@ -162,7 +167,6 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                 members: [...participants, response],
                 publicKeys,
                 axiosPrivate,
-                currentUserId: user.id,
             });
 
             setSearchResults((prev) =>

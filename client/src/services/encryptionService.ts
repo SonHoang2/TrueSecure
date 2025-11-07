@@ -121,10 +121,8 @@ export async function distributeGroupKeys(params: {
     members: User[];
     publicKeys: Map<number, { deviceUuid: string; publicKey: string }[]>;
     axiosPrivate: AxiosInstance;
-    currentUserId: number;
 }) {
-    const { conversationId, members, publicKeys, axiosPrivate, currentUserId } =
-        params;
+    const { conversationId, members, publicKeys, axiosPrivate } = params;
 
     const aesKey = await cryptoUtils.generateAesKey();
 

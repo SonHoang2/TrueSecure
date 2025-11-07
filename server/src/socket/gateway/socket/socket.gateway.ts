@@ -214,4 +214,20 @@ export class SocketGateway
             );
         }
     }
+
+    @SubscribeMessage('user-left-group')
+    async handleUserLeftGroup(
+        @MessageBody() data: { conversationId: number; userId: number },
+    ) {
+        try {
+            await this.socketService.handleUserLeftGroup(
+                data.conversationId,
+                data.userId,
+            );
+        } catch (error) {
+            this.logger.error(
+                `Error handling user left group: ${error.message}`,
+            );
+        }
+    }
 }
