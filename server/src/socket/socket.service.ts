@@ -295,4 +295,38 @@ export class SocketService {
         userCallDeviceMap.delete(data.receiverId);
         userCallDeviceMap.delete((client as any).user.id);
     }
+
+    async handleUserLeftGroup(
+        conversationId: number,
+        userId: number,
+    ): Promise<void> {
+        const participants =
+            await this.conversationService.getOtherParticipants(
+                conversationId,
+                userId,
+            );
+
+        const emitPromises: Promise<void>[] = [];
+
+        for (const participant of participants) {
+            const deviceMap = await this.socketCacheService.getDevicesByUserId(
+                participant.userId,
+            );
+            for (const deviceUuid of Object.keys(deviceMap)) {
+                emitPromises.push(
+                    this.socketManagerService.emitToUser({
+                        userId: participant.userId,
+                        event: 'user-left-group',
+                        data: {
+                            conversationId,
+                            userId,
+                        },
+                        deviceUuid,
+                    }),
+                );
+            }
+        }
+
+        await Promise.all(emitPromises);
+    }
 }
