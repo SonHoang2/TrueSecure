@@ -33,6 +33,8 @@ import {
     updateConversationLastMessage,
     incrementUnreadCount,
     loadConversations,
+    loadConversationDetails,
+    completeKeyRotation,
 } from '../store/slices/conversationSlice';
 import { addNotification } from '../store/slices/uiSlice';
 import { LastSeenStatus, Message } from '../types/messages.types';
@@ -651,9 +653,18 @@ export const useChatMessages = ({
         );
 
         socket.on('user-left-group', async ({ conversationId, userId }) => {
-            const remainingParticipants = participants.filter(
+            const result = await dispatch(
+                loadConversationDetails(conversationId),
+            );
+
+            const conversation = result.payload;
+
+            if (!conversation.rotateNeeded) return;
+
+            const remainingParticipants = conversation.participants.filter(
                 (p) => p.id !== userId,
             );
+
             const publicKeys = await getUserPublicKeys({
                 userIds: remainingParticipants.map((p) => p.id),
                 axiosPrivate,
@@ -665,6 +676,8 @@ export const useChatMessages = ({
                 publicKeys,
                 axiosPrivate,
             });
+
+            await dispatch(completeKeyRotation(conversationId));
         });
 
         return () => {

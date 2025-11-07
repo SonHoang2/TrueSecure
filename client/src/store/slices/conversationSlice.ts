@@ -36,6 +36,23 @@ const initialState: ConversationState = {
     rotateNeeded: false,
 };
 
+export const completeKeyRotation = createAsyncThunk(
+    'conversations/completeKeyRotation',
+    async (conversationId: number, { rejectWithValue }) => {
+        try {
+            await axiosPrivate.post(
+                `/conversations/${conversationId}/rotate-complete`,
+            );
+            return conversationId;
+        } catch (error: any) {
+            return rejectWithValue(
+                error.response?.data?.message ||
+                    'Failed to complete key rotation',
+            );
+        }
+    },
+);
+
 export const loadConversations = createAsyncThunk(
     'conversations/loadConversations',
     async (_, { rejectWithValue }) => {
