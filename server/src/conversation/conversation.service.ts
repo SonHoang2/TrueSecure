@@ -13,6 +13,7 @@ import { UserService } from 'src/user/user.service';
 import { ChatGroupRole } from 'src/common/enum/chat-role.enum';
 import { ParticipantDevice } from './entities/participant-device.entity';
 import { DeviceService } from 'src/device/device.service';
+import { validate as isValidUUID } from 'uuid';
 
 @Injectable()
 export class ConversationService {
@@ -119,7 +120,9 @@ export class ConversationService {
         };
     }
 
-    async getConversation(uuid: string, userId: number) {
+    async getConversation(identifier: string, userId: number) {
+        const isUUID = isValidUUID(identifier);
+
         const conversation = await this.conversationRepo
             .createQueryBuilder('conversation')
             .leftJoinAndSelect('conversation.participants', 'participants')
@@ -128,7 +131,12 @@ export class ConversationService {
                 'participants.participantDevices',
                 'participantDevices',
             )
-            .where('conversation.uuid = :uuid', { uuid })
+            .where(
+                isUUID
+                    ? 'conversation.uuid = :identifier'
+                    : 'conversation.id = :identifier',
+                { identifier: isUUID ? identifier : parseInt(identifier) },
+            )
             .getOne();
 
         if (!conversation) {
@@ -644,6 +652,8 @@ export class ConversationService {
             {
                 groupEpoch: () => '"groupEpoch" + 1',
                 rotateNeeded: true,
+                rotateReason: 'member_added',
+                rotateRequestedAt: () => 'CURRENT_TIMESTAMP',
             },
         );
 
@@ -730,11 +740,48 @@ export class ConversationService {
             {
                 groupEpoch: () => '"groupEpoch" + 1',
                 rotateNeeded: true,
+                rotateReason: 'member_removed',
+                rotateRequestedAt: () => 'CURRENT_TIMESTAMP',
             },
         );
 
         return {
             message: 'User removed from group successfully',
+        };
+    }
+
+    async rotateGroupKeyComplete(conversationId: number, userId: number) {
+        const conversation = await this.conversationRepo.findOne({
+            where: { id: conversationId },
+        });
+
+        if (!conversation) {
+            throw new NotFoundException('Conversation not found');
+        }
+
+        const participant = await this.participantRepo.findOne({
+            where: { conversationId, userId },
+        });
+
+        if (!participant) {
+            throw new ForbiddenException(
+                'You are not a participant of this conversation',
+            );
+        }
+
+        if (!conversation.rotateNeeded) {
+            throw new BadRequestException(
+                'No key rotation is needed for this conversation',
+            );
+        }
+
+        await this.conversationRepo.update(
+            { id: conversation.id },
+            { rotateNeeded: false },
+        );
+
+        return {
+            message: 'Group key rotation marked as complete',
         };
     }
 }

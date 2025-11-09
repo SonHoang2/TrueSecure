@@ -40,8 +40,8 @@ export const completeKeyRotation = createAsyncThunk(
     'conversations/completeKeyRotation',
     async (conversationId: number, { rejectWithValue }) => {
         try {
-            await axiosPrivate.post(
-                `/conversations/${conversationId}/rotate-complete`,
+            await axiosPrivate.patch(
+                `${CONVERSATIONS_URL}/${conversationId}/rotate-complete`,
             );
             return conversationId;
         } catch (error: any) {
@@ -188,6 +188,23 @@ export const removeUserFromGroup = createAsyncThunk(
             return rejectWithValue(
                 error.response?.data?.message ||
                     'Failed to remove user from group',
+            );
+        }
+    },
+);
+
+export const rotateGroupKeyComplete = createAsyncThunk(
+    'conversations/rotateGroupKeyComplete',
+    async (conversationId: number, { rejectWithValue }) => {
+        try {
+            await axiosPrivate.patch(
+                `${CONVERSATIONS_URL}/${conversationId}/rotate-complete`,
+            );
+            return conversationId;
+        } catch (error: any) {
+            return rejectWithValue(
+                error.response?.data?.message ||
+                    'Failed to complete group key rotation',
             );
         }
     },

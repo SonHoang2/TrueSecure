@@ -652,7 +652,7 @@ export const useChatMessages = ({
             },
         );
 
-        socket.on('user-left-group', async ({ conversationId, userId }) => {
+        socket.on('member-left', async ({ conversationId, userId }) => {
             const result = await dispatch(
                 loadConversationDetails(conversationId),
             );
@@ -687,7 +687,7 @@ export const useChatMessages = ({
             socket.off('group-message-status-update');
             socket.off('user-typing');
             socket.off('user-stopped-typing');
-            socket.off('user-left-group');
+            socket.off('member-left');
         };
     }, [socket, userKey, selectedConversationId, user, axiosPrivate, dispatch]);
 

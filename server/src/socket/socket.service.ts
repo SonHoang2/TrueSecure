@@ -316,7 +316,7 @@ export class SocketService {
                 emitPromises.push(
                     this.socketManagerService.emitToUser({
                         userId: participant.userId,
-                        event: 'user-left-group',
+                        event: 'member-left',
                         data: {
                             conversationId,
                             userId,

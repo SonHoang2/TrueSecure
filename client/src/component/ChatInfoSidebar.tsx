@@ -16,6 +16,7 @@ import {
     addUserToConversation,
     leaveGroup,
     removeUserFromGroup,
+    rotateGroupKeyComplete,
 } from '../store/slices/conversationSlice';
 import { searchUsers } from '../utils/userUtils';
 import useAxiosPrivate from '../hooks/useAxiosPrivate';
@@ -82,7 +83,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
         try {
             await dispatch(leaveGroup(conversation.id)).unwrap();
 
-            socket.emit('user-left-group', {
+            socket.emit('member-left', {
                 conversationId: conversation.id,
                 userId: user.id,
             });
@@ -113,6 +114,13 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                 members: remainingParticipants,
                 publicKeys,
                 axiosPrivate,
+            });
+
+            await dispatch(rotateGroupKeyComplete(conversation.id)).unwrap();
+
+            socket.emit('member-removed', {
+                conversationId: conversation.id,
+                userId,
             });
         } catch (error) {
             console.error('Failed to remove user:', error);
@@ -167,6 +175,13 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                 members: [...participants, response],
                 publicKeys,
                 axiosPrivate,
+            });
+
+            await dispatch(rotateGroupKeyComplete(conversation.id)).unwrap();
+
+            socket.emit('add-user', {
+                conversationId: conversation.id,
+                user: response,
             });
 
             setSearchResults((prev) =>

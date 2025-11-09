@@ -215,7 +215,7 @@ export class SocketGateway
         }
     }
 
-    @SubscribeMessage('user-left-group')
+    @SubscribeMessage('member-left')
     async handleUserLeftGroup(
         @MessageBody() data: { conversationId: number; userId: number },
     ) {
