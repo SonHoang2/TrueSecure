@@ -230,4 +230,36 @@ export class SocketGateway
             );
         }
     }
+
+    @SubscribeMessage('member-removed')
+    async handleUserRemovedFromGroup(
+        @MessageBody() data: { conversationId: number; userId: number },
+    ) {
+        try {
+            await this.socketService.handleUserRemovedFromGroup(
+                data.conversationId,
+                data.userId,
+            );
+        } catch (error) {
+            this.logger.error(
+                `Error handling user removed from group: ${error.message}`,
+            );
+        }
+    }
+
+    @SubscribeMessage('member-added')
+    async handleUserAddedToGroup(
+        @MessageBody() data: { conversationId: number; userId: number },
+    ) {
+        try {
+            await this.socketService.handleUserAddedToGroup(
+                data.conversationId,
+                data.userId,
+            );
+        } catch (error) {
+            this.logger.error(
+                `Error handling user added to group: ${error.message}`,
+            );
+        }
+    }
 }

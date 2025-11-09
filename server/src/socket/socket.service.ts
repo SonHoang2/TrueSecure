@@ -329,4 +329,110 @@ export class SocketService {
 
         await Promise.all(emitPromises);
     }
+
+    async handleUserRemovedFromGroup(
+        conversationId: number,
+        userId: number,
+    ): Promise<void> {
+        // Notify the removed user on all their devices
+        const deviceMap =
+            await this.socketCacheService.getDevicesByUserId(userId);
+
+        const emitPromises: Promise<void>[] = [];
+
+        for (const deviceUuid of Object.keys(deviceMap)) {
+            emitPromises.push(
+                this.socketManagerService.emitToUser({
+                    userId,
+                    event: 'removed-from-group',
+                    data: {
+                        conversationId,
+                    },
+                    deviceUuid,
+                }),
+            );
+        }
+
+        // Notify remaining participants
+        const participants =
+            await this.conversationService.getOtherParticipants(
+                conversationId,
+                userId,
+            );
+
+        for (const participant of participants) {
+            const participantDeviceMap =
+                await this.socketCacheService.getDevicesByUserId(
+                    participant.userId,
+                );
+            for (const deviceUuid of Object.keys(participantDeviceMap)) {
+                emitPromises.push(
+                    this.socketManagerService.emitToUser({
+                        userId: participant.userId,
+                        event: 'member-removed',
+                        data: {
+                            conversationId,
+                            userId,
+                        },
+                        deviceUuid,
+                    }),
+                );
+            }
+        }
+
+        await Promise.all(emitPromises);
+    }
+
+    async handleUserAddedToGroup(
+        conversationId: number,
+        userId: number,
+    ): Promise<void> {
+        // Notify the added user on all their devices
+        const deviceMap =
+            await this.socketCacheService.getDevicesByUserId(userId);
+
+        const emitPromises: Promise<void>[] = [];
+
+        for (const deviceUuid of Object.keys(deviceMap)) {
+            emitPromises.push(
+                this.socketManagerService.emitToUser({
+                    userId,
+                    event: 'added-to-group',
+                    data: {
+                        conversationId,
+                    },
+                    deviceUuid,
+                }),
+            );
+        }
+
+        // Notify existing participants
+        const participants =
+            await this.conversationService.getOtherParticipants(
+                conversationId,
+                userId,
+            );
+
+        for (const participant of participants) {
+            const participantDeviceMap =
+                await this.socketCacheService.getDevicesByUserId(
+                    participant.userId,
+                );
+            for (const deviceUuid of Object.keys(participantDeviceMap)) {
+                emitPromises.push(
+                    this.socketManagerService.emitToUser({
+                        userId: participant.userId,
+                        event: 'member-added',
+                        data: {
+                            conversationId,
+                            userId,
+                        },
+                        deviceUuid,
+                    }),
+                );
+            }
+        }
+
+        await Promise.all(emitPromises);
+    }
 }
