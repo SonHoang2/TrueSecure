@@ -179,7 +179,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
 
             await dispatch(rotateGroupKeyComplete(conversation.id)).unwrap();
 
-            socket.emit('add-user', {
+            socket.emit('member-added', {
                 conversationId: conversation.id,
                 user: response,
             });

@@ -139,6 +139,15 @@ export class ConversationService {
             )
             .getOne();
 
+        console.log(
+            'Fetched conversation:',
+            conversation,
+            'with identifier:',
+            identifier,
+            'userId:',
+            userId,
+        );
+
         if (!conversation) {
             throw new NotFoundException(
                 'Conversation not found or you are not a participant',
@@ -148,6 +157,12 @@ export class ConversationService {
         const currentUserParticipation = conversation.participants.find(
             (participant) => participant.userId === userId,
         );
+
+        if (!currentUserParticipation) {
+            throw new ForbiddenException(
+                'You are not a participant of this conversation',
+            );
+        }
 
         const baseResponse = {
             id: conversation.id,
