@@ -10,6 +10,7 @@ import {
     Request,
     ParseIntPipe,
     Query,
+    Patch,
 } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
@@ -86,6 +87,18 @@ export class ConversationController {
         const userId = req.user.id;
         return this.conversationService.createConversation(
             createConversationDto,
+            userId,
+        );
+    }
+
+    @Patch(':id/rotate-complete')
+    rotateGroupKeyComplete(
+        @Param('id', ParseIntPipe) conversationId: number,
+        @Req() req: RequestWithUser,
+    ) {
+        const userId = req.user.id;
+        return this.conversationService.rotateGroupKeyComplete(
+            conversationId,
             userId,
         );
     }
