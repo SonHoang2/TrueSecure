@@ -11,7 +11,7 @@ import {
 } from 'react-icons/md';
 import { FaArrowLeft, FaRegEdit, FaUserPlus } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '../store';
+import { AppDispatch, RootState, store } from '../store';
 import {
     addUserToConversation,
     leaveGroup,
@@ -26,6 +26,7 @@ import {
     getUserPublicKeys,
 } from '../services/encryptionService';
 import socket from '../../socket';
+import { storeLocalGroupEpoch } from '../crypto/cryptoUtils';
 
 interface ChatInfoSidebarProps {
     isOpen: boolean;
@@ -116,7 +117,11 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                 axiosPrivate,
             });
 
-            await dispatch(rotateGroupKeyComplete(conversation.id)).unwrap();
+            const { groupEpoch } = await dispatch(
+                rotateGroupKeyComplete(conversation.id),
+            ).unwrap();
+
+            await storeLocalGroupEpoch(conversation.id, groupEpoch);
 
             socket.emit('member-removed', {
                 conversationId: conversation.id,
@@ -177,7 +182,11 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
                 axiosPrivate,
             });
 
-            await dispatch(rotateGroupKeyComplete(conversation.id)).unwrap();
+            const { groupEpoch } = await dispatch(
+                rotateGroupKeyComplete(conversation.id),
+            ).unwrap();
+
+            await storeLocalGroupEpoch(conversation.id, groupEpoch);
 
             socket.emit('member-added', {
                 conversationId: conversation.id,
