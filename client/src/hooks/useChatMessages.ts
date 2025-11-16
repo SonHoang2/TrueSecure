@@ -70,6 +70,7 @@ export const useChatMessages = ({
         currentConversation,
         participants,
         currentReceiver,
+        groupEpoch,
     } = useAppSelector((state) => state.conversations);
 
     const chatState = useMemo(
@@ -169,6 +170,7 @@ export const useChatMessages = ({
                 axiosPrivate,
                 userId: user.id,
                 deviceUuid: deviceUuid,
+                currentGroupEpoch: groupEpoch,
             });
 
             if (key) {
@@ -176,7 +178,7 @@ export const useChatMessages = ({
             }
             return key;
         },
-        [userKey, axiosPrivate, user.id, deviceUuid],
+        [userKey, axiosPrivate, user.id, deviceUuid, groupEpoch],
     );
 
     const sendMessage = useCallback(
@@ -457,8 +459,13 @@ export const useChatMessages = ({
     };
 
     useEffect(() => {
-        if (!socket || !userKey?.privateKey) {
-            console.warn('Socket or userKey is not available');
+        if (!socket) {
+            console.warn('Socket is not available');
+            return;
+        }
+
+        if (!userKey?.privateKey) {
+            console.warn('User private keys are required for message handling');
             return;
         }
 
@@ -476,8 +483,6 @@ export const useChatMessages = ({
                         .catch((error) =>
                             console.error('Audio play error:', error),
                         );
-
-                    console.log('new-private-message:', data);
 
                     const decryptedContent =
                         await cryptoUtils.decryptPrivateMessage(
@@ -546,13 +551,9 @@ export const useChatMessages = ({
                             console.error('Audio play error:', error),
                         );
 
-                    const groupkey = await getGroupKey({
-                        conversationId: data.conversationId,
-                        userKey: userKey,
-                        axiosPrivate,
-                        userId: user.id,
-                        deviceUuid: deviceUuid,
-                    });
+                    const groupkey = await getOrFetchGroupKey(
+                        data.conversationId,
+                    );
 
                     const decryptedContent = await cryptoUtils.decryptGroupData(
                         groupkey!,
@@ -625,8 +626,6 @@ export const useChatMessages = ({
                 userId: number;
                 status: MessageStatus;
             }) => {
-                console.log('group message update', data);
-
                 dispatch(persistGroupStatusUpdate(data));
             },
         );

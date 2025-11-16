@@ -425,3 +425,28 @@ export async function setDeviceUuid(uuid: string): Promise<void> {
 export async function clearDeviceUuid(): Promise<void> {
     await cryptoStorage.removeItem('deviceUuid');
 }
+
+export async function getLocalGroupEpoch(
+    conversationId: number,
+): Promise<number> {
+    try {
+        const storageKey = `groupEpoch_${conversationId}`;
+        const epoch = Number(await cryptoStorage.getItem(storageKey));
+        return isNaN(epoch) ? 0 : epoch;
+    } catch (err) {
+        console.warn('Failed to get local group epoch:', err);
+        return 0;
+    }
+}
+
+export async function storeLocalGroupEpoch(
+    conversationId: number,
+    epoch: number,
+): Promise<void> {
+    try {
+        const storageKey = `groupEpoch_${conversationId}`;
+        await cryptoStorage.setItem(storageKey, epoch);
+    } catch (err) {
+        console.warn('Failed to set local group epoch:', err);
+    }
+}

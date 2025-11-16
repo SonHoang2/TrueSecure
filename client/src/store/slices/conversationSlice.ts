@@ -197,10 +197,10 @@ export const rotateGroupKeyComplete = createAsyncThunk(
     'conversations/rotateGroupKeyComplete',
     async (conversationId: number, { rejectWithValue }) => {
         try {
-            await axiosPrivate.patch(
+            const res = await axiosPrivate.patch(
                 `${CONVERSATIONS_URL}/${conversationId}/rotate-complete`,
             );
-            return conversationId;
+            return res.data.data;
         } catch (error: any) {
             return rejectWithValue(
                 error.response?.data?.message ||
@@ -337,6 +337,7 @@ const conversationSlice = createSlice({
                 state.selectedConversationId = action.payload.id;
                 state.participants = action.payload.participants;
                 state.currentReceiver = action.payload.receiver;
+                state.groupEpoch = action.payload.groupEpoch;
             })
             .addCase(loadConversationDetails.rejected, (state, action) => {
                 state.isLoading = false;
@@ -421,6 +422,18 @@ const conversationSlice = createSlice({
                 );
             })
             .addCase(removeUserFromGroup.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload as string;
+            })
+            .addCase(rotateGroupKeyComplete.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(rotateGroupKeyComplete.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.groupEpoch = action.payload.groupEpoch;
+            })
+            .addCase(rotateGroupKeyComplete.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload as string;
             });

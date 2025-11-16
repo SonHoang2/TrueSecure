@@ -9,6 +9,7 @@ interface GetGroupKeyParams {
     userId: number;
     axiosPrivate: AxiosInstance;
     deviceUuid: string;
+    currentGroupEpoch: number;
 }
 
 export interface UserDevice {
@@ -36,28 +37,30 @@ export const getGroupKey = async ({
     userId,
     axiosPrivate,
     deviceUuid,
+    currentGroupEpoch,
 }: GetGroupKeyParams) => {
     const { privateKey } = userKey;
 
-    if (!privateKey) {
-        console.error('User private keys are required');
-    }
-
-    if (!conversationId || !userId) {
-        console.error('Conversation ID and User ID are required');
-    }
-
-    if (!deviceUuid) {
-        console.error('Device UUID is required');
-    }
+    if (!privateKey) throw new Error('User private keys are required');
+    if (!conversationId || !userId)
+        throw new Error('Conversation ID and User ID are required');
+    if (!deviceUuid) throw new Error('Device UUID is required');
+    if (!currentGroupEpoch) throw new Error('Current Group Epoch is required');
 
     let groupKey = await cryptoUtils.importGroupKey({
         conversationId,
     });
 
-    if (groupKey) {
-        return groupKey;
-    }
+    let localEpoch = await cryptoUtils.getLocalGroupEpoch(conversationId);
+
+    console.log(
+        'Local Epoch:',
+        localEpoch,
+        'Current Group Epoch:',
+        currentGroupEpoch,
+    );
+
+    if (groupKey && currentGroupEpoch === localEpoch) return groupKey;
 
     let response;
     try {
@@ -76,7 +79,13 @@ export const getGroupKey = async ({
         );
     }
 
-    const { encryptedGroupKey } = response.data.data || response.data;
+    if (!response || !response.data) {
+        console.error('Server did not return a valid response');
+        return;
+    }
+
+    const { encryptedGroupKey, groupEpoch: newGroupEpoch } =
+        response.data.data || response.data;
 
     if (!encryptedGroupKey) {
         console.error('No encrypted group key found in server response');
@@ -110,6 +119,16 @@ export const getGroupKey = async ({
             conversationId,
             groupKey,
         });
+
+        await cryptoUtils.storeLocalGroupEpoch(conversationId, newGroupEpoch);
+
+        await axiosPrivate.patch(
+            `${CONVERSATIONS_URL}/${conversationId}/confirm-key`,
+            {},
+            {
+                headers: { 'x-device-uuid': deviceUuid },
+            },
+        );
     } catch (storeError) {
         console.warn('Failed to store group key locally:', storeError);
     }

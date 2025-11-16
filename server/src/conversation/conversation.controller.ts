@@ -11,6 +11,7 @@ import {
     ParseIntPipe,
     Query,
     Patch,
+    Headers,
 } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
@@ -21,6 +22,21 @@ import { RequestWithUser } from 'src/common/interfaces/request-with-user.interfa
 @UseGuards(JwtAuthGuard)
 export class ConversationController {
     constructor(private readonly conversationService: ConversationService) {}
+
+    @Patch(':id/confirm-key')
+    async confirmKeyStored(
+        @Headers('x-device-uuid') deviceUuid: string,
+        @Param('id') conversationId: number,
+        @Req() req: RequestWithUser,
+    ) {
+        const userId = req.user.id;
+
+        return this.conversationService.confirmKeyStored(
+            conversationId,
+            userId,
+            deviceUuid,
+        );
+    }
 
     @Get('me')
     findUserConversations(@Req() req: RequestWithUser) {
@@ -104,7 +120,6 @@ export class ConversationController {
     }
 
     @Delete(':id/leave')
-    @UseGuards(JwtAuthGuard)
     async leaveGroup(
         @Param('id', ParseIntPipe) conversationId: number,
         @Request() req,
@@ -113,7 +128,6 @@ export class ConversationController {
     }
 
     @Delete(':id/remove-user')
-    @UseGuards(JwtAuthGuard)
     async removeUserFromGroup(
         @Param('id', ParseIntPipe) conversationId: number,
         @Query('userId', ParseIntPipe) userId: number,

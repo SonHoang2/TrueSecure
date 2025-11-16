@@ -139,15 +139,6 @@ export class ConversationService {
             )
             .getOne();
 
-        console.log(
-            'Fetched conversation:',
-            conversation,
-            'with identifier:',
-            identifier,
-            'userId:',
-            userId,
-        );
-
         if (!conversation) {
             throw new NotFoundException(
                 'Conversation not found or you are not a participant',
@@ -405,14 +396,52 @@ export class ConversationService {
             );
         }
 
-        // await this.participantDeviceRepo.update(
-        //     { id: participantDevice.id },
-        //     { encryptedGroupKey: null, groupEpoch: conversation.groupEpoch },
-        // );
+        await this.participantDeviceRepo.update(
+            { id: participantDevice.id },
+            { groupEpoch: conversation.groupEpoch },
+        );
 
         return {
             encryptedGroupKey: participantDevice.encryptedGroupKey,
+            groupEpoch: conversation.groupEpoch,
         };
+    }
+
+    async confirmKeyStored(
+        conversationId: number,
+        userId: number,
+        deviceUuid: string,
+    ) {
+        // Tìm participant
+        const participant = await this.participantRepo.findOne({
+            where: { conversationId, userId },
+        });
+        if (!participant) throw new NotFoundException('Participant not found');
+
+        // Tìm device
+        const device = await this.deviceService.findByUuid(deviceUuid);
+
+        if (!device) throw new NotFoundException('Device not found');
+
+        // Tìm participant_device
+        const participantDevice = await this.participantDeviceRepo.findOne({
+            where: {
+                participantId: participant.id,
+                deviceId: device.id,
+            },
+        });
+        if (!participantDevice)
+            throw new NotFoundException(
+                'No encrypted group key found for this device',
+            );
+
+        // Xác nhận key đã lưu → xóa encryptedGroupKey
+        await this.participantDeviceRepo.update(
+            { id: participantDevice.id },
+            { encryptedGroupKey: null },
+        );
+
+        return { success: true };
     }
 
     async getOtherParticipants(conversationId: number, userId: number) {
@@ -795,8 +824,14 @@ export class ConversationService {
             { rotateNeeded: false },
         );
 
+        await this.participantDeviceRepo.update(
+            { participantId: participant.id },
+            { groupEpoch: conversation.groupEpoch },
+        );
+
         return {
             message: 'Group key rotation marked as complete',
+            groupEpoch: conversation.groupEpoch,
         };
     }
 }

@@ -31,6 +31,8 @@ async function bootstrap() {
     app.enableCors({
         origin: corsOrigins,
         credentials: true,
+        methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'x-device-uuid'],
     });
 
     const port = configService.get<number>('port') || 5000;
