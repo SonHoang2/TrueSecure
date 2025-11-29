@@ -1,1 +1,1 @@
-export const TIME_CAPTURE_IMG_INTERVAL = 1000;
+export const TIME_CAPTURE_IMG_INTERVAL = 8000; // 8 seconds
