@@ -121,6 +121,8 @@ export const useWebRTC = ({
                     );
                     formData.append('callId', `${user.id}_${receiverId}`);
 
+                    console.log('capture image');
+
                     const res = await axiosPrivate.post(
                         DEEPFAKE_URL + '/upload',
                         formData,
@@ -132,7 +134,7 @@ export const useWebRTC = ({
                     );
                     const result = res.data.data;
                     console.log('Deepfake result:', result);
-                    
+
                     dispatch(
                         setDeepfakeResults({
                             isDeepfake: result.isDeepfake ?? false,
@@ -298,11 +300,6 @@ export const useWebRTC = ({
                 offer: null,
                 isVideoCall: prev.isVideoCall,
             }));
-
-            // Start image capture if it's a video call
-            if (callState.isVideoCall) {
-                startImageCapture(stream);
-            }
         } catch (error) {
             console.error('Error accepting call:', error);
         }
@@ -380,13 +377,17 @@ export const useWebRTC = ({
     };
 
     useEffect(() => {
+        if (remoteStream && callState.isConnected && callState.isVideoCall) {
+            console.log('Remote stream ready, starting image capture...');
+            startImageCapture(remoteStream);
+        }
+
         return () => {
-            stopImageCapture();
-            if (canvasRef.current) {
-                canvasRef.current = null;
+            if (!remoteStream) {
+                stopImageCapture();
             }
         };
-    }, []);
+    }, [remoteStream, callState.isConnected, callState.isVideoCall]);
 
     useEffect(() => {
         peer.current = new RTCPeerConnection({
@@ -435,11 +436,6 @@ export const useWebRTC = ({
                             isRinging: false,
                             isVideoCall: prev.isVideoCall,
                         };
-
-                        // Start image capture when call is connected and it's a video call
-                        if (prev.isVideoCall && remoteStream) {
-                            startImageCapture(remoteStream);
-                        }
 
                         return newState;
                     });
