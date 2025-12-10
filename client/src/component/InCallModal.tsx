@@ -22,7 +22,6 @@ const InCallModal: React.FC<InCallModalProps> = ({
     const remoteRef = useRef<any>(null);
 
     const deepfakeResults = useSelector((state: RootState) => state.deepfake);
-    console.log('Deepfake Results in InCallModal:', deepfakeResults);
 
     useEffect(() => {
         if (localRef.current) {
