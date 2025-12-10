@@ -344,7 +344,7 @@ export class SocketService {
             emitPromises.push(
                 this.socketManagerService.emitToUser({
                     userId,
-                    event: 'removed-from-group',
+                    event: 'member-removed',
                     data: {
                         conversationId,
                     },
@@ -387,6 +387,8 @@ export class SocketService {
         conversationId: number,
         userId: number,
     ): Promise<void> {
+        console.log('userId in handleUserAddedToGroup:', userId);
+
         // Notify the added user on all their devices
         const deviceMap =
             await this.socketCacheService.getDevicesByUserId(userId);
@@ -394,10 +396,16 @@ export class SocketService {
         const emitPromises: Promise<void>[] = [];
 
         for (const deviceUuid of Object.keys(deviceMap)) {
+            console.log('Member added event emitted to device:', {
+                userId,
+                deviceUuid,
+                conversationId,
+            });
+
             emitPromises.push(
                 this.socketManagerService.emitToUser({
                     userId,
-                    event: 'added-to-group',
+                    event: 'member-added',
                     data: {
                         conversationId,
                     },

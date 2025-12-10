@@ -151,19 +151,20 @@ export const leaveGroup = createAsyncThunk(
     },
 );
 
-export const addUserToConversation = createAsyncThunk(
+export const addUserToConversation = createAsyncThunk<
+    User, // type trả về khi fulfilled
+    { conversation: string; userId: string }, // params
+    { rejectValue: string } // type rejectWithValue
+>(
     'conversations/addUserToConversation',
-    async (
-        { conversation, userId }: { conversation: string; userId: string },
-        { rejectWithValue },
-    ) => {
+    async ({ conversation, userId }, { rejectWithValue }) => {
         try {
             const res = await axiosPrivate.post(
                 `${CONVERSATIONS_URL}/${conversation}/add-user`,
                 { userId },
             );
 
-            return res.data.data.participant;
+            return res.data.data.participant; // phải đúng kiểu User
         } catch (error: any) {
             return rejectWithValue(
                 error.response?.data?.message || 'Failed to add user to group',
