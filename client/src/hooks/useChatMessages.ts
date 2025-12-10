@@ -337,123 +337,6 @@ export const useChatMessages = ({
         }
     };
 
-    // const sendImage = useCallback(
-    //     async (file: File) => {
-    //         if (!currentConversation || !user) {
-    //             return;
-    //         }
-
-    //         try {
-    //             const messageId = uuidv4();
-    //             const fileData = await file.arrayBuffer();
-    //             const objectUrl = URL.createObjectURL(file);
-
-    //             let messageData;
-
-    //             if (currentConversation.isGroup) {
-    //                 const groupkey = await getGroupKey({
-    //                     conversationId: selectedConversationId,
-    //                     userKey: userKey!,
-    //                     axiosPrivate,
-    //                     userId: user.id,
-    //                 });
-
-    //                 if (!groupkey) {
-    //                     throw new Error('Group key not available');
-    //                 }
-
-    //                 const { encryptedContent, iv } =
-    //                     await cryptoUtils.encryptGroupData(groupkey, fileData);
-
-    //                 messageData = {
-    //                     id: messageId,
-    //                     senderId: user.id,
-    //                     conversationId: selectedConversationId,
-    //                     content: objectUrl,
-    //                     type: 'image' as const,
-    //                     fileName: file.name,
-    //                     fileSize: file.size,
-    //                     mimeType: file.type,
-    //                     status: MessageStatus.SENDING,
-    //                     createdAt: new Date().toISOString(),
-    //                 };
-
-    //                 const encryptedMessage = {
-    //                     ...messageData,
-    //                     content: encryptedContent,
-    //                     iv: iv,
-    //                 };
-
-    //                 socket.emit('send-group-image', encryptedMessage);
-    //             } else {
-    //                 if (!userKey?.publicKey) {
-    //                     throw new Error('Public key not available');
-    //                 }
-
-    //                 const { encryptedContent, iv, ephemeralPublicKey } =
-    //                     await cryptoUtils.encryptPrivateData(
-    //                         userKey.publicKey,
-    //                         fileData,
-    //                     );
-
-    //                 messageData = {
-    //                     id: messageId,
-    //                     senderId: user.id,
-    //                     conversationId: selectedConversationId,
-    //                     content: objectUrl,
-    //                     type: 'image' as const,
-    //                     fileName: file.name,
-    //                     fileSize: file.size,
-    //                     mimeType: file.type,
-    //                     status: MessageStatus.SENDING,
-    //                     createdAt: new Date().toISOString(),
-    //                 };
-
-    //                 const encryptedMessage = {
-    //                     ...messageData,
-    //                     content: encryptedContent,
-    //                     iv: iv,
-    //                     ephemeralPublicKey: ephemeralPublicKey,
-    //                 };
-
-    //                 socket.emit('send-private-image', encryptedMessage);
-    //             }
-
-    //             dispatch(addMessage(messageData));
-
-    //             dispatch(
-    //                 updateConversationLastMessage({
-    //                     conversationId: selectedConversationId,
-    //                     lastMessage: {
-    //                         content: `📷 Image`,
-    //                         senderId: user.id,
-    //                         createdAt: messageData.createdAt,
-    //                         type: 'image',
-    //                     },
-    //                 }),
-    //             );
-    //         } catch (error) {
-    //             console.error('Failed to send image:', error);
-    //             dispatch(
-    //                 addNotification({
-    //                     type: 'error',
-    //                     title: 'Image Failed',
-    //                     message: 'Failed to send image. Please try again.',
-    //                 }),
-    //             );
-    //         }
-    //     },
-    //     [
-    //         currentConversation,
-    //         user,
-    //         userKey,
-    //         selectedConversationId,
-    //         socket,
-    //         axiosPrivate,
-    //         dispatch,
-    //     ],
-    // );
-
     const sendImage = () => {
         return;
     };
@@ -679,6 +562,73 @@ export const useChatMessages = ({
             await dispatch(completeKeyRotation(conversationId));
         });
 
+        socket.on('member-added', async ({ conversationId, targetUserId }) => {
+            try {
+                await dispatch(loadConversations());
+                console.log('Member added event received:', {
+                    conversationId,
+                    targetUserId,
+                });
+
+                if (conversationId === selectedConversationId) {
+                    await dispatch(loadConversationDetails(conversationId));
+                }
+
+                dispatch(
+                    addNotification({
+                        type: 'info',
+                        title: 'Member Added',
+                        message: 'A new member has joined the group.',
+                    }),
+                );
+            } catch (error) {
+                console.error('Failed to handle member-added event:', error);
+            }
+        });
+
+        socket.on(
+            'member-removed',
+            async ({ conversationId, targetUserId }) => {
+                try {
+                    // If the current user was removed
+                    if (targetUserId === user.id) {
+                        dispatch(clearMessages());
+                        dispatch(
+                            addNotification({
+                                type: 'warning',
+                                title: 'Removed from Group',
+                                message:
+                                    'You have been removed from this group.',
+                            }),
+                        );
+
+                        await dispatch(loadConversations());
+                        return;
+                    }
+
+                    await dispatch(loadConversations());
+
+                    if (conversationId === selectedConversationId) {
+                        await dispatch(loadConversationDetails(conversationId));
+                    }
+
+                    dispatch(
+                        addNotification({
+                            type: 'info',
+                            title: 'Member Removed',
+                            message:
+                                'A member has been removed from the group.',
+                        }),
+                    );
+                } catch (error) {
+                    console.error(
+                        'Failed to handle member-removed event:',
+                        error,
+                    );
+                }
+            },
+        );
+
         return () => {
             socket.off('new-private-message');
             socket.off('new-group-message');
@@ -687,6 +637,8 @@ export const useChatMessages = ({
             socket.off('user-typing');
             socket.off('user-stopped-typing');
             socket.off('member-left');
+            socket.off('member-added');
+            socket.off('member-removed');
         };
     }, [socket, userKey, selectedConversationId, user, axiosPrivate, dispatch]);
 

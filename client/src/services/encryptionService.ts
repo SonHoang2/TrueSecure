@@ -54,9 +54,9 @@ export const getGroupKey = async ({
     let localEpoch = await cryptoUtils.getLocalGroupEpoch(conversationId);
 
     console.log(
-        'Local Epoch:',
+        'Epoch check → local:',
         localEpoch,
-        'Current Group Epoch:',
+        'server:',
         currentGroupEpoch,
     );
 
@@ -77,10 +77,6 @@ export const getGroupKey = async ({
             }`,
             apiError,
         );
-    }
-
-    if (!response || !response.data) {
-        console.error('Server did not return a valid response');
         return;
     }
 
@@ -99,18 +95,19 @@ export const getGroupKey = async ({
             encryptedGroupKey,
         );
     } catch (decryptError) {
-        console.error('Failed to decrypt group key');
+        alert('Failed to decrypt group key');
         return;
     }
 
     try {
         groupKey = await cryptoUtils.importAESKey(decryptedKey);
     } catch (error) {
-        console.error('Failed to import decrypted group key');
+        alert('Failed to import decrypted group key');
+        return;
     }
 
     if (!groupKey) {
-        console.error('Failed to import group key');
+        alert('Failed to import decrypted group key');
         return;
     }
 

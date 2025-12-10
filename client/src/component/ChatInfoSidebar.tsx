@@ -163,7 +163,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
         if (!conversation?.isGroup) return;
 
         try {
-            const response = await dispatch(
+            const user = await dispatch(
                 addUserToConversation({
                     conversation: conversation.id,
                     userId,
@@ -177,7 +177,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
 
             await distributeGroupKeys({
                 conversationId: conversation.id,
-                members: [...participants, response],
+                members: [...participants, user],
                 publicKeys,
                 axiosPrivate,
             });
@@ -190,7 +190,7 @@ const ChatInfoSidebar: React.FC<ChatInfoSidebarProps> = ({
 
             socket.emit('member-added', {
                 conversationId: conversation.id,
-                user: response,
+                userId: userId,
             });
 
             setSearchResults((prev) =>
