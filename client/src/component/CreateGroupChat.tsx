@@ -110,7 +110,6 @@ export const CreateGroupChat: React.FC<CreateGroupChatProps> = ({
                 members: formData.groupMembers,
                 publicKeys: publicKeys,
                 axiosPrivate: axiosPrivate,
-                currentUserId: user.id,
             });
 
             // Reload conversations

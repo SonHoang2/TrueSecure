@@ -72,8 +72,9 @@ export const loadConversations = createAsyncThunk(
 
 export const loadConversationDetails = createAsyncThunk(
     'conversations/loadConversationDetails',
-    async (conversationId: string, { rejectWithValue }) => {
+    async (conversationId: string | number, { rejectWithValue }) => {
         try {
+            // nhận cả uuid và id
             const res = await axiosPrivate.get(
                 `${CONVERSATIONS_URL}/${conversationId}`,
             );

@@ -2,7 +2,7 @@
   "scripts": {
     "server": "cd server && npm run start:dev",
     "client": "cd client && npm run start:dev",
-    "df_server": "cd df_server && python main.py",
+    "df_server": "cd df_server && venv\\Scripts\\activate && python main.py",
     "start:dev": "concurrently --names \"🖥️ SERVER,⚛️ CLIENT\" --prefix-colors \"blue,green\" \"npm run server\" \"npm run client\"",
     "start:all": "concurrently --names \"🖥️ SERVER,⚛️ CLIENT,🤖 DF_SERVER\" --prefix-colors \"blue,green,yellow\" \"npm run server\" \"npm run client\" \"npm run df_server\""
   },

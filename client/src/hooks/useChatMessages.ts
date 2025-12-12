@@ -164,13 +164,29 @@ export const useChatMessages = ({
                 return groupKeyCache.current.get(conversationId);
             }
 
+            let currentGroupEpoch = groupEpoch;
+            if (currentGroupEpoch === undefined || currentGroupEpoch === null) {
+                try {
+                    const result = await dispatch(
+                        loadConversationDetails(conversationId),
+                    );
+                    currentGroupEpoch = result.payload?.groupEpoch ?? 0;
+                } catch (error) {
+                    console.error(
+                        'Failed to load conversation details:',
+                        error,
+                    );
+                    currentGroupEpoch = 0; // Default fallback
+                }
+            }
+
             const key = await getGroupKey({
                 conversationId,
                 userKey: userKey,
                 axiosPrivate,
                 userId: user.id,
                 deviceUuid: deviceUuid,
-                currentGroupEpoch: groupEpoch,
+                currentGroupEpoch,
             });
 
             if (key) {
