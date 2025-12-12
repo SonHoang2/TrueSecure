@@ -203,6 +203,89 @@ export class ConversationService {
         }
     }
 
+    async getConversationByUuid(identifier: string, userId: number) {
+        const isUUID = isValidUUID(identifier);
+
+        const conversation = await this.conversationRepo
+            .createQueryBuilder('conversation')
+            .leftJoinAndSelect('conversation.participants', 'participants')
+            .leftJoinAndSelect('participants.user', 'user')
+            .leftJoinAndSelect(
+                'participants.participantDevices',
+                'participantDevices',
+            )
+            .where(
+                isUUID
+                    ? 'conversation.uuid = :identifier'
+                    : 'conversation.id = :identifier',
+                { identifier: isUUID ? identifier : parseInt(identifier) },
+            )
+            .getOne();
+
+        if (!conversation) {
+            throw new NotFoundException(
+                'Conversation not found or you are not a participant',
+            );
+        }
+
+        const currentUserParticipation = conversation.participants.find(
+            (participant) => participant.userId === userId,
+        );
+
+        if (!currentUserParticipation) {
+            throw new ForbiddenException(
+                'You are not a participant of this conversation',
+            );
+        }
+
+        const baseResponse = {
+            id: conversation.id,
+            uuid: conversation.uuid,
+            title: conversation.title,
+            isGroup: conversation.isGroup,
+            avatar: conversation.avatar,
+            myRole: currentUserParticipation.role,
+            createdAt: conversation.createdAt,
+            updatedAt: conversation.updatedAt,
+            groupEpoch: conversation.groupEpoch,
+            rotateNeeded: conversation.rotateNeeded,
+        };
+
+        if (conversation.isGroup) {
+            const participants = conversation.participants.map((p) => ({
+                id: p.user.id,
+                firstName: p.user.firstName,
+                lastName: p.user.lastName,
+                email: p.user.email,
+                avatar: p.user.avatar,
+                role: p.role,
+            }));
+
+            return {
+                ...baseResponse,
+                participants,
+            };
+        } else {
+            const otherParticipant = conversation.participants.find(
+                (p) => p.userId !== userId,
+            );
+
+            if (!otherParticipant) {
+                throw new NotFoundException('Other participant not found');
+            }
+            return {
+                ...baseResponse,
+                receiver: {
+                    id: otherParticipant.user.id,
+                    firstName: otherParticipant.user.firstName,
+                    lastName: otherParticipant.user.lastName,
+                    email: otherParticipant.user.email,
+                    avatar: otherParticipant.user.avatar,
+                },
+            };
+        }
+    }
+
     async getUserConversations(userId: number) {
         const userParticipations = await this.participantRepo.find({
             where: { userId },

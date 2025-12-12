@@ -45,7 +45,8 @@ export const getGroupKey = async ({
     if (!conversationId || !userId)
         throw new Error('Conversation ID and User ID are required');
     if (!deviceUuid) throw new Error('Device UUID is required');
-    if (!currentGroupEpoch) throw new Error('Current Group Epoch is required');
+    if (currentGroupEpoch === undefined || currentGroupEpoch === null)
+        throw new Error('Current group epoch is required');
 
     let groupKey = await cryptoUtils.importGroupKey({
         conversationId,
