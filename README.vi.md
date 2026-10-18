@@ -7,7 +7,7 @@
 Ứng dụng nhắn tin thời gian thực này cho phép người dùng kết nối dễ dàng với bạn bè, gia đình và đồng nghiệp thông qua nhắn tin văn bản tức thời, trò chuyện nhóm, cuộc gọi thoại và video. Được thiết kế để truyền thông nhanh chóng và an toàn, ứng dụng sử dụng Socket.IO cho nhắn tin thời gian thực, WebRTC cho phát trực tiếp media peer-to-peer và mã hóa đầu cuối (E2EE) để bảo vệ quyền riêng tư của người dùng. Hệ thống cũng tích hợp phát hiện deepfake để phân tích luồng video trong thời gian thực, nâng cao bảo mật và sự tin cậy trong quá trình giao tiếp video.
 
 ## Kiến trúc hệ thống
-- **Microservices:** Hệ thống được thiết kế theo kiến trúc microservices, cho phép từng dịch vụ được triển khai độc lập, dễ dàng mở rộng và bảo trì.
+- **Modular monolith + dịch vụ AI riêng:** Backend NestJS là một ứng dụng module hóa (auth, user, conversation, socket, deepfake, ...). Phát hiện deepfake chạy như một service FastAPI riêng (`df_server`), được gọi qua HTTP, giúp triển khai và mở rộng độc lập phần xử lý PyTorch nặng.
 
 ## Công nghệ
 - Front End: React, HTML, CSS, Tailwindcss, Typescript
@@ -15,7 +15,7 @@
 - Deepfake Detection: OpenCV, PyTorch, Facenet-PyTorch, Grad-CAM
 - Cơ sở dữ liệu: PortgresSQL, Redis, TypeORM
 - Giao tiếp thời gian thực: Socket.io, WebRTC
-- Hàng đợi tin nhắn: RabbitMQ
+- Hàng đợi tin nhắn: RabbitMQ (queue bền vững theo từng user để gửi tin nhắn offline)
 
 ## Tính năng
 - **Xác thực người dùng:** Người dùng có thể đăng ký, đăng nhập và đăng xuất an toàn bằng email và mật khẩu hoặc tài khoản mạng xã hội.
@@ -32,7 +32,7 @@
 - **Hỗ trợ WebSocket:** Kết nối thời gian thực với máy chủ để nhận thông báo và cập nhật ngay lập tức.
 
 ## Bảo mật
-- **Mã hóa đầu cuối:** Tin nhắn được mã hóa hoàn toàn dựa trên Giao thức Signal để đảm bảo mức độ bảo mật cao nhất, chỉ cho phép người nhận dự định đọc chúng.
+- **Mã hóa đầu cuối:** Tin nhắn được mã hóa tại client bằng Web Crypto API (trao đổi khóa ECDH P-256 + AES-GCM-256). Chat nhóm dùng khóa nhóm được mã hóa riêng cho từng thiết bị của thành viên và xoay khóa theo group epoch. Đây là cơ chế tự xây dựng, không phải Giao thức Signal (không có X3DH / Double Ratchet).
 - **Xác thực an toàn:** Mật khẩu được băm và thêm muối để ngăn chặn truy cập trái phép.
 - **Ủy quyền mạnh mẽ:** Token làm mới và truy cập được lưu trữ trong cookie với các cờ HttpOnly, Secure và SameSite để giảm thiểu các cuộc tấn công XSS, MITM và CSRF.
 - **Cưỡng chế HTTPS:** Tất cả dữ liệu truyền tải được bảo mật bằng HTTPS.
