@@ -7,7 +7,7 @@
 This real-time messaging application enables users to seamlessly connect with friends, family, and colleagues through instant text messaging, group chats, voice calls, and video calls. Designed for fast and secure communication, it leverages Socket.IO for real-time messaging, WebRTC for peer-to-peer media streaming, and end-to-end encryption (E2EE) to protect user privacy. The system also integrates deepfake detection to analyze video streams in real time, enhancing security and trust during video communication.
 
 ## Architectural Pattern
-- **Microservices:** The system is designed using a microservices architecture, allowing independent deployment, scalability, and maintainability of each service.
+- **Modular monolith + separate AI service:** The NestJS backend is a single modular application (auth, user, conversation, socket, deepfake, ...). Deepfake detection runs as a separate FastAPI service (`df_server`) called over HTTP, so the heavy PyTorch workload can be deployed and scaled independently.
 
 ## Technologies
 - Front End: React, HTML, CSS, Tailwindcss, Typescript
@@ -15,7 +15,7 @@ This real-time messaging application enables users to seamlessly connect with fr
 - Deepfake Detection: OpenCV, PyTorch, Facenet-PyTorch, Grad-CAM
 - Database: PortgresSQL, Redis, TypeORM
 - Real-Time Communication: Socket.io, WebRTC
-- Messaging Queue: RabbitMQ
+- Messaging Queue: RabbitMQ (per-user durable queues for offline message delivery)
 
 ## Features
 - **User Authentication:** Users can securely sign up, log in, and log out using either email and password or social accounts.
@@ -34,7 +34,7 @@ This real-time messaging application enables users to seamlessly connect with fr
 
 ## Security
 
-- **End-to-End Encryption**: Messages are fully encrypted based on the Signal Protocol to ensure the highest level of security, allowing only intended recipients to read them.
+- **End-to-End Encryption**: Messages are encrypted on the client with the Web Crypto API (ECDH P-256 key exchange + AES-GCM-256). Group chats use a shared group key that is encrypted per participant device and rotated via a group epoch. This is a custom scheme, not the Signal Protocol (no X3DH / Double Ratchet).
 - **Secure Authentication:** Passwords are securely hashed and salted to prevent unauthorized access.
 - **Robust Authorization:** Refresh and access tokens are stored in cookies with HttpOnly, Secure, and SameSite flags to mitigate XSS, MITM, and CSRF attacks.
 - **HTTPS Enforcement:** All data transmissions are secured using HTTPS.
